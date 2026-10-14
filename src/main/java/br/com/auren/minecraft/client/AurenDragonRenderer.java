@@ -7,6 +7,7 @@ import com.iafenvoy.uranus.client.model.TabulaModel;
 import com.iafenvoy.uranus.client.model.util.TabulaModelHandlerHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
@@ -18,13 +19,17 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
     private static final ResourceLocation BABY_TEXTURE =
             ResourceLocation.fromNamespaceAndPath(AurenMinecraft.MOD_ID, "textures/entity/auren_black_1.png");
 
+    private static final ResourceLocation SHOULDER_POSE =
+            ResourceLocation.fromNamespaceAndPath(AurenMinecraft.MOD_ID,
+                    "lightningdragon/lightningdragon_sitting_shoulder");
+
     private final TabulaModel<AurenDragon> groundModel;
-    private final TabulaModel<AurenDragon> shoulderModel;
 
     public AurenDragonRenderer(EntityRendererProvider.Context context) {
         super(context, load("lightningdragon/lightningdragon_ground"), 1.5F);
         this.groundModel = this.model;
-        this.shoulderModel = load("lightningdragon/lightningdragon_sitting_shoulder");
+        // Load the original CE shoulder pose once as a reference, not a swapped renderer.
+        TabulaModelHandlerHelper.getModel(SHOULDER_POSE);
     }
 
     private static TabulaModel<AurenDragon> load(String modelName) {
@@ -47,8 +52,16 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
                                 float limbSwing, float limbSwingAmount,
                                 float age, float yaw, float pitch, float scale) {
         model.resetToDefaultPose();
-        if (dragon.isSmallForm() && dragon.isOnShoulder()) {
-            AurenNeckPose.apply(model, age);
+        float partialTick = Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false);
+        float shoulderBlend = dragon.getShoulderBlend(partialTick);
+
+        // As in IceAndFire CE: animate the SAME Tabula skeleton and blend every
+        // bone from its normal pose toward the original SIT_ON_PLAYER_POSE.
+        if (shoulderBlend > 0.0F && dragon.isSmallForm()) {
+            TabulaModel<AurenDragon> originalPose = TabulaModelHandlerHelper.getModel(SHOULDER_POSE);
+            AurenPoseTransition.apply(model, originalPose, shoulderBlend);
+            // Our selected "living scarf" pose is an additive adjustment only.
+            AurenNeckPose.apply(model, age, shoulderBlend);
             return;
         }
 
@@ -103,18 +116,19 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
     @Override
     public void render(AurenDragon entity, float yaw, float partialTick, PoseStack pose,
                        MultiBufferSource buffer, int packedLight) {
-        this.model = entity.isSmallForm() && entity.isOnShoulder() ? shoulderModel : groundModel;
+        // No instant switching of models: the CE bone pose now blends in/out.
+        this.model = groundModel;
         this.shadowRadius = entity.isOnShoulder() ? 0.0F : entity.isSmallForm() ? 0.2F : 1.7F;
         super.render(entity, yaw, partialTick, pose, buffer, packedLight);
     }
 
     @Override
     protected void scale(AurenDragon entity, PoseStack pose, float partialTick) {
-        if (entity.isSmallForm() && entity.isOnShoulder()) {
-            // Lay the dragon sideways across the player's shoulders.
-            // Head faces the left side; tail bends over the right.
-            pose.mulPose(Axis.YP.rotationDegrees(90.0F));
-            pose.translate(0.0D, -0.035D, 0.0D);
+        float blend = entity.getShoulderBlend(partialTick);
+        if (entity.isSmallForm() && blend > 0.0F) {
+            // Smoothly rotate from normal orientation into the scarf pose.
+            pose.mulPose(Axis.YP.rotationDegrees(90.0F * blend));
+            pose.translate(0.0D, -0.035D * blend, 0.0D);
         }
         // Keep the original baby size in every pose, as requested.
         float factor = entity.isSmallForm() ? 0.42F : 5.8F;

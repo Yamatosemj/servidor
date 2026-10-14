@@ -1,4 +1,4 @@
-"""Check that v0.3's neck-wrap pose targets real bones in the bundled Tabula model.
+"""Check that v0.4's CE-inspired neck-wrap transition targets real bones in the bundled Tabula model.
 
 Structural build test only: pose appearance must also be checked in Minecraft.
 """
@@ -43,14 +43,24 @@ def verify():
     renderer = RENDERER.read_text(encoding="utf-8")
     entity = ENTITY.read_text(encoding="utf-8")
     version = GRADLE.read_text(encoding="utf-8")
-    assert "AurenNeckPose.apply(model, age);" in renderer
+    assert "AurenNeckPose.apply(model, age, shoulderBlend);" in renderer
+    assert "AurenPoseTransition.apply(model, originalPose, shoulderBlend);" in renderer
+    assert "this.model = groundModel;" in renderer
+    assert "float shoulderBlend = dragon.getShoulderBlend(partialTick);" in renderer
     assert "dragon.isSmallForm() && dragon.isOnShoulder()" in renderer
     assert "entity.isSmallForm() && entity.isOnShoulder()" in renderer
-    assert "Axis.YP.rotationDegrees(90.0F)" in renderer
+    assert "Axis.YP.rotationDegrees(90.0F * blend)" in renderer
     assert "float factor = entity.isSmallForm() ? 0.42F : 5.8F;" in renderer
     assert "double backward = 0.18D;" in entity
-    assert "mod_version=0.3.0-alpha" in version
-    print(f"PASS: v0.3 shoulder model includes {len(names)} valid animated bones; "
+    assert "mod_version=0.4.0-alpha" in version
+    assert "SHOULDER_ANIMATION_TICKS = 20.0F" in entity
+    assert "getShoulderBlend(float partialTick)" in entity
+    transition_source = (ROOT / "src/main/java/br/com/auren/minecraft/client/AurenPoseTransition.java").read_text(encoding="utf-8")
+    for property_name in ("rotateAngleX", "rotateAngleY", "rotateAngleZ",
+                          "rotationPointX", "rotationPointY", "rotationPointZ"):
+        assert f"from.{property_name}" in transition_source
+    assert "Math.atan2" in transition_source
+    print(f"PASS: v0.4 shoulder model includes {len(names)} valid animated bones; "
           "neck pose isolated and baby scale preserved")
 
 

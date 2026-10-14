@@ -36,3 +36,13 @@ Os quatro arquivos externos escolhidos são baixados durante o build a partir de
 2. Minecraft cliente **sem Uranus separado**: confirmar que NeoForge reconhece a dependência embutida; depois ver o dragão em ambas as escalas sem partes deslocadas, testar pose de ombro e desmonte.
 3. Persistência de forma e dono após sair do mundo.
 4. Só depois melhorar posicionamento, caminhada, animação, voo e comandos de assistente.
+
+## V0.4 — adaptação das transições da CE (14/10/2026)
+
+Conforme confirmado em `IceAndFireTabulaModelAnimator.transitionTo()` e `DragonTabulaModelAnimator.setRotationsLoop()` (ramo 1.21.1 da CE), o mod original usa blend gradual para a pose SIT_ON_PLAYER_POSE. Adaptamos a interpolação nome-a-nome (rotações pelo ângulo mínimo e pivôs XYZ), 20 ticks de progresso local por entidade, pose da CE como referência e a pose de pescoço do Auren como ajuste aditivo. Não copiamos classes completas ou múltiplas mecânicas do dragão original.
+
+Ao contrário da versão v0.3, o renderizador **não alterna mais imediatamente para o arquivo sitting_shoulder**: mantém o esqueleto normal e interpola para a pose original sobre ele. A geometria pode exigir regulagem no Zalith, especialmente a posição durante o primeiro segundo da transformação. O deslocamento físico para atrás da nuca continua instantâneo; não há animação de escalar no personagem.
+
+### Testes
+
+O teste `scripts/verify_neck_pose.py` verifica nomes de ossos e invariantes da transição. Build e dependência aninhada passam por CI. O visual em Android e Windows permanece teste manual, e não deve ser considerado aprovado só por compilar.
