@@ -36,7 +36,9 @@ import net.minecraft.world.phys.Vec3;
  * an owner who is constantly moving.
  */
 public final class AurenIafDragonFlightManager {
-    private static final int WAYPOINT_REEVALUATE_TICKS = 25;
+    // CE reselects on arrival or obstruction; we additionally refresh if
+    // the owner travels away. A relaxed cadence keeps smooth 4° CE turns.
+    private static final int WAYPOINT_REEVALUATE_TICKS = 60;
     private final AurenDragon dragon;
     private Vec3 target;
     private Vec3 lastOwnerPos;
@@ -94,7 +96,7 @@ public final class AurenIafDragonFlightManager {
         }
 
         boolean moved = this.lastOwnerPos == null
-                || this.lastOwnerPos.distanceToSqr(owner.position()) > 9.0D;
+                || this.lastOwnerPos.distanceToSqr(owner.position()) > 64.0D;
         boolean reached = this.target == null
                 || dragon.position().distanceToSqr(this.target) < 4.0D;
         boolean obstructed = this.target != null && isTargetBlocked(this.target);
@@ -131,8 +133,11 @@ public final class AurenIafDragonFlightManager {
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, escortPos);
         int distFromGround = escortPos.getY() - ground.getY();
         int wanderDistance = dragon.isSmallForm() ? 7 : 15;
-        int baseHeight = dragon.isSmallForm() ? 3 : 8;
-        int heightRange = dragon.isSmallForm() ? 4 : 8;
+        // The vanilla CE's adult escort height (8..24 above owner) is taller
+        // than Auren's selected 2/8-block stop radius. Use stage-appropriate
+        // target heights so canContinueToUse() can eventually land.
+        int baseHeight = dragon.isSmallForm() ? 2 : 4;
+        int heightRange = dragon.isSmallForm() ? 2 : 3;
 
         for (int i = 0; i < 10; i++) {
             BlockPos pos = new BlockPos(
