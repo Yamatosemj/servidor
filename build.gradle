@@ -54,6 +54,10 @@ def assets = [
         ['models/tabula/lightningdragon/lightningdragon_ground.tbl', 'b6fb4bf7a465b5cfe48889ce7dafcff0ea9d2576'],
     'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_sitting_shoulder.tbl':
         ['models/tabula/lightningdragon/lightningdragon_sitting_shoulder.tbl', 'bd359b95a57428df293fc1fdcda6775f44674590'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_sitting.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_sitting.tbl', '45cab84a19e5f558f50581c5ec9ea36dde2a64da'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_sleeping.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_sleeping.tbl', '363a94e348621b6dd1cdd78eae7028d5e90a4465'],
     'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_walk1.tbl':
         ['models/tabula/lightningdragon/lightningdragon_walk1.tbl', 'c81e818a8d8f98d391af207d40dcd6da20d2a7e8'],
     'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_walk2.tbl':
