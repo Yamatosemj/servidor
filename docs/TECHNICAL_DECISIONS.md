@@ -63,7 +63,16 @@ A entidade usava um único `FollowOwnerGoal(this, 1.15D, 4.5F, 1.7F)` para ambas
 
 Nova regra:
 - Filhote: preserva `FollowOwnerGoal` anterior, agora ativado **somente se for pequeno e estiver fora do ombro**; parâmetros intactos.
-- Adulto: `AurenAdultFollowOwnerGoal`, que inicia a perseguição apenas acima de 13 blocos e para a 8 blocos, recalculando o caminho a cada 10 ticks. Teleporta apenas quando a distância >=40 blocos, procurando terreno sólido e livre de colisão entre ~8 e 12 blocos do dono. Se não encontrar terreno seguro, permanece no chão e tenta continuar caminhando.
+- Adulto: `AurenAdultFollowOwnerGoal`, que inicia a perseguição apenas acima de 15 blocos e para a 8 blocos, recalculando o caminho a cada 10 ticks. Teleporta apenas quando a distância >=50 blocos, procurando terreno sólido e livre de colisão entre ~8 e 12 blocos do dono. Se não encontrar terreno seguro, permanece no chão e tenta continuar caminhando.
 - Se o jogador mudar de forma no meio da perseguição, as duas metas não podem continuar na forma errada.
 - `shoulder`, poses Tabula, texturas e animações não são tocados.
-- Verificar com teste visual no Zalith: 10, 15, 30 e 45 blocos; terreno plano e com obstáculos. O teste de CI confirma estrutura e constantes do código, não simula IA real do Minecraft.
+- Verificar com teste visual no Zalith: 10, 16, 30 e 55 blocos; terreno plano e com obstáculos. O teste de CI confirma estrutura e constantes do código, não simula IA real do Minecraft.
+
+
+### Follow-up: escala estágio 3, voo e montaria
+
+- CE estágio 3: render size 7–12,5 × 0,35 → cerca de 2,45–4,375 de escala. Nosso Auren usava 5,8.
+- V0.5.1 usa escala adulta **3,25** e colisão 1,05 × 1,3 blocos. Filhote permanece com escala 0,42. Isto é apenas um ajuste das duas formas existentes, não introduz estágio de crescimento.
+- Distância de início de seguimento adulto **15 blocos** e teleporte emergencial apenas a partir de **50 blocos**.
+- O usuário quer filhote e adulto voando para seguir. **Este patch NÃO implementa voo mecânico**; o filhote mantém a meta vanilla provisoriamente (e seu teleporte) até substituí-la por uma IA aérea funcional.
+- O Ice and Fire CE permite montaria desde estágio 3, mas o Auren ainda precisa de programação própria de montaria, posição/controle do passageiro e teste no Android.

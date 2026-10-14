@@ -3,8 +3,10 @@
 ## Correction v0.5.1 — Adult following distance
 
 - **Small form:** keeps its existing vanilla FollowOwnerGoal parameters (speed 1.15, start 4.5 blocks, stop 1.7 blocks). Shoulder mode unchanged.
-- **Adult form:** separate `AurenAdultFollowOwnerGoal`. Starts following when the player exceeds **13 blocks** of separation, stops around **8 blocks**, with comfortable space to view the full dragon.
-- **Emergency teleport:** adult only tries to teleport when the owner is **40+ blocks** away, not around 10–12 blocks. A valid destination must be on solid ground, collision-free and outside the owner's immediate space (roughly 8–12 blocks).
+- **Adult form:** separate `AurenAdultFollowOwnerGoal`. Starts following when the player exceeds **15 blocks** of separation, stops around **8 blocks**, with comfortable space to view the full dragon.
+- **Emergency teleport:** adult only tries to teleport when the owner is **50+ blocks** away, not around 10–12 blocks. A valid destination must be on solid ground, collision-free and outside the owner's immediate space (roughly 8–12 blocks).
+- **Adult visual size lowered from 5.8 to 3.25**, approximately the middle of the original CE stage-3 range (2.45–4.375); adult collision box adjusted to 1.05 × 1.3 blocks.
+- **Flight and riding remain future work**: the dragon is still ground-bound. The requested flying follow behavior for both forms will replace terrestrial chasing and the baby's vanilla teleport in a separate, tested update.
 - No change to original CE model/animations or the neck pose; the incorrect neck pose remains a known separate task.
 - Check adult and baby behavior in game; compile checks cannot confirm visual/pathfinding behavior.
 
@@ -21,7 +23,7 @@ the **original IceAndFire Community Edition Tabula assets** for the Lightning Dr
 - `ground` remains the default pose while standing.
 - **Shoulder/neck pose is preserved**, including the v0.4's 20-tick transition
   and the custom living-scarf adjustment approved by the player.
-- Baby scale remains **0.42**, adult scale remains **5.8**.
+- Baby scale remains **0.42**, adult scale changed to **3.25** (similar to the original CE stage 3).
 
 Source: [IAFEnvoy / IceAndFire-CE, 1.21.1](https://github.com/IAFEnvoy/IceAndFire-CE/tree/1.21.1).
 The assets are downloaded from an immutable commit and their Git blob hashes

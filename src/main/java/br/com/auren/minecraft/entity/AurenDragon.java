@@ -114,7 +114,7 @@ public final class AurenDragon extends TamableAnimal {
     protected EntityDimensions getDefaultDimensions(Pose pose) {
         return isSmallForm()
                 ? EntityDimensions.scalable(0.5F, 0.7F)
-                : EntityDimensions.scalable(1.65F, 2.0F);
+                : EntityDimensions.scalable(1.05F, 1.3F);
     }
 
     @Override

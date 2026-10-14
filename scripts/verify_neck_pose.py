@@ -50,9 +50,9 @@ def verify():
     assert "shoulderBlend > 0.0F && dragon.isSmallForm()" in renderer
     assert "entity.isSmallForm() && blend > 0.0F" in renderer
     assert "Axis.YP.rotationDegrees(90.0F * blend)" in renderer
-    assert "float factor = entity.isSmallForm() ? 0.42F : 5.8F;" in renderer
+    assert "float factor = entity.isSmallForm() ? 0.42F : 3.25F;" in renderer
     assert "double backward = 0.18D;" in entity
-    assert "mod_version=0.5.0-alpha" in version
+    assert "mod_version=0.5.1-alpha" in version
     assert "SHOULDER_ANIMATION_TICKS = 20.0F" in entity
     assert "getShoulderBlend(float partialTick)" in entity
     transition_source = (ROOT / "src/main/java/br/com/auren/minecraft/client/AurenPoseTransition.java").read_text(encoding="utf-8")

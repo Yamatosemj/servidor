@@ -19,9 +19,9 @@ def verify():
     assert "return AurenDragon.this.isSmallForm()" in entity, "baby gating missing"
     assert "&& !AurenDragon.this.isOnShoulder()" in entity, "shoulder gating missing"
     assert "new AurenAdultFollowOwnerGoal(this)" in entity, "adult goal not registered"
-    assert "START_DISTANCE = 13.0D" in adult
+    assert "START_DISTANCE = 15.0D" in adult
     assert "STOP_DISTANCE = 8.0D" in adult
-    assert "EMERGENCY_TELEPORT_DISTANCE = 40.0D" in adult
+    assert "EMERGENCY_TELEPORT_DISTANCE = 50.0D" in adult
     assert ">= EMERGENCY_TELEPORT_DISTANCE * EMERGENCY_TELEPORT_DISTANCE" in adult
     assert "!this.dragon.isSmallForm()" in adult
     assert "!this.dragon.isOnShoulder()" in adult
@@ -31,7 +31,7 @@ def verify():
                    "level.getFluidState(candidate).isEmpty()"):
         assert safety in adult, f"missing teleport safety: {safety}"
     assert "mod_version=0.5.1-alpha" in props
-    print("PASS: baby follows at 4.5/1.7; adult at 13/8; teleports only at 40+ with safe landing")
+    print("PASS: baby follows at 4.5/1.7; adult at 15/8; teleports only at 50+ with safe landing")
 
 
 if __name__ == "__main__":

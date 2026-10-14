@@ -14,16 +14,16 @@ import java.util.EnumSet;
  * Adult-only follow behavior. Never uses vanilla FollowOwnerGoal, which
  * hard-codes teleportation at a distance unsuitable for Auren's huge form.
  *
- * Movement: start following at >13 blocks, stop at <=8 blocks.
- * Emergency teleport: only beyond 40 blocks, and only to a safe destination
+ * Movement: start following at >15 blocks, stop at <=8 blocks.
+ * Emergency teleport: only beyond 50 blocks, and only to a safe destination
  * approximately 8..12 blocks away. If no safe point exists, do not teleport.
  *
  * The baby retains the existing vanilla follow goal and shoulder mechanics.
  */
 public final class AurenAdultFollowOwnerGoal extends Goal {
-    static final double START_DISTANCE = 13.0D;
+    static final double START_DISTANCE = 15.0D;
     static final double STOP_DISTANCE = 8.0D;
-    static final double EMERGENCY_TELEPORT_DISTANCE = 40.0D;
+    static final double EMERGENCY_TELEPORT_DISTANCE = 50.0D;
 
     private static final double WALK_SPEED = 1.05D;
     private static final int REPATH_INTERVAL_TICKS = 10;
