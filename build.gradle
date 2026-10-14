@@ -1,0 +1,98 @@
+import java.security.MessageDigest
+import java.nio.charset.StandardCharsets
+import java.util.HexFormat
+
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+version = mod_version
+group = mod_group_id
+base { archivesName = mod_id }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+repositories {
+    maven { url = 'https://cursemaven.com' }
+}
+
+neoForge {
+    version = project.neo_version
+    parchment {
+        mappingsVersion = project.parchment_mappings_version
+        minecraftVersion = project.parchment_minecraft_version
+    }
+    runs {
+        client { client() }
+        server { server(); programArgument '--nogui' }
+    }
+    mods {
+        aurenminecraft { sourceSet(sourceSets.main) }
+    }
+}
+
+dependencies {
+    // Tabula loader / animations only. IceAndFire-CE itself is NOT a dependency.
+    implementation 'curse.maven:uranus-1010827:8682870'
+}
+
+// Git SHA-1 of the upstream CE branch, plus each original Git blob ID.
+// The jar contains exactly the chosen model/texture files; no other CE content.
+def upstreamCommit = 'aa2f11a6b79acb48a1094765d610cdaca79e3d18'
+def upstreamRoot = 'src/main/resources/assets/iceandfire/'
+def assets = [
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_ground.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_ground.tbl', 'b6fb4bf7a465b5cfe48889ce7dafcff0ea9d2576'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_sitting_shoulder.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_sitting_shoulder.tbl', 'bd359b95a57428df293fc1fdcda6775f44674590'],
+    'assets/aurenminecraft/textures/entity/auren_black_1.png':
+        ['textures/entity/lightningdragon/black_1.png', '775f7acc54bfbd51ed49e742459993982d786898'],
+    'assets/aurenminecraft/textures/entity/auren_black_5.png':
+        ['textures/entity/lightningdragon/black_5.png', 'c519247eeaec1a902ed770ba6cf733edf97b168a']
+]
+def assetOutput = layout.buildDirectory.dir('generated/aurenDragonAssets')
+def fetchDragonAssets = tasks.register('fetchDragonAssets') {
+    outputs.dir(assetOutput)
+    inputs.property('upstreamCommit', upstreamCommit)
+    inputs.property('assetIds', assets.toString())
+    doLast {
+        def root = assetOutput.get().asFile
+        assets.each { destination, source ->
+            def output = new File(root, destination)
+            def origin = 'https://raw.githubusercontent.com/IAFEnvoy/IceAndFire-CE/' +
+                upstreamCommit + '/' + upstreamRoot + source[0]
+            def bytes = new URL(origin).openStream().withCloseable { stream -> stream.bytes }
+            def hash = MessageDigest.getInstance('SHA-1')
+            hash.update(('blob ' + bytes.length + '\u0000').getBytes(StandardCharsets.UTF_8))
+            hash.update(bytes)
+            def actual = HexFormat.of().formatHex(hash.digest())
+            if (actual != source[1]) throw new GradleException('Asset SHA mismatch: ' + destination)
+            output.parentFile.mkdirs()
+            output.bytes = bytes
+            logger.lifecycle('Verified CE asset: ' + destination)
+        }
+    }
+}
+
+sourceSets.main.resources.srcDir(assetOutput)
+tasks.named('processResources') { dependsOn(fetchDragonAssets) }
+
+def generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    def replacements = [
+        mod_id: mod_id, mod_name: mod_name, mod_license: mod_license,
+        mod_version: mod_version, minecraft_version_range: minecraft_version_range,
+        neo_version: neo_version, loader_version_range: loader_version_range
+    ]
+    inputs.properties(replacements)
+    expand(replacements)
+    from 'src/main/templates'
+    into layout.buildDirectory.dir('generated/modMetadata')
+}
+sourceSets.main.resources.srcDir(generateModMetadata)
+neoForge.ideSyncTask(generateModMetadata)
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
