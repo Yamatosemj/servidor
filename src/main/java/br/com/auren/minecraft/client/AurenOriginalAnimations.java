@@ -85,7 +85,8 @@ public final class AurenOriginalAnimations {
                     AurenPoseTransition.apply(model, this.flying, flightBlend * 0.45F);
                     // Six ORIGINAL lightning-dragon CE flight frames, blended
                     // continuously (never fabricated per-joint wing flapping).
-                    blendCycle(model, this.flight, age * 0.16F, flightBlend);
+                    // CE increments flightCycle by 2/tick and uses 10 ticks/pose.
+                    blendCycle(model, this.flight, age * 0.2F, flightBlend);
                 }
             } else {
                 // Original CE hovering pose for takeoff and slow landing.
