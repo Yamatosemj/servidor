@@ -1,0 +1,101 @@
+{
+  "version": "0.5.7-alpha",
+  "baseline": "f896e841b7b0f88313cffc927bf15bb2a2020433",
+  "upstreamPose": "lightningdragon_sitting_shoulder",
+  "description": "Pose experimental validada em pre-visualizacao geometrica; requer teste visual Zalith. O alvo e uma postura estatica proprio do Auren, NAO uma animacao original CE.",
+  "anchor": {
+    "lateral": -0.13,
+    "backward": 0.31,
+    "heightFactor": 0.572
+  },
+  "babyModelScale": 0.42,
+  "adultModelScale": 3.25,
+  "subtreeScales": {
+    "armL1": 0.42,
+    "armR1": 0.42,
+    "Tail1": 0.72
+  },
+  "anglesDegrees": {
+    "BodyUpper": [
+      -21.78,
+      0,
+      0
+    ],
+    "BodyLower": [
+      -0.22,
+      0,
+      0
+    ],
+    "Neck1": [
+      -5.22,
+      38.83,
+      0
+    ],
+    "Neck2": [
+      -6.32,
+      6.02,
+      0
+    ],
+    "Neck3": [
+      -12.45,
+      4.75,
+      0
+    ],
+    "Head": [
+      47.89,
+      -11.57,
+      0
+    ],
+    "Tail1": [
+      29.77,
+      3.48,
+      0
+    ],
+    "Tail2": [
+      3.99,
+      86.3,
+      0
+    ],
+    "Tail3": [
+      -18.47,
+      41.31,
+      0
+    ],
+    "Tail4": [
+      -15.54,
+      -11.08,
+      0
+    ],
+    "Tail5": [
+      10.43,
+      12,
+      0
+    ],
+    "ThighL": [
+      -26,
+      0,
+      0
+    ],
+    "ThighR": [
+      -26,
+      0,
+      0
+    ],
+    "LegL": [
+      0,
+      0,
+      0
+    ],
+    "LegR": [
+      0,
+      0,
+      0
+    ]
+  },
+  "previewAssumptions": {
+    "playerHeight": 1.8,
+    "modelScale": 0.42,
+    "modelOrientation": "Minecraft facing +Z at yaw 0; living renderer rotates by 180 degrees then flips model X and Y; Y pivot uses 1.501-block offset.",
+    "limitations": "SVG/PNG nao e renderizacao de jogo nem simula skin UV, luz, movimentos do avatar ou idle; validacao Zalith e obrigatoria."
+  }
+}

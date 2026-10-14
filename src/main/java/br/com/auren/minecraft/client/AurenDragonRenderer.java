@@ -17,23 +17,17 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
     private static final ResourceLocation BABY_TEXTURE =
             ResourceLocation.fromNamespaceAndPath(AurenMinecraft.MOD_ID, "textures/entity/auren_black_1.png");
 
-    // Awake original CE pose for neck/head, folded CE sleeping WING JOINTS
-    // only. The sleeping dragon's torso/head pose is deliberately NOT used.
+    // Original awake CE shoulder pose is the reference for a single,
+    // documented, authored Auren-specific STATIC posture.
     private static final ResourceLocation SHOULDER_AWAKE_POSE =
             ResourceLocation.fromNamespaceAndPath(AurenMinecraft.MOD_ID,
                     "lightningdragon/lightningdragon_sitting_shoulder");
-    private static final ResourceLocation FOLDED_WINGS_POSE =
-            ResourceLocation.fromNamespaceAndPath(AurenMinecraft.MOD_ID,
-                    "lightningdragon/lightningdragon_sleeping");
-
     private final TabulaModel<AurenDragon> groundModel;
 
     public AurenDragonRenderer(EntityRendererProvider.Context context) {
         super(context, load("lightningdragon/lightningdragon_ground"), 1.5F);
         this.groundModel = this.model;
-        // Cache two immutable source poses; no invented wing animation.
-        TabulaModelHandlerHelper.getModel(SHOULDER_AWAKE_POSE);
-        TabulaModelHandlerHelper.getModel(FOLDED_WINGS_POSE);
+        // CE shoulder base; the authored posture is in AurenNeckPose.
     }
 
     private static TabulaModel<AurenDragon> load(String modelName) {
@@ -48,13 +42,15 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
     }
 
     /**
-     * Awake CE shoulder pose + original CE sleeping wing joints + corrected
-     * neck/tail wrap + CE idle. Does not affect the adult or normal walking.
+     * Original awake shoulder base + ONE authored static target + CE idle.
+     * Uses the same CE skeleton and does not affect walking/adult animations.
      */
     private static void animate(TabulaModel<AurenDragon> model, AurenDragon dragon,
                                 float limbSwing, float limbSwingAmount,
                                 float age, float yaw, float pitch, float scale) {
         model.resetToDefaultPose();
+        // Uranus does NOT reset per-bone scale or scaleChildren itself.
+        AurenNeckPose.resetTransientScale(model);
         float partialTick = Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false);
         float shoulderBlend = dragon.getShoulderBlend(partialTick);
 
@@ -64,15 +60,9 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
                     TabulaModelHandlerHelper.getModel(SHOULDER_AWAKE_POSE);
             AurenPoseTransition.apply(model, awake, shoulderBlend);
 
-            // Restores the old living-scarf neck/tail concept, but NEVER
-            // rotates the entire model 90 degrees (old sideways bug).
-            AurenNeckPose.apply(model, shoulderBlend);
-
-            // ONLY the wing joints inherit the original folded CE rest pose.
-            TabulaModel<AurenDragon> folded =
-                    TabulaModelHandlerHelper.getModel(FOLDED_WINGS_POSE);
-            AurenPoseTransition.applyBones(model, folded, shoulderBlend,
-                    "armL1", "armL2", "armR1", "armR2");
+            // Authored shoulder posture; folds the extremely broad wings
+            // as a small cosmetic profile. The original CE provides idle.
+            AurenNeckPose.apply(model, awake, shoulderBlend);
 
             // Keep original CE continuous idle: neck/tail/breathing.
             AurenOriginalShoulderIdle.apply(model, age, shoulderBlend);
@@ -95,8 +85,7 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
 
     @Override
     protected void scale(AurenDragon entity, PoseStack pose, float partialTick) {
-        // Model yaw follows player's torso. Do NOT rotate the whole dragon
-        // 90 degrees like v0.4: curl only its neck and tail bones.
+        // Model yaw follows player's torso, no whole-model sideways flip.
         // Keep the original baby size; adult now approximates a CE stage-3 dragon.
         float factor = entity.isSmallForm() ? 0.42F : 3.25F;
         pose.scale(factor, factor, factor);

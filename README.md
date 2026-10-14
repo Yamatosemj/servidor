@@ -1,4 +1,28 @@
-# Auren Minecraft — v0.5.6-alpha (Minecraft 1.21.1 / NeoForge)
+# Auren Minecraft — v0.5.7-alpha (Minecraft 1.21.1 / NeoForge)
+
+## v0.5.7 — shoulder pose rebuilt with geometric preview
+
+- A **single authored static target** replaces the previous combination of
+  upright CE shoulder + sleeping wing keyframes + arbitrary neck angles.
+  The target angles were constrained from 3D player-relative landmarks and
+  inspected in front/back/side/top projection, not guessed from one screenshot.
+- Wakeful head at the side of the player's face; body lower behind the nape;
+  tail curled across the back. Keeps the original CE *idle motion*.
+- Uses **display-only cosmetic scale 0.42 for wing subtrees** and 0.72 for the
+  long tail subtree when resting on the neck. This simulates a compact
+  folded appearance without inventing a new flap animation or modifying
+  the original CE model. Explicit `scaleChildren=true` makes Uranus scale
+  membranes and fingers, not just one bone; the scale is restored to 1.0
+  **on every frame** when no longer resting on the shoulder.
+- Calibrated shoulder anchor: -0.13 lateral, 0.31 behind player,
+  0.572 times current player height. Body yaw stays matched to player's torso.
+- Original ground/walk/flight animations and adult size **unchanged**;
+  adult 15-block follow, 50-block emergency teleport and bounded chunk
+  ticket are unmodified.
+- Source of truth for the pose: `docs/AUREN_SHOULDER_POSE_V057.json`;
+  verification checks every authored target against the Java constants.
+- The SVG/PNG pose proxy is NOT Minecraft's render pipeline. **Must test
+  in Zalith** for clipping, eye-height, wings and the correct shoulder side.
 
 ## v0.5.6 — awake, folded-wing neck wrap from user illustration
 

@@ -182,3 +182,31 @@ e o blend de 20 ticks continua.
 Não foram alterados o Auren adulto, escalas, IA, voo, andar, teleporte
 de emergência a 50 blocos nem tickets de chunk. Teste visual de frente
 e costas no Zalith é obrigatório antes de aprovar aparência.
+
+
+## V0.5.7 — postura estática única com prévia do personagem (14/10/2026)
+
+Após a auditoria v0.5.6, uma prévia geométrica de cubos e hierarquia mostrou
+na mesma escala o jogador e o dragão de quatro lados. A pose foi ajustada por
+alvos físicos (cabeça ao lado do rosto, corpo atrás da nuca, cauda no ombro
+oposto). Conjunto de ângulos e posição: `docs/AUREN_SHOULDER_POSE_V057.json`.
+
+Substitui a combinação de poses incompatíveis da v0.5.6 por **um único alvo
+estático** interpolado contra a pose original CE `sitting_shoulder`. As
+animações contínuas de repouso CE continuam. Para reduzir a aparência de asas
+abertas, a subárvore de cada asa fica em escala cosmética 0.42 no ombro;
+a longa cauda fica em 0.72. Isto **não é a dobra anatômica real** das
+membranas, mas uma aproximação visual com as articulações existentes; não
+afirmar que é animação CE original. O método `setShouldScaleChildren(true)`
+é indispensável para abranger dedos/membranas. Como `resetToDefaultPose()`
+da Uranus não limpa as escalas, o renderizador restaura escala=1 e
+`scaleChildren=false` a cada frame antes de aplicar o modo ombro.
+
+Ponto de atenção: o sinal do eixo Y muda ao passar do Tabula ao renderizador
+de entidades vivas (yaw 180° mais inversão de X). A prévia usa o mesmo
+sentido de eixos previsto para yaw de jogador zero. Confirmar no Zalith;
+a imagem renderizada externamente não equivale ao motor Minecraft.
+
+Esta atualização **não altera** a IA, teleportes, chunk tickets,
+comandos ou ritual. Se o visual não ficar aprovado, fazer correção
+guiada pelos quatro ângulos de câmera da prévia e pelo screenshot do jogador.

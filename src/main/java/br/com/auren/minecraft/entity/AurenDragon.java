@@ -204,15 +204,15 @@ public final class AurenDragon extends TamableAnimal {
                 this.setOnShoulder(false);
                 return;
             }
-            // Back-of-neck anchor restored from v0.4. The previous
-            // location was comfortable; the sideways 90-degree rotation
-            // was the problem, not the distance from the player.
+            // Shoulder anchor calibrated against the Minecraft-sized
+            // player proxy; only shoulder rendering is adjusted in v0.5.7.
+            // Values are mirrored in docs/AUREN_SHOULDER_POSE_V057.json.
             double angle = Math.toRadians(player.yBodyRot);
-            double lateral = 0.075D;
-            double backward = 0.18D;
+            double lateral = -0.13D;
+            double backward = 0.31D;
             double x = player.getX() + Math.cos(angle) * lateral + Math.sin(angle) * backward;
             double z = player.getZ() + Math.sin(angle) * lateral - Math.cos(angle) * backward;
-            double y = player.getY() + player.getBbHeight() * 0.76D;
+            double y = player.getY() + player.getBbHeight() * 0.572D;
             this.getNavigation().stop();
             this.setDeltaMovement(Vec3.ZERO);
             this.noPhysics = true;

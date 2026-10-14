@@ -56,14 +56,14 @@ def check():
         assert f'load("{name}")' in source
     assert "AurenOriginalAnimations.instance().apply" in renderer
     assert "AurenPoseTransition.apply(model, awake, shoulderBlend);" in renderer
-    assert 'lightningdragon/lightningdragon_sleeping' in renderer
-    assert "AurenPoseTransition.applyBones(model, folded, shoulderBlend," in renderer
-    assert "AurenNeckPose.apply(model, shoulderBlend);" in renderer
+    assert "AurenNeckPose.resetTransientScale(model);" in renderer
+    assert "AurenNeckPose.apply(model, awake, shoulderBlend);" in renderer
+    assert "FOLDED_WINGS_POSE" not in renderer
     assert "AurenOriginalShoulderIdle.apply(model, age, shoulderBlend);" in renderer
     assert "pose.mulPose(" not in renderer
-    assert "mod_version=0.5.6-alpha" in version
+    assert "mod_version=0.5.7-alpha" in version
     print(f"PASS: {len(NAMES)} compatible original Lightning Dragon "
-          f"Tabula models are bundled and referenced; original CE folded wings and illustrated awake neck wrap integrated")
+          f"Tabula models are bundled; authored shoulder target uses CE skeleton and idle")
 
 
 if __name__ == "__main__":
