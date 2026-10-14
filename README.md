@@ -1,4 +1,12 @@
-# Auren Minecraft — v0.5.0-alpha (Minecraft 1.21.1 / NeoForge)
+# Auren Minecraft — v0.5.1-alpha (Minecraft 1.21.1 / NeoForge)
+
+## Correction v0.5.1 — Adult following distance
+
+- **Small form:** keeps its existing vanilla FollowOwnerGoal parameters (speed 1.15, start 4.5 blocks, stop 1.7 blocks). Shoulder mode unchanged.
+- **Adult form:** separate `AurenAdultFollowOwnerGoal`. Starts following when the player exceeds **13 blocks** of separation, stops around **8 blocks**, with comfortable space to view the full dragon.
+- **Emergency teleport:** adult only tries to teleport when the owner is **40+ blocks** away, not around 10–12 blocks. A valid destination must be on solid ground, collision-free and outside the owner's immediate space (roughly 8–12 blocks).
+- No change to original CE model/animations or the neck pose; the incorrect neck pose remains a known separate task.
+- Check adult and baby behavior in game; compile checks cannot confirm visual/pathfinding behavior.
 
 ## Original IceAndFire CE lightning-dragon animations
 
@@ -29,7 +37,7 @@ entity states, which are not present in Auren; it is not copied wholesale.
 
 ## Playing and testing
 
-1. Remove earlier Auren JARs from `mods` and install the one for v0.5.
+1. Remove earlier Auren JARs from `mods` and install the one for v0.5.1.
 2. Minecraft Java **1.21.1**, NeoForge **21.1.248+**.
 3. Summon with `/summon aurenminecraft:auren`; empty-hand interact to tame.
 4. Observe the big dragon walking: the feet/body should now use the original

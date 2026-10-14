@@ -55,3 +55,15 @@ Em vez de criar nossas próprias poses de voo e caminhada, importamos os arquivo
 O animador completo original **não funciona sem a lógica específica de `DragonBaseEntity` da CE**. Utilizamos apenas sua técnica de interpolação por nome das articulações nos quadros Tabula. A caminhada vanilla aciona o ciclo de caminhada. Durante salto/queda, o renderizador usa poses aéreas originais como demonstração; **não há voo mecânico real** ainda. A pose personalizada do pescoço e sua transição de 20 ticks foram preservadas.
 
 Ajustes de velocidade dos ciclos requerem teste visual no Zalith. Não afirmar que o voo está implementado só porque existem animações.
+
+
+## V0.5.1 — comportamento de seguimento separado entre filhote/adulto (14/10/2026)
+
+A entidade usava um único `FollowOwnerGoal(this, 1.15D, 4.5F, 1.7F)` para ambas as formas. No adulto isso provocava aproximação excessiva (parava a ~1,7 bloco) e teleporte frequente porque a meta vanilla usa o gatilho interno de distância curta.
+
+Nova regra:
+- Filhote: preserva `FollowOwnerGoal` anterior, agora ativado **somente se for pequeno e estiver fora do ombro**; parâmetros intactos.
+- Adulto: `AurenAdultFollowOwnerGoal`, que inicia a perseguição apenas acima de 13 blocos e para a 8 blocos, recalculando o caminho a cada 10 ticks. Teleporta apenas quando a distância >=40 blocos, procurando terreno sólido e livre de colisão entre ~8 e 12 blocos do dono. Se não encontrar terreno seguro, permanece no chão e tenta continuar caminhando.
+- Se o jogador mudar de forma no meio da perseguição, as duas metas não podem continuar na forma errada.
+- `shoulder`, poses Tabula, texturas e animações não são tocados.
+- Verificar com teste visual no Zalith: 10, 15, 30 e 45 blocos; terreno plano e com obstáculos. O teste de CI confirma estrutura e constantes do código, não simula IA real do Minecraft.
