@@ -66,7 +66,7 @@ def check():
                      "model.bob(model.getCube(\"BodyUpper\")"):
         assert required in motion, f"Original CE flight motion missing: {required}"
     assert "AurenFlightController.FLYING" in source
-    assert "blendCycle(model, this.flight, age * 0.16F, flightBlend)" in source
+    assert "blendCycle(model, this.flight, age * 0.2F, flightBlend)" in source
     assert "dragon.getDeltaMovement().y < -0.18D" in source
     assert "AurenPoseTransition.apply(model, awake, shoulderBlend);" in renderer
     assert 'lightningdragon/lightningdragon_sleeping' in renderer
@@ -74,7 +74,7 @@ def check():
     assert "AurenNeckPose.apply(model, shoulderBlend);" in renderer
     assert "AurenOriginalShoulderIdle.apply(model, age, shoulderBlend);" in renderer
     assert "pose.mulPose(" not in renderer
-    assert "mod_version=0.6.1-alpha" in version
+    assert "mod_version=0.6.2-alpha" in version
     print(f"PASS: {len(NAMES)} compatible original Lightning Dragon "
           f"Tabula models are bundled and referenced; original CE folded wings and illustrated awake neck wrap integrated")
 
