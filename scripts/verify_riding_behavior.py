@@ -34,6 +34,13 @@ for value in (
     assert value in dragon, f"Missing CE mounted control behavior: {value}"
 
 
+# Mounted landing must not call autonomous reset() and erase momentum.
+mounted_logic = dragon.split("private void tickMountedRider(LivingEntity rider)")[1].split(
+    "public void travel(Vec3 pTravelVector)")[0]
+assert "this.setFlightMode(AurenFlightController.GROUNDED)" in mounted_logic
+assert "this.setNoGravity(false)" in mounted_logic
+assert "this.flightController.reset()" not in mounted_logic
+
 # CE LightningDragon 1.21.1 exact movement coefficients and state logic.
 for required in (
     "CE_LIGHTNING_MIN_SPEED = 0.15F",
