@@ -8,6 +8,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 @Mod(AurenMinecraft.MOD_ID)
@@ -26,6 +27,7 @@ public final class AurenMinecraft {
 
     public AurenMinecraft(IEventBus modBus) {
         ENTITIES.register(modBus);
+        NeoForge.EVENT_BUS.addListener(AurenCommands::register);
         modBus.addListener(this::registerAttributes);
     }
 
