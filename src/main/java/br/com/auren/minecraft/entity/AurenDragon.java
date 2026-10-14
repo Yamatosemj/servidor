@@ -394,6 +394,25 @@ public final class AurenDragon extends TamableAnimal {
     }
 
     /**
+     * From CE DragonBaseEntity.move(): mounted vehicle gravity is set on BOTH
+     * simulation sides, and lateral collision damping precedes vanilla move.
+     * Do not change unmounted movement; autonomous v0.6.2 sets its own gravity.
+     */
+    @Override
+    public void move(MoverType type, Vec3 motion) {
+        if (this.isVehicle()) {
+            if (this.isControlledByLocalInstance() && this.horizontalCollision) {
+                this.setDeltaMovement(this.getDeltaMovement().multiply(0.6D, 1.0D, 0.6D));
+            }
+            super.move(type, motion);
+            this.setNoGravity(this.getFlightMode() == AurenFlightController.TAKING_OFF
+                    || this.getFlightMode() == AurenFlightController.FLYING);
+        } else {
+            super.move(type, motion);
+        }
+    }
+
+    /**
      * Adaptation of original CE DragonBaseEntity.switchNavigator(1).
      * AdvancedPathNavigate ships in the existing embedded Uranus dependency.
      * Explicit no-teleport stuck handler: the ONLY teleport is the proven
@@ -469,6 +488,11 @@ public final class AurenDragon extends TamableAnimal {
         if (SHOULDER.equals(key)) {
             this.noPhysics = this.isOnShoulder();
             this.setNoGravity(this.isOnShoulder());
+        }
+        if (FLIGHT_MODE.equals(key) && this.isVehicle()) {
+            // CE is client-driven while mounted; sync noGravity with flight state.
+            this.setNoGravity(this.getFlightMode() == AurenFlightController.TAKING_OFF
+                    || this.getFlightMode() == AurenFlightController.FLYING);
         }
     }
 
