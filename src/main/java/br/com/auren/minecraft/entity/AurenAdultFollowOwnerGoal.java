@@ -11,18 +11,21 @@ import net.minecraft.world.phys.AABB;
 import java.util.EnumSet;
 
 /**
- * Adult-only follow behavior. Never uses vanilla FollowOwnerGoal, which
- * hard-codes teleportation at a distance unsuitable for Auren's huge form.
+ * Auren follow + emergency teleport with a REAL autonomous flight controller.
+ * Original adult teleport search and stop/start boundaries are preserved.
+ * The baby uses the SAME safe flight system, with its old 4.5/1.7 range.
  *
  * Movement: start following at >15 blocks, stop at <=8 blocks.
  * Emergency teleport: only beyond 50 blocks, and only to a safe destination
  * approximately 8..12 blocks away. If no safe point exists, do not teleport.
  *
- * The baby retains the existing vanilla follow goal and shoulder mechanics.
+ * Baby never takes off while on the shoulder; no teleport until 50 blocks.
  */
 public final class AurenAdultFollowOwnerGoal extends Goal {
     static final double START_DISTANCE = 15.0D;
     static final double STOP_DISTANCE = 8.0D;
+    static final double BABY_START_DISTANCE = 4.5D;
+    static final double BABY_STOP_DISTANCE = 1.7D;
     static final double EMERGENCY_TELEPORT_DISTANCE = 50.0D;
 
     private static final double WALK_SPEED = 1.05D;
@@ -31,17 +34,24 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
 
     private final AurenDragon dragon;
     private final PathNavigation navigation;
+    private final boolean baby;
     private LivingEntity owner;
     private int repathCooldown;
 
     public AurenAdultFollowOwnerGoal(AurenDragon dragon) {
+        this(dragon, false);
+    }
+
+    /** Shares the adult's proven safe teleport code with the small form. */
+    public AurenAdultFollowOwnerGoal(AurenDragon dragon, boolean baby) {
         this.dragon = dragon;
+        this.baby = baby;
         this.navigation = dragon.getNavigation();
         this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
 
     private boolean adultMayFollow(LivingEntity player) {
-        return !this.dragon.isSmallForm()
+        return this.dragon.isSmallForm() == this.baby
                 && !this.dragon.isOnShoulder()
                 && this.dragon.isTame()
                 && !this.dragon.isOrderedToSit()
@@ -55,7 +65,8 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
     public boolean canUse() {
         LivingEntity current = this.dragon.getOwner();
         if (!adultMayFollow(current)) return false;
-        if (this.dragon.distanceToSqr(current) <= START_DISTANCE * START_DISTANCE) {
+        double start = this.baby ? BABY_START_DISTANCE : START_DISTANCE;
+        if (this.dragon.distanceToSqr(current) <= start * start) {
             return false;
         }
         this.owner = current;
@@ -64,8 +75,9 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        double stop = this.baby ? BABY_STOP_DISTANCE : STOP_DISTANCE;
         return adultMayFollow(this.owner)
-                && this.dragon.distanceToSqr(this.owner) > STOP_DISTANCE * STOP_DISTANCE;
+                && this.dragon.distanceToSqr(this.owner) > stop * stop;
     }
 
     @Override
@@ -77,6 +89,7 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
     public void stop() {
         this.owner = null;
         this.navigation.stop();
+        this.dragon.getFlightController().land();
     }
 
     @Override
@@ -84,18 +97,22 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
         if (this.owner == null) return;
 
         this.dragon.getLookControl().setLookAt(this.owner, 10.0F, 10.0F);
+        // The controller receives a moving air target EVERY tick. Keeping
+        // the target fresh lets the dragon turn naturally around the owner.
+        if (this.dragon.getFlightController().follow(this.owner)) {
+            this.navigation.stop();
+        } else {
+            // If roofed in or submerged, fall back to safe walking.
+            this.navigation.moveTo(this.owner, WALK_SPEED);
+        }
+
         if (--this.repathCooldown > 0) return;
         this.repathCooldown = REPATH_INTERVAL_TICKS;
-
         double distanceSq = this.dragon.distanceToSqr(this.owner);
         if (distanceSq >= EMERGENCY_TELEPORT_DISTANCE * EMERGENCY_TELEPORT_DISTANCE
                 && this.teleportNearOwner()) {
             return;
         }
-
-        // Do not run straight into the owner's position: navigation will be
-        // stopped by canContinueToUse() once the 8-block limit is reached.
-        this.navigation.moveTo(this.owner, WALK_SPEED);
     }
 
     /**
@@ -135,6 +152,7 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
                         posZ - this.dragon.getZ());
                 if (!level.noCollision(this.dragon, destinationBox)) continue;
 
+                this.dragon.getFlightController().reset();
                 this.dragon.setPos(posX, posY, posZ);
                 this.navigation.stop();
                 return true;
