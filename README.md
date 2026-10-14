@@ -1,45 +1,48 @@
-# Auren Minecraft — protótipo 0.2 (NeoForge 1.21.1)
+# Auren Minecraft — v0.3.0-alpha (NeoForge 1.21.1)
 
-**Um único dragão Auren** com forma adulta e filhote, usando os modelos Tabula de relâmpagos da IceAndFire Community Edition e a biblioteca Uranus incluída no JAR.
+Um único dragão companheiro Auren, com forma adulta, filhote e **pose de pescoço** baseada na ilustração aprovada pelo jogador.
 
-## Status
+## Funcionando no Android / Zalith (já observado)
 
-- **Confirmado pelo jogador no Android/Zalith (v0.1):** jogo inicia, modelo/textura aparecem, Auren anda, pode ser domesticado e alterna entre adulto/filhote.
-- **Problemas da v0.1:** modelo rígido (não havia animação), interação de ombro não funcionou.
-- **Alterações da v0.2:** movimento procedural simples para cabeça, corpo, cauda e patas; ombro por sincronização da posição do Auren ao jogador, sem montaria do Minecraft; feedback na tela e comando alternativo para Android.
-- **Não validado no jogo ainda:** as correções da v0.2 e o posicionamento exato sobre o ombro.
+- Dragão adulto e filhote renderizam com o modelo de raios da IceAndFire Community Edition.
+- Domesticação, acompanhamento e transformação entre duas formas.
+- V0.2: filhote aparece sobre o ombro do jogador (fotos e relato confirmados).
 
-## Instalação
+## Novo em v0.3 — pose de cachecol de dragão
+
+**Objetivo visual:** Auren se enrola em torno do pescoço, com o corpo sobre a nuca, a cabeça apoiada no **ombro esquerdo**, a cauda curvada para o **ombro direito**, as asas dobradas e as patas apoiadas nas costas/ombros.
+
+- Reaproveita o modelo Tabula `lightningdragon_sitting_shoulder` e posiciona os ossos diretamente no renderizador.
+- Ajusta a posição do corpo relativa à rotação do jogador, para não parecer pousado em um único ombro.
+- **Mantém exatamente o tamanho atual da forma filhote (escala 0,42)**, conforme solicitado.
+- Não altera o visual ou a IA do adulto e do filhote andando no chão.
+- Mantém a animação suave de respiração e a cauda mexendo discretamente no pescoço.
+- O tamanho das asas não foi reduzido: são dobradas por articulação.
+
+**Status:** pose implementada e dependente de validação visual em jogo; compilação por si só não prova que cada articulação está perfeita. Ver `docs/NECK_POSE_V03.md` para detalhes e testes.
+
+## Requisitos
 
 - Minecraft Java **1.21.1**
-- NeoForge **21.1.248+** (ramo 1.21.1)
-- Instale **somente o JAR do Auren**. Uranus **3.0-beta.1 está embutido via Jar-in-Jar**. Ice and Fire não é necessário.
-- Substitua o JAR antigo do Auren; não use duas versões ao mesmo tempo.
+- NeoForge **21.1.248+**, na série 1.21.1
+- Apenas o JAR do Auren na pasta `mods`; Uranus 3.0-beta.1 está **incluído via Jar-in-Jar**. Ice and Fire não é necessário.
 
-## Controles para o novo teste
+## Teste rápido
 
-1. Em um mundo com comandos: `/summon aurenminecraft:auren`.
-2. Com mão vazia, interaja uma vez para domesticar.
-3. Agache e interaja para alternar adulto ↔ filhote.
-4. Com filhote e **sem agachar**, interaja para colocá-lo no ombro. Uma mensagem de confirmação deve aparecer.
-5. **Agache** para tirar do ombro; ou interaja outra vez.
-6. **Alternativa fácil no Android:** use `/auren ombro` para alternar a posição no ombro do Auren domesticado mais próximo (até 16 blocos). O comando pode transformar o Auren em filhote automaticamente.
+1. Remova a versão anterior de `mods` e instale apenas o JAR v0.3.
+2. Entre num mundo com comandos e invoque `/summon aurenminecraft:auren`.
+3. Com a mão vazia, interaja para domesticar; agache e interaja para transformá-lo em filhote.
+4. Sem agachar, interaja com o filhote para ativar a pose de pescoço; ou use `/auren ombro`.
+5. Pressione F5 para câmera traseira, caminhe e gire. Confira a cabeça no ombro esquerdo, o corpo atrás da nuca e a cauda atravessando o ombro direito.
+6. Agache ou use `/auren ombro` de novo para tirá-lo do pescoço.
+7. Veja se o adulto e o filhote fora do ombro continuam com os tamanhos e comportamentos anteriores.
 
-Enquanto estiver no ombro, o Auren desativa a navegação/gravidade e acompanha a posição do seu dono. Não é um passageiro vanilla. A posição visual **precisa ser testada no Zalith**.
+**Limitações atuais:** sem montaria, voo, ataques elétricos, animações completas de voo/combate ou IA externa. A pose específica ainda exige inspeção visual no Android.
 
-## O que observar
+## Arquivos principais
 
-- Cabeça e cauda devem apresentar movimentos discretos em repouso.
-- Patas devem se mexer quando o Auren anda; **a animação completa da Community Edition ainda não foi incorporada**.
-- O filhote deve se manter perto do ombro durante caminhadas, agachamento e mudanças de direção; verificar se fica visualmente deslocado.
-- Verificar se há dano, travamento, sumiço ou descontrole de escala depois de salvar e recarregar mundo.
-
-## Arquivos
-
-- `src/main/java/br/com/auren/minecraft/` — entidade, comando de ombro e renderizador.
-- `build.gradle` — Gradle e download verificado de dois modelos e duas texturas; Uranus via Jar-in-Jar.
-- `docs/TECHNICAL_DECISIONS.md` — decisões e limitações.
-- `THIRD_PARTY_ASSETS.md` — créditos e licenças de terceiros.
-- `.github/workflows/build.yml` — build e verificação de JAR.
-
-**Fora do escopo desta versão:** voo, montaria, raios, inteligência artificial, animações complexas de voo e ataques.
+- `src/main/java/br/com/auren/minecraft/client/AurenNeckPose.java` — ângulos dos ossos da pose aprovada.
+- `src/main/java/br/com/auren/minecraft/client/AurenDragonRenderer.java` — seleciona a pose, orientação e escala.
+- `src/main/java/br/com/auren/minecraft/entity/AurenDragon.java` — posição do corpo relativa ao jogador.
+- `docs/NECK_POSE_V03.md` — referência visual e roteiro de teste.
+- `THIRD_PARTY_ASSETS.md` — créditos e licenças.

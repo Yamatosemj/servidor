@@ -22,6 +22,8 @@ jobs:
         run: gradle build --no-daemon --stacktrace
       - name: Verify Auren JAR embeds an intact Uranus mod
         run: python3 scripts/verify_bundle.py
+      - name: Verify Tabula bones for custom neck pose
+        run: python3 scripts/verify_neck_pose.py
       - uses: actions/upload-artifact@v4
         if: success()
         with:
