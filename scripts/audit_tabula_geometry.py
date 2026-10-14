@@ -45,7 +45,8 @@ def load(jar, pose):
                 raise AssertionError(f"Duplicated Tabula bone: {name}")
             result[name] = dict(name=name, parent=parent,
                                 position=list(n["position"]), rotation=list(n["rotation"]),
-                                children=[a["name"] for a in n.get("children", [])])
+                                children=[a["name"] for a in n.get("children", [])],
+                                offset=list(n["offset"]),dimensions=list(n["dimensions"]))
             if parent is None:
                 roots.append(name)
             visit(n.get("children", []), name)
@@ -155,6 +156,7 @@ def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--jar",type=Path,required=True)
     ap.add_argument("--out",type=Path,required=True)
+    ap.add_argument("--shoulder-config",type=Path,default=None)
     args=ap.parse_args()
     args.out.mkdir(parents=True,exist_ok=True)
     with ZipFile(args.jar) as jar:
@@ -206,7 +208,180 @@ def main():
     assert geom["v0.5.6_composed"]["pivot_span_x_blocks_at_042"]>geom["sitting_shoulder"]["pivot_span_x_blocks_at_042"],"Unexpected v0.5.6 pose model: update audit reference if changed"
     print("PASS: four original CE poses, 113 shared bones, parent paths, 0.5.6 composition")
     print("Wing pivot spans:", {k:v["pivot_span_x_blocks_at_042"] for k,v in geom.items()})
+    if args.shoulder_config is not None:
+        preview_with_player(shoulder, current, base_roots, args.shoulder_config, args.out)
     print("Audit reports:", args.out.resolve())
+
+
+# New: player-aligned shoulder preview. Unlike historical pivot-only projection,
+# this plots all Tabula cuboid surfaces (including planar wing membranes), using
+# the MC yaw=0 coordinate transform. Still an APPROXIMATION, not MC renderer.
+def scale4(value):
+    return [[value,0,0,0],[0,value,0,0],[0,0,value,0],[0,0,0,1]]
+
+def point4(matrix, xyz):
+    v = [*xyz, 1.0]
+    return tuple(sum(matrix[i][j] * v[j] for j in range(4)) for i in range(3))
+
+CORNERS=((0,0,0),(0,0,1),(0,1,0),(0,1,1),
+         (1,0,0),(1,0,1),(1,1,0),(1,1,1))
+FACES=((0,1,3,2),(4,5,7,6),(0,1,5,4),
+       (2,3,7,6),(0,2,6,4),(1,3,7,5))
+
+def cuboids_world(bones, roots, scales, anchor):
+    out=[]
+    pivots={}
+    lateral, backwards, vertical=anchor
+    def world(q):
+        # For Minecraft living entity at yaw=0: Y 180 degrees and scale(-1,-1,1).
+        # X model positive goes to world positive; Z model positive to world negative.
+        return (lateral + q[0]*0.42/16,
+                1.8*vertical + 0.42*(1.501-q[1]/16),
+                -backwards - q[2]*0.42/16)
+    def visit(name, parent):
+        bone=bones[name]
+        x,y,z=bone["position"]
+        a,b,c=map(math.radians,bone["rotation"])
+        t=mul(mul(mul(mul(parent,move(x,y,z)),rz(c)),ry(b)),rx(a))
+        pivots[name]=world(transform(t))
+        factor=scales.get(name,1)
+        if factor!=1:
+            t=mul(t,scale4(factor))
+        offset=bone["offset"]
+        dims=bone["dimensions"]
+        box=[]
+        for i,j,k in CORNERS:
+            local=(offset[0]+dims[0]*i,offset[1]+dims[1]*j,
+                   offset[2]+dims[2]*k)
+            box.append(world(point4(t,local)))
+        out.append((name,box))
+        for child in bone["children"]:
+            visit(child,t)
+    I=[[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+    for name in roots:
+        visit(name,I)
+    return out,pivots
+
+def player_boxes():
+    def box(name,lo,hi):
+        return (name, [(lo[0]+(hi[0]-lo[0])*i,
+                        lo[1]+(hi[1]-lo[1])*j,
+                        lo[2]+(hi[2]-lo[2])*k) for i,j,k in CORNERS])
+    return [
+        box("player_hair",(-.255,1.87,-.245),(.255,2.00,.245)),
+        box("player_head",(-.245,1.50,-.235),(.245,1.95,.235)),
+        box("player_body",(-.26,.78,-.165),(.26,1.50,.175)),
+        box("player_arm",(-.40,.82,-.165),(-.26,1.46,.175)),
+        box("player_arm",(.26,.82,-.165),(.40,1.46,.175)),
+        box("player_leg",(-.245,0,-.165),(-.01,.78,.175)),
+        box("player_leg",(.01,0,-.165),(.245,.78,.175))
+    ]
+
+def face_color(name):
+    if name=="player_hair":return "#322a37"
+    if name=="player_head":return "#a4775a"
+    if name in ("player_body","player_arm"):return "#bb4652"
+    if name=="player_leg":return "#c4baa6"
+    if name.startswith(("membrane","finger","arm")):return "#403b56"
+    if name.startswith(("Neck","Head")):return "#4d4a64"
+    if name.startswith("Tail"):return "#333044"
+    if name.startswith(("Thigh","Leg")):return "#423d52"
+    return "#37334a"
+
+def screen(q, view):
+    x,y,z=q
+    if view=="frente":return x,y,-z
+    if view=="costas":return -x,y,z
+    if view=="perfil":return z,y,-x
+    if view=="superior":return x,z,-y
+    raise ValueError(view)
+
+def render_player_preview(rows):
+    # Deterministic painted-surface SVG, world-coordinate aligned across rows.
+    width,height=1580,980
+    cols=(("frente",(-.96,.96),(0,2.25)),
+          ("costas",(-.96,.96),(0,2.25)),
+          ("perfil",(-1.0,1.0),(0,2.25)),
+          ("superior",(-.96,.96),(-1.15,.8)))
+    lines=[f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}">',
+           '<rect width="100%" height="100%" fill="#e8eff8"/>',
+           '<style>text{font-family:DejaVu Sans,Arial,sans-serif;fill:#243042} .title{font-size:20px;font-weight:bold} .tiny{font-size:12px}</style>',
+           '<text x="25" y="29" class="title">Auren: comparação geométrica ao lado do avatar — prévia, NÃO o Minecraft</text>']
+    for row,(name,dragon) in enumerate(rows):
+        allboxes=dragon+player_boxes()
+        for col,(view,xrange,yrange) in enumerate(cols):
+            left=20+col*390
+            top=48+row*452
+            lines.append(f'<rect x="{left}" y="{top}" width="380" height="441" rx="9" fill="#f5f7fb" stroke="#b8c6da"/>')
+            lines.append(f'<text x="{left+12}" y="{top+27}" class="title">{escape(name)} · {view}</text>')
+            polys=[]
+            for bone,vertices in allboxes:
+                color=face_color(bone)
+                for face in FACES:
+                    coords2=[screen(vertices[idx],view) for idx in face]
+                    depth=sum(p[2] for p in coords2)/4
+                    polys.append((depth,[(p[0],p[1]) for p in coords2],color))
+            # Depth is signed DISTANCE (farther = greater); paint far first.
+            polys.sort(key=lambda x:-x[0])
+            xlo,xhi=xrange
+            ylo,yhi=yrange
+            def convert(p):
+                x,y=p
+                # Fixed world bounds are crucial to compare two poses honestly.
+                return (left+10+(x-xlo)/(xhi-xlo)*360,
+                        top+420-(y-ylo)/(yhi-ylo)*378)
+            for _,poly,color in polys:
+                converted=[convert(p) for p in poly]
+                path=" ".join(f"{x:.2f},{y:.2f}" for x,y in converted)
+                lines.append(f'<polygon points="{path}" fill="{color}" stroke="#272537" stroke-width=".25"/>')
+    lines.append('<text x="24" y="971" class="tiny">Cubo/ossos Tabula + avatar simplificado; sem UV, pele, iluminação, idle, animação do player ou validação Zalith.</text>')
+    lines.append('</svg>')
+    return "\n".join(lines)
+
+def preview_with_player(shoulder,baseline,roots,config_path,out):
+    cfg=json.loads(config_path.read_text(encoding="utf-8"))
+    assert cfg["version"]=="0.5.7-alpha"
+    assert cfg["upstreamPose"]=="lightningdragon_sitting_shoulder"
+    posed={n:{**data,"rotation":list(data["rotation"])}
+           for n,data in shoulder.items()}
+    for bone,angles in cfg["anglesDegrees"].items():
+        if bone not in posed:
+            raise AssertionError(f"Unknown pose bone: {bone}")
+        if len(angles)!=3 or not all(math.isfinite(x) for x in angles):
+            raise AssertionError(f"Invalid authored pose: {bone}")
+        posed[bone]["rotation"]=angles
+    for bone in cfg["subtreeScales"]:
+        assert bone in posed
+    anchor=cfg["anchor"]
+    oldboxes,oldpivots=cuboids_world(baseline,roots,{},(.075,.18,.76))
+    newboxes,newpivots=cuboids_world(posed,roots,cfg["subtreeScales"],
+                                    (anchor["lateral"],anchor["backward"],anchor["heightFactor"]))
+    def wing_extent(boxes):
+        xs=[p[0] for name,verts in boxes if name.startswith(
+            ("armL","armR","fingerL","fingerR","membraneL","membraneR","ClawL","ClawR"))
+            for p in verts]
+        return round(max(xs)-min(xs),4)
+    oldspan=wing_extent(oldboxes)
+    newsp=wing_extent(newboxes)
+    assert newsp < oldspan*.70, ("Candidate wings not sufficiently compact",
+                                  newsp,oldspan)
+    assert newpivots["Head"][0] < -.24, "Head did not reach intended left shoulder"
+    metrics={"visual_mode":"cuboids and simplified avatar, not Minecraft",
+             "baseline":"v0.5.6", "candidate":cfg["version"],
+             "wingspan_cuboids_baseline_blocks":oldspan,
+             "wingspan_cuboids_candidate_blocks":newsp,
+             "head_pivot_candidate":list(map(lambda x:round(x,4),newpivots["Head"])),
+             "headfront_pivot_candidate":list(map(lambda x:round(x,4),newpivots["HeadFront"])),
+             "tail5_pivot_candidate":list(map(lambda x:round(x,4),newpivots["Tail5"])),
+             "approximations":["MobRenderer yaw=0, standing player 1.8m, Tabula cuboids",
+                               "No skin texture or MC lighting, no idle/head animation",
+                               "Geometric mesh projection is not in-game acceptance"]}
+    (out/"shoulder_avatar_metrics.json").write_text(
+        json.dumps(metrics,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+    (out/"shoulder_avatar_preview.svg").write_text(
+        render_player_preview([("v0.5.6",oldboxes),("v0.5.7",newboxes)]),
+        encoding="utf-8")
+    print("PASS: authored compact shoulder preview:",oldspan,"→",newsp,"blocks")
 
 if __name__=="__main__":
     main()
