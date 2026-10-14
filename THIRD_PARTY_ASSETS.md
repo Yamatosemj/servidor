@@ -110,3 +110,23 @@ mounted, and adapting CE stage-3 rider position to Auren's render scale.
 All credit and original LGPL terms remain with upstream IceAndFire CE authors.
 The complete upstream animation buffer architecture is not bundled; the
 visual experience still requires validation in Zalith.
+
+
+## v0.6.4 — FireDragon continuous rider breath code port (LGPL-3.0-or-later)
+
+Original implementation reference: IceAndFire CE revision
+`aa2f11a6b79acb48a1094765d610cdaca79e3d18`,
+`FireDragonEntity.riderShootFire`, `DragonBaseEntity.rayTraceRider`,
+`DragonBaseEntity.getHeadPosition`,
+`DragonBaseEntity.performNormalBreathAttack`,
+`IafDragonDestructionManager.destroyAreaBreath` (Fire stage 3).
+These methods are adapted in `AurenFireBreath.java`, respecting CE's
+original warmup, aim, reach, ramp, fire damage and ignition durations.
+
+The implementation uses existing vanilla `ParticleTypes.FLAME`,
+`SoundEvents.BLAZE_SHOOT` and `Blocks.FIRE`: the upstream custom DragonFlame
+particle shader, FIREDRAGON_BREATH audio, FireDragonCharge projectile,
+Dragon Forge and charred-terrain registries are intentionally *not* included,
+nor represented as source-identical. Other changes are documented in
+`docs/TECHNICAL_DECISIONS.md`. No upstream binary/asset beyond the
+already-attributed Tabula models is bundled in this revision.
