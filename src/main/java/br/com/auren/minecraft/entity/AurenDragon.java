@@ -22,6 +22,10 @@ import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.ai.control.MoveControl;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import com.iafenvoy.uranus.object.entity.pathfinding.raycoms.AdvancedPathNavigate;
+import com.iafenvoy.uranus.object.entity.pathfinding.raycoms.PathingStuckHandler;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -52,6 +56,12 @@ public final class AurenDragon extends TamableAnimal {
     private float previousFlightProgress;
     private float flightProgress;
     private final AurenFlightController flightController = new AurenFlightController(this);
+
+    // CE's DragonBaseEntity.switchNavigator(0/1) changes BOTH the path
+    // navigator and the MoveControl. Keep the original instances to restore
+    // ground walking after landing or emergency teleport.
+    private PathNavigation savedGroundNavigation;
+    private MoveControl savedGroundMoveControl;
 
     // A bounded temporary region ticket keeps a tamed ADULT ticking while
     // its online owner moves beyond the simulation distance.
@@ -96,6 +106,36 @@ public final class AurenDragon extends TamableAnimal {
 
     public AurenFlightController getFlightController() {
         return this.flightController;
+    }
+
+    /**
+     * Adaptation of original CE DragonBaseEntity.switchNavigator(1).
+     * AdvancedPathNavigate ships in the existing embedded Uranus dependency.
+     * Explicit no-teleport stuck handler: the ONLY teleport is the proven
+     * 50-block emergency fallback in AurenAdultFollowOwnerGoal.
+     */
+    public void useIceAndFireFlightNavigation(MoveControl flightMoveControl) {
+        if (this.savedGroundNavigation != null) return;
+        this.savedGroundNavigation = this.navigation;
+        this.savedGroundMoveControl = this.moveControl;
+        this.navigation.stop();
+        this.navigation = new AdvancedPathNavigate(this, this.level(),
+                AdvancedPathNavigate.MovementType.FLYING,
+                Math.max(0.5F, this.getBbWidth()),
+                Math.max(0.7F, this.getBbHeight()),
+                PathingStuckHandler.createStuckHandler());
+        this.navigation.setCanFloat(true);
+        this.moveControl = flightMoveControl;
+    }
+
+    /** Adaptation of original CE DragonBaseEntity.switchNavigator(0). */
+    public void useOriginalGroundNavigation() {
+        if (this.savedGroundNavigation == null) return;
+        this.navigation.stop();
+        this.navigation = this.savedGroundNavigation;
+        this.moveControl = this.savedGroundMoveControl;
+        this.savedGroundNavigation = null;
+        this.savedGroundMoveControl = null;
     }
 
     public float getFlightBlend(float partialTick) {
