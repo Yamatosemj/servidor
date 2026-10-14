@@ -1,6 +1,7 @@
 package br.com.auren.minecraft.entity;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -57,7 +58,7 @@ public final class AurenDragon extends TamableAnimal {
     }
 
     @Override
-    public EntityDimensions getDimensions(Pose pose) {
+    protected EntityDimensions getDefaultDimensions(Pose pose) {
         return isSmallForm()
                 ? EntityDimensions.scalable(0.5F, 0.7F)
                 : EntityDimensions.scalable(1.65F, 2.0F);
@@ -112,15 +113,20 @@ public final class AurenDragon extends TamableAnimal {
     }
 
     @Override
-    protected void addAdditionalSaveData(CompoundTag tag) {
+    public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putBoolean("SmallForm", this.isSmallForm());
     }
 
     @Override
-    protected void readAdditionalSaveData(CompoundTag tag) {
+    public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         this.setSmallForm(tag.getBoolean("SmallForm"));
+    }
+
+    @Override
+    public boolean isFood(ItemStack stack) {
+        return false; // Auren has no breeding item.
     }
 
     @Nullable
