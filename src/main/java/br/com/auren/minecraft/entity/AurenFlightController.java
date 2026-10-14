@@ -2,6 +2,7 @@ package br.com.auren.minecraft.entity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
@@ -162,6 +163,8 @@ public final class AurenFlightController {
         Vec3 goal = this.iafFlightManager.getFlightTarget();
 
         if (goal == null) {
+            // No waypoint: bleed leftover momentum rather than drifting away.
+            dragon.setDeltaMovement(dragon.getDeltaMovement().scale(0.85D));
             if (++this.obstructionTicks > MAX_OBSTRUCTION_TICKS) land();
             return;
         }
@@ -170,6 +173,16 @@ public final class AurenFlightController {
             land();
             return;
         }
+
+        // CE's original upward impulse presumes normal dragon gravity.
+        // Auren disables gravity during flight, so stabilize only vertical
+        // movement while leaving the CE horizontal steering and turns intact.
+        Vec3 motion = dragon.getDeltaMovement();
+        double desiredVerticalSpeed = Mth.clamp(
+                (goal.y - dragon.getY()) * 0.10D, -0.16D, 0.18D);
+        double stabilizedY = Mth.lerp(0.22D, motion.y, desiredVerticalSpeed);
+        dragon.setDeltaMovement(motion.x,
+                Mth.clamp(stabilizedY, -0.20D, 0.22D), motion.z);
 
         // Safety retained from our previous working prototype: the original
         // flight mover already handles horizontalCollision by retargeting.
