@@ -15,6 +15,7 @@ mod = (JAVA / "AurenMinecraft.java").read_text(encoding="utf-8")
 packet = (JAVA / "network/AurenDragonControlPayload.java").read_text(encoding="utf-8")
 network = (JAVA / "network/AurenRiderNetwork.java").read_text(encoding="utf-8")
 version = (ROOT / "gradle.properties").read_text(encoding="utf-8")
+renderer = (JAVA / "client/AurenDragonRenderer.java").read_text(encoding="utf-8")
 
 for value in (
     "getControllingPassenger()", "this.isOwnedBy(player)",
@@ -73,6 +74,9 @@ assert "this.riderAirTicks >= 12" not in dragon
 assert "0.94D" not in dragon
 assert "getDeltaMovement().scale(0.9D)" not in dragon
 
+assert "this.previousDragonPitch = this.dragonPitch" in dragon
+assert "getRiderVisualPitch(float partialTick)" in dragon
+assert "pose.mulPose(Axis.XP.rotationDegrees(entity.getRiderVisualPitch(partialTick)))" in renderer
 assert "&& !this.dragon.isVehicle()" in follow
 assert "dragon.getControllingPassenger() != null" in flight
 assert "modBus.addListener(AurenRiderNetwork::registerPayloads)" in mod
