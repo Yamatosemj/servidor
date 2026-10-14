@@ -87,3 +87,29 @@ Solução focada: `AurenAdultChunkLoader` usa uma `TicketType<UUID>` temporária
 **Limitação importante:** se o chunk do Auren já tinha sido descarregado **antes** da instalação desta versão, o servidor não sabe onde reativar sua entidade. O usuário deve aproximar-se da localização antiga uma vez para que o ticket seja ativado. Persistir índice global e recuperar entidade fria após reinício não está no escopo desta atualização.
 
 Validação: build/compilação e teste estrutural de emissão/renovação/remoção. **Teste efetivo de unload + teleporte exigirá Zalith**. Se falhar por ausência de pouso seguro, melhorar a busca sem permitir teleporte para dentro de blocos.
+
+
+## V0.5.3 — correção do filhote torto no ombro com pose CE original
+
+Usuário confirmou que as animações originais de caminhada/voo estão aceitáveis,
+mas o filhote fica extremamente torto sobre o pescoço.
+
+**Causa identificada:** v0.4–0.5.2 carregava `lightningdragon_sitting_shoulder.tbl`,
+mas adicionava `AurenNeckPose` (várias torções manuais em pescoço/asa/cauda),
+e girava o dragão inteiro **90 graus**. Também faltava o deslocamento especial
+`BodyUpper.offsetZ → -12` aplicado pelo `DragonTabulaModelAnimator` da CE
+quando `ridingProgress > 0`.
+
+**Correção:** retiramos torções manuais e rotação global, mantemos interpolação
+dos ossos para a pose original CE por 20 ticks, aplicamos offset do torso com
+mesmo `shoulderBlend`, movemos o anchor para o primeiro ombro esquerdo
+(original CE +0,5 lateral, altura +1,4 e +0,04 de recuo) e travamos a
+orientação à rotação do torso do dono, não à rotação da câmera.
+
+**Escopo:** nenhuma alteração no filhote que segue caminhando, no adulto, nos
+tickets de chunk, nas poses CE de caminhada/voo e na escala 0,42/3,25.
+
+**Limitação:** a pose oficial CE foi projetada para **empoleirar no ombro**,
+não para dar a volta no pescoço como cachecol. Não prometer esse resultado
+sem testar o posicionamento no Zalith; se ele ficar alinhado mas ainda
+parecer empoleirado, é uma decisão visual separada.

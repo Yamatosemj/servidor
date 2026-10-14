@@ -1,4 +1,22 @@
-# Auren Minecraft — v0.5.2-alpha (Minecraft 1.21.1 / NeoForge)
+# Auren Minecraft — v0.5.3-alpha (Minecraft 1.21.1 / NeoForge)
+
+## v0.5.3 — original CE shoulder pose (fix for twisted baby on neck)
+
+- Remove the extra hand-authored `AurenNeckPose` bone rotations and the
+  **90-degree root rotation** that were twisting the baby while mounted.
+- Use the original CE `lightningdragon_sitting_shoulder.tbl` for the 20-tick
+  transition and reproduce CE's special `BodyUpper.offsetZ → -12` rider
+  correction (previously missing).
+- Attach at the original first shoulder passenger position: approximately
+  **0.5 blocks to the left** of the player's center and **1.4 blocks high**,
+  oriented using player's body yaw, not head/camera direction. Small backward
+  correction: 0.04 blocks.
+- Keep the small model scale at 0.42 and adult scale at 3.25; adult following,
+  temporary chunk ticket, and original walk/flight keyframes unchanged.
+- **Important visual distinction:** CE's original sitting-on-shoulder pose is
+  a perching pose, not the wholly custom around-the-neck living-scarf concept.
+  First correct the objectively twisted attachment, then use the user's Zalith
+  screenshots to decide whether a new model asset is needed later.
 
 ## Correction v0.5.2 — keep the adult's current chunk loaded while following
 
@@ -15,7 +33,7 @@ instead of becoming frozen when simulation distance is low. The small Auren
 and neck mechanic remain unchanged. This still does not implement flight.
 
 **One-time caveat for existing saves:** if the adult's chunk was already
-unloaded *before installing v0.5.2*, you need to approach his last known
+unloaded *before installing v0.5.3*, you need to approach his last known
 location once to load him and start the first ticket. A durable unloaded
 entity index is not part of this focused update.
 
@@ -54,8 +72,8 @@ the **original IceAndFire Community Edition Tabula assets** for the Lightning Dr
 - `flying`, `hovering` and `diving`: official source poses used as appropriate
   during jumps/falls, preparing for a future flight movement system.
 - `ground` remains the default pose while standing.
-- **Shoulder/neck pose is preserved**, including the v0.4's 20-tick transition
-  and the custom living-scarf adjustment approved by the player.
+- **Original CE shoulder pose** is interpolated across 20 ticks without
+  custom 90-degree rotation or hand-authored body twisting.
 - Baby scale remains **0.42**, adult scale changed to **3.25** (similar to the original CE stage 3).
 
 Source: [IAFEnvoy / IceAndFire-CE, 1.21.1](https://github.com/IAFEnvoy/IceAndFire-CE/tree/1.21.1).
@@ -72,7 +90,7 @@ entity states, which are not present in Auren; it is not copied wholesale.
 
 ## Playing and testing
 
-1. Remove earlier Auren JARs from `mods` and install the one for v0.5.2.
+1. Remove earlier Auren JARs from `mods` and install the one for v0.5.3.
 2. Minecraft Java **1.21.1**, NeoForge **21.1.248+**.
 3. Summon with `/summon aurenminecraft:auren`; empty-hand interact to tame.
 4. Observe the big dragon walking: the feet/body should now use the original
