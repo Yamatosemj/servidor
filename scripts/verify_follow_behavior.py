@@ -39,7 +39,7 @@ def verify():
         "ClipContext.Block.COLLIDER",
         "getBlockInViewEscort(LivingEntity owner)",
         "Heightmap.Types.MOTION_BLOCKING_NO_LEAVES",
-        "this.target.y >= dragon.getY()",
+        "// Auren's flight uses noGravity=true",
         "WAYPOINT_REEVALUATE_TICKS = 60",
         "this.lastOwnerPos.distanceToSqr(owner.position()) > 64.0D",
         "int baseHeight = dragon.isSmallForm() ? 2 : 4;",
@@ -77,13 +77,31 @@ def verify():
     ):
         assert expected in entity, f"CE navigation/state sync missing: {expected}"
 
+    # Auren cannot borrow the CE +0.1 Y/tick boost because it has no gravity.
+    assert "dragon.getDeltaMovement().add(0, 0.1D, 0)" not in ce
+    assert "double desiredVerticalSpeed = Mth.clamp(" in flight
+    assert "double stabilizedY = Mth.lerp(" in flight
+    assert "Mth.clamp(stabilizedY, -0.20D, 0.22D)" in flight
+    assert "dragon.setDeltaMovement(dragon.getDeltaMovement().scale(0.85D))" in flight
+
     # Baby/adult distances retained, including the 50+ emergency teleport.
     assert "new AurenAdultFollowOwnerGoal(this, true)" in entity
     assert "new AurenAdultFollowOwnerGoal(this)" in entity
     assert "new FollowOwnerGoal" not in entity
     assert "this.dragon.getNavigation().stop()" in follow
     assert "private final PathNavigation navigation" not in follow
+    # Walk first, and only switch to the CE flight mover after repeated
+    # ground path failure/stalling or after 40 ticks of a long chase.
     for expected in (
+        "GROUND_WALK_BEFORE_FLIGHT_TICKS = 40",
+        "GROUND_STALL_TICKS = 30",
+        "ADULT_LONG_CHASE_DISTANCE = 32.0D",
+        "BABY_LONG_CHASE_DISTANCE = 14.0D",
+        "getNavigation().moveTo(this.owner, WALK_SPEED)",
+        "this.stalledGroundTicks >= GROUND_STALL_TICKS",
+        "this.groundPursuitTicks >= GROUND_WALK_BEFORE_FLIGHT_TICKS",
+        "if (blocked || longPursuit)",
+        "if (flightMode != AurenFlightController.GROUNDED) return;",
         "START_DISTANCE = 15.0D",
         "STOP_DISTANCE = 8.0D",
         "BABY_START_DISTANCE = 4.5D",
@@ -110,8 +128,8 @@ def verify():
     ):
         assert expected in loader, f"Chunk ticket regression: {expected}"
     assert "&& !dragon.isSmallForm()" not in loader
-    assert "mod_version=0.6.1-alpha" in version
-    print("PASS: original CE FlightMoveHelper/escort/path switch; 15/8 adult, 4.5/1.7 baby; safe 50+ teleport; bounded tickets")
+    assert "mod_version=0.6.2-alpha" in version
+    print("PASS: ground-first CE follow; bounded vertical speed; 15/8 adult, 4.5/1.7 baby; safe 50+ teleport; bounded tickets")
 
 if __name__ == "__main__":
     verify()
