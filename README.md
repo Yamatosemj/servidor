@@ -27,6 +27,8 @@ IceAndFire mod itself.
   CE hovering and clears the state at touchdown.
 - **Animation:** a synced integer flight state plus 10-tick blend selects
   the original CE hovering/flying/diving Tabula poses and 6 flight frames.
+  It also ports the original CE continuous in-flight body bob, neck/tail
+  waves, thighs and toes motion; the animation is not stiff keyframes alone.
   Ordinary jump no longer automatically triggers the flying state.
 - Shoulder pose on main remains exactly v0.5.6. **The experimental v0.5.7
   shoulder revision stays isolated on PR #15** and is not included here.

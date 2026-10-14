@@ -91,6 +91,9 @@ public final class AurenOriginalAnimations {
                 // Original CE hovering pose for takeoff and slow landing.
                 AurenPoseTransition.apply(model, this.hovering, flightBlend);
             }
+            // In the original CE the keyframes are only part of the flight
+            // animation: body bob, tail/neck waves, toes and thighs still move.
+            AurenOriginalFlightMotion.apply(model, age, flightBlend);
             return;
         }
 
