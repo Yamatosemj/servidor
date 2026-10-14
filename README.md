@@ -1,48 +1,41 @@
-# Auren Minecraft — v0.3.0-alpha (NeoForge 1.21.1)
+# Auren Minecraft — v0.4.0-alpha (NeoForge 1.21.1)
 
-Um único dragão companheiro Auren, com forma adulta, filhote e **pose de pescoço** baseada na ilustração aprovada pelo jogador.
+**Auren** é um único dragão companheiro com forma adulta e filhote, modelo Tabula do dragão de raios da IceAndFire Community Edition e biblioteca Uranus embutida no JAR.
 
-## Funcionando no Android / Zalith (já observado)
+## Alteração principal — animações de ombro inspiradas na CE
 
-- Dragão adulto e filhote renderizam com o modelo de raios da IceAndFire Community Edition.
-- Domesticação, acompanhamento e transformação entre duas formas.
-- V0.2: filhote aparece sobre o ombro do jogador (fotos e relato confirmados).
+Na Community Edition, a pose `SIT_ON_PLAYER_POSE` não substitui bruscamente o dragão. O animador `DragonTabulaModelAnimator` usa `transitionTo()` para **misturar as rotações e posições das articulações** com `ridingProgress` (0–20 ticks).
 
-## Novo em v0.3 — pose de cachecol de dragão
+Nesta versão do Auren, adaptamos esse princípio sem trazer o mod inteiro:
+- **AurenPoseTransition** interpola cada osso Tabula do modelo normal para a pose original `lightningdragon_sitting_shoulder.tbl`, com rotação pelo caminho mais curto.
+- A criatura tem uma progressão visual de **20 ticks** para entrar ou sair do modo de ombro; apenas o estado de ombro é sincronizado na rede.
+- A pose personalizada **AurenNeckPose** acrescenta gradualmente o pescoço curvado, a cauda ao redor do ombro direito e as asas recolhidas, em cima da pose da CE.
+- A orientação global também faz transição suave; o renderizador não troca mais instantaneamente de modelo.
+- **Mesmo tamanho v0.2/v0.3 do filhote (escala 0,42)**, sem afetar o dragão adulto ou o filhote caminhando.
 
-**Objetivo visual:** Auren se enrola em torno do pescoço, com o corpo sobre a nuca, a cabeça apoiada no **ombro esquerdo**, a cauda curvada para o **ombro direito**, as asas dobradas e as patas apoiadas nas costas/ombros.
+**Importante:** esta é uma adaptação do sistema de *transição de pose* da CE, não uma cópia de seu animador completo (que depende de voo, combate, estados e várias animações ainda inexistentes no Auren). A posição física do dragão continua sendo fixada ao jogador quando o ombro é ativado, e precisa de teste visual para garantir que não haja clipping durante a transição.
 
-- Reaproveita o modelo Tabula `lightningdragon_sitting_shoulder` e posiciona os ossos diretamente no renderizador.
-- Ajusta a posição do corpo relativa à rotação do jogador, para não parecer pousado em um único ombro.
-- **Mantém exatamente o tamanho atual da forma filhote (escala 0,42)**, conforme solicitado.
-- Não altera o visual ou a IA do adulto e do filhote andando no chão.
-- Mantém a animação suave de respiração e a cauda mexendo discretamente no pescoço.
-- O tamanho das asas não foi reduzido: são dobradas por articulação.
+## O que já foi confirmado pelo jogador
 
-**Status:** pose implementada e dependente de validação visual em jogo; compilação por si só não prova que cada articulação está perfeita. Ver `docs/NECK_POSE_V03.md` para detalhes e testes.
+- NeoForge 1.21.1 no Zalith: inicia com Auren e Uranus embutido.
+- Modelo 3D, texturas, domesticação e duas formas funcionam.
+- O filhote consegue ficar preso ao jogador.
+- A v0.3 ainda parecia empoleirada com as asas abertas; a nova interpolação tem como objetivo corrigir a passagem do repouso normal à pose original e preservar a silhueta de cachecol vivo.
 
-## Requisitos
+## Como testar (Zalith / Windows)
 
-- Minecraft Java **1.21.1**
-- NeoForge **21.1.248+**, na série 1.21.1
-- Apenas o JAR do Auren na pasta `mods`; Uranus 3.0-beta.1 está **incluído via Jar-in-Jar**. Ice and Fire não é necessário.
+1. Retire o JAR da versão anterior da pasta `mods` e instale o novo.
+2. No mundo, invoque `/summon aurenminecraft:auren`, dome o Auren e coloque na forma filhote.
+3. Digite `/auren ombro` e observe por alguns segundos de lado e de costas. A animação deve acontecer ao longo de aproximadamente **1 segundo**.
+4. Use `/auren ombro` novamente para sair do ombro e observar a transição reversa.
+5. Confira também o Auren adulto e o filhote solto para verificar regressões.
 
-## Teste rápido
+## Escopo atual
 
-1. Remova a versão anterior de `mods` e instale apenas o JAR v0.3.
-2. Entre num mundo com comandos e invoque `/summon aurenminecraft:auren`.
-3. Com a mão vazia, interaja para domesticar; agache e interaja para transformá-lo em filhote.
-4. Sem agachar, interaja com o filhote para ativar a pose de pescoço; ou use `/auren ombro`.
-5. Pressione F5 para câmera traseira, caminhe e gire. Confira a cabeça no ombro esquerdo, o corpo atrás da nuca e a cauda atravessando o ombro direito.
-6. Agache ou use `/auren ombro` de novo para tirá-lo do pescoço.
-7. Veja se o adulto e o filhote fora do ombro continuam com os tamanhos e comportamentos anteriores.
+**Sem** IA conectada, voo, montaria, ataque de raios ou animações de combate. O modelo não foi remodelado; continuam possíveis pequenos encaixes incorretos entre patas, asas, cauda e pescoço até refinarmos as posições.
 
-**Limitações atuais:** sem montaria, voo, ataques elétricos, animações completas de voo/combate ou IA externa. A pose específica ainda exige inspeção visual no Android.
+## Fonte e créditos
 
-## Arquivos principais
-
-- `src/main/java/br/com/auren/minecraft/client/AurenNeckPose.java` — ângulos dos ossos da pose aprovada.
-- `src/main/java/br/com/auren/minecraft/client/AurenDragonRenderer.java` — seleciona a pose, orientação e escala.
-- `src/main/java/br/com/auren/minecraft/entity/AurenDragon.java` — posição do corpo relativa ao jogador.
-- `docs/NECK_POSE_V03.md` — referência visual e roteiro de teste.
-- `THIRD_PARTY_ASSETS.md` — créditos e licenças.
+- [IceAndFire Community Edition 1.21.1](https://github.com/IAFEnvoy/IceAndFire-CE/tree/1.21.1) — conceito do `ridingProgress` e `transitionTo`; origem dos arquivos Tabula e texturas sob as condições aplicáveis.
+- [Uranus](https://github.com/IAFEnvoy/Uranus/tree/1.21.1) — renderização Tabula e dependência incluída via Jar-in-Jar.
+- Confira `THIRD_PARTY_ASSETS.md` e `docs/TECHNICAL_DECISIONS.md`.

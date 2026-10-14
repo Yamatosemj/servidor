@@ -1,6 +1,7 @@
 package br.com.auren.minecraft.entity;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.Mth;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -38,6 +39,12 @@ public final class AurenDragon extends TamableAnimal {
     private static final EntityDataAccessor<Boolean> SHOULDER =
             SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.BOOLEAN);
 
+    // Client-side animation progress, mirroring CE ridingProgress 0..20 ticks.
+    // The desired state is synced by SHOULDER, never by sending every frame.
+    private static final float SHOULDER_ANIMATION_TICKS = 20.0F;
+    private float previousShoulderProgress;
+    private float shoulderProgress;
+
     public AurenDragon(EntityType<? extends TamableAnimal> type, Level level) {
         super(type, level);
         this.setPersistenceRequired();
@@ -63,6 +70,12 @@ public final class AurenDragon extends TamableAnimal {
 
     public boolean isOnShoulder() {
         return this.entityData.get(SHOULDER);
+    }
+
+    /** Blend factor for an interpolated frame: 0 = walking, 1 = resting on neck. */
+    public float getShoulderBlend(float partialTick) {
+        return Mth.clamp(Mth.lerp(partialTick, this.previousShoulderProgress,
+                this.shoulderProgress) / SHOULDER_ANIMATION_TICKS, 0.0F, 1.0F);
     }
 
     public void setSmallForm(boolean small) {
@@ -150,6 +163,14 @@ public final class AurenDragon extends TamableAnimal {
 
     @Override
     public void tick() {
+        // Animate both entering and leaving shoulder mode. Kept client-side
+        // and derived from the synced state so latency cannot spam packets.
+        this.previousShoulderProgress = this.shoulderProgress;
+        float destination = this.isOnShoulder() ? SHOULDER_ANIMATION_TICKS : 0.0F;
+        this.shoulderProgress = Mth.clamp(this.shoulderProgress
+                        + (destination > this.shoulderProgress ? 1.0F
+                        : destination < this.shoulderProgress ? -1.0F : 0.0F),
+                0.0F, SHOULDER_ANIMATION_TICKS);
         super.tick();
         if (!this.isOnShoulder()) return;
         if (this.getOwner() instanceof Player player && player.isAlive() && player.level() == this.level()) {
