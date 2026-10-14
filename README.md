@@ -1,4 +1,57 @@
-# Auren Minecraft — v0.5.6-alpha (Minecraft 1.21.1 / NeoForge)
+# Auren Minecraft — v0.6.0-alpha (Minecraft 1.21.1 / NeoForge)
+
+## v0.6.0 — flight foundation: autonomous follow, takeoff and landing
+
+**Real flight** is now implemented for both forms. Auren uses velocity,
+server-side flight state and native collision instead of merely changing the
+renderer while falling. The controller adapts the IceAndFire CE separation of
+flight manager / aerial target / move control, but does not require the
+IceAndFire mod itself.
+
+- **Adult** still starts following beyond **15 blocks**, stops within **8**.
+- **Small form** keeps its proven comfortable **4.5/1.7** follow thresholds,
+  but flies instead of using vanilla FollowOwnerGoal teleport at ~12 blocks.
+- **Emergency teleport is 50+ blocks for both forms**, reusing the original
+  safety tests and destination search. The previously working adult ticket
+  also stays active for the small form when not on the shoulder, preventing
+  unload before teleport.
+- **Takeoff:** check headroom, initial vertical thrust, hover pose, then
+  transition to six original lightning-dragon flight frames.
+- **Cruise:** velocity-based pursuit of the owner's changing location;
+  predictive upward detour when a forward bounding-box would collide.
+  No phasing through walls and no force-loading target chunks.
+- **Landing:** on reaching owner, losing the target or encountering persistent
+  collision, gravity is restored and speed is damped. Landing pose is the
+  original CE hovering model; flight state is cleared on touchdown.
+- **Animation:** a synced integer flight state plus 10-tick blend selects
+  the original CE hovering/flying/diving Tabula poses and 6 flight frames.
+  Ordinary jump no longer automatically triggers the flying state.
+- Shoulder pose on main remains exactly v0.5.6. **The experimental v0.5.7
+  shoulder revision stays isolated on PR #15** and is not included here.
+- Existing **Uranus 3.0-beta.1 already supplies every Tabula dependency**;
+  no additional mod dependency or IceAndFire installation is required.
+
+### How to test flight in Zalith
+
+1. Install a single Auren JAR (remove the previous version from `mods`).
+2. Use `/summon aurenminecraft:auren` and tame with an empty hand.
+3. In a flat clear area, walk more than **15 blocks** from the adult.
+   It should rise, flap its ORIGINAL CE wings, follow in the air and land.
+4. Walk away again, then test the **baby** beyond 4.5 blocks, not on shoulder.
+5. After both move successfully, try a low obstacle, building wall and trees.
+   The controller can choose a basic upward avoidance direction, but **is not
+   yet the complete CE 3D pathfinder**. Some complex enclosures may trap it.
+6. Travel 55–65 blocks away; it should still use the 50-block emergency
+   teleport when a safe ground destination exists.
+7. Test leaving/re-entering the world during/after flight; verify gravity and
+   original shoulder interaction continue to work.
+
+**Known limits:** stage-3 player riding and flight controls, fire/lightning
+breath, advanced 3D A* navigation, stamina, combat and user-specific UI are
+separate features. This version aims for working autonomous flying FIRST.
+GitHub CI compile/static tests are NOT a substitute for runtime testing.
+Do not mark aerial steering, player collision and landing as visually
+approved until Zalith footage confirms.
 
 ## v0.5.6 — awake, folded-wing neck wrap from user illustration
 

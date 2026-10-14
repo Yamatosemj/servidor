@@ -182,3 +182,38 @@ e o blend de 20 ticks continua.
 Não foram alterados o Auren adulto, escalas, IA, voo, andar, teleporte
 de emergência a 50 blocos nem tickets de chunk. Teste visual de frente
 e costas no Zalith é obrigatório antes de aprovar aparência.
+
+
+## V0.6.0 — voo autônomo real e quadros CE vinculados ao estado (14/10/2026)
+
+O modelo da v0.5.6 já continha todos os seis `flight1..6.tbl`,
+`hovering.tbl` e `diving.tbl` da Community Edition, mas nenhum controlador
+de voo real. Adotamos a divisão arquitetural usada no `IafDragonFlightManager`
+(estado, objetivo, movimento), **sem importar o mod IceAndFire CE completo**
+e suas dependências. A Uranus já embarcada continua sendo a única dependência
+de animação.
+
+- `AurenFlightController` aplica `deltaMovement` REAL no servidor, com
+  decolagem em duas fases, piloto automático em direção ao dono, verificação
+  preventiva de colisão e chunks carregados, tentativa de desvio para cima,
+  pouso por gravidade e cancelamento de estados transitórios.
+- `AurenAdultFollowOwnerGoal` agora trabalha com forma adulta (15/8) ou
+  pequena (4.5/1.7), preservando exatamente a lógica de teleporte seguro
+  para >=50 blocos; a pequena não usa mais o vanilla FollowOwnerGoal
+  de 12 blocos.
+- Chunk ticket temporário de 100 ticks estendido ao filhote **fora do ombro**,
+  enquanto dono estiver online na mesma dimensão. Estado de ombro libera
+  o ticket imediatamente e desativa voo. Não há force-loading permanente.
+- `AurenDragon.FLIGHT_MODE` sincronizado ao cliente permite interpolar os
+  quadros CE originais por 10 ticks: `hovering` na decolagem/pouso,
+  `flight1..6` durante deslocamento, `diving` durante descida acentuada.
+  Não é uma animação autoral de bater asas.
+- Ao recarregar o mundo, voo não persiste sem alvo; reset seguro para
+  gravidade e passeio terrestre. Mudar para ombro, sentar ou teleportar
+  cancela alvo/voo.
+- Limitações declaradas: *não* há ainda montaria/controle de voo pelo
+  jogador, combate, stamina ou pathfinder A* 3D completo do IceAndFire.
+  Fuga de áreas muito fechadas requer avaliação real no Zalith.
+
+Escopo independente: PR #15 da pose experimental v0.5.7 permanece aberto
+e separado; nenhum ajuste do ombro foi combinado na v0.6.0.

@@ -55,13 +55,17 @@ def check():
     for name in ("flying", "hovering", "diving"):
         assert f'load("{name}")' in source
     assert "AurenOriginalAnimations.instance().apply" in renderer
+    assert "dragon.getFlightMode()" in source
+    assert "dragon.getFlightBlend(partialTick)" in source
+    assert "AurenFlightController.FLYING" in source
+    assert "blendCycle(model, this.flight, age * 0.16F, flightBlend)" in source
     assert "AurenPoseTransition.apply(model, awake, shoulderBlend);" in renderer
     assert 'lightningdragon/lightningdragon_sleeping' in renderer
     assert "AurenPoseTransition.applyBones(model, folded, shoulderBlend," in renderer
     assert "AurenNeckPose.apply(model, shoulderBlend);" in renderer
     assert "AurenOriginalShoulderIdle.apply(model, age, shoulderBlend);" in renderer
     assert "pose.mulPose(" not in renderer
-    assert "mod_version=0.5.6-alpha" in version
+    assert "mod_version=0.6.0-alpha" in version
     print(f"PASS: {len(NAMES)} compatible original Lightning Dragon "
           f"Tabula models are bundled and referenced; original CE folded wings and illustrated awake neck wrap integrated")
 

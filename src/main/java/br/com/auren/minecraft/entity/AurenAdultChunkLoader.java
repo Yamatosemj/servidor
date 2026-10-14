@@ -9,10 +9,12 @@ import java.util.Comparator;
 import java.util.UUID;
 
 /**
- * Keeps only the adult Auren's CURRENT chunk entity-ticking while its owner
+ * Keeps only the following Auren's CURRENT chunk entity-ticking while its owner
  * is online in the same dimension, allowing its emergency 50-block teleport
  * goal to keep running even after the player leaves simulation distance.
  *
+ * Both sizes are supported: the small Auren now follows by flight rather
+ * than default vanilla teleport. Shoulder state always releases the ticket.
  * The ticket is temporary (100 ticks), never persisted to world data. It is
  * removed when the adult changes chunk/form, sits, dies, or loses its owner.
  * Every 20 ticks it is explicitly renewed by remove/re-add; this is reliable
@@ -43,7 +45,6 @@ final class AurenAdultChunkLoader {
 
         boolean shouldStayActive = dragon.isAlive()
                 && dragon.isTame()
-                && !dragon.isSmallForm()
                 && !dragon.isOnShoulder()
                 && !dragon.isOrderedToSit()
                 && owner != null

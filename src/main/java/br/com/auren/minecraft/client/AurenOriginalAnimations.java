@@ -2,9 +2,11 @@ package br.com.auren.minecraft.client;
 
 import br.com.auren.minecraft.AurenMinecraft;
 import br.com.auren.minecraft.entity.AurenDragon;
+import br.com.auren.minecraft.entity.AurenFlightController;
 import com.iafenvoy.uranus.client.model.AdvancedModelBox;
 import com.iafenvoy.uranus.client.model.TabulaModel;
 import com.iafenvoy.uranus.client.model.util.TabulaModelHandlerHelper;
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 
@@ -20,7 +22,8 @@ import java.util.List;
  * fabricated walk/wing motion. The full CE animator cannot run unchanged
  * because it expects DragonBaseEntity's state machine and animation events.
  *
- * Visual airborne states are NOT a flying movement controller / flight AI.
+ * The real AurenFlightController now drives takeoff, flight and landing on
+ * the server; these original CE keyframes are selected by its synced state.
  */
 public final class AurenOriginalAnimations {
     private static final String PREFIX = "lightningdragon/lightningdragon_";
@@ -63,28 +66,35 @@ public final class AurenOriginalAnimations {
     }
 
     /**
-     * Walking uses CE's four original walk keyframes, selected by the vanilla
-     * limb cycle. In air the original flying/hovering/diving poses are previewed
-     * when a jump or fall is already happening. Actual flight comes later.
+     * Visual states come from the actual SERVER flight state, never just
+     * 'off ground'. This prevents random jumps from looking like long flights
+     * and prevents no-gravity flight from being mistaken for hovering.
      */
     public void apply(TabulaModel<AurenDragon> model, AurenDragon dragon,
                       float limbSwing, float limbSwingAmount, float age) {
-        if (!dragon.onGround() && !dragon.isInWater() && dragon.tickCount > 5) {
-            double verticalSpeed = dragon.getDeltaMovement().y;
-            if (verticalSpeed < -0.35D) {
-                AurenPoseTransition.apply(model, this.diving, 1.0F);
-            } else if (Math.abs(verticalSpeed) < 0.025D) {
-                AurenPoseTransition.apply(model, this.hovering, 1.0F);
+        int mode = dragon.getFlightMode();
+        float partialTick = Minecraft.getInstance().getTimer()
+                .getGameTimeDeltaPartialTick(false);
+        float flightBlend = dragon.getFlightBlend(partialTick);
+
+        if (mode != AurenFlightController.GROUNDED || flightBlend > 0.01F) {
+            if (mode == AurenFlightController.FLYING) {
+                if (dragon.getDeltaMovement().y < -0.29D) {
+                    AurenPoseTransition.apply(model, this.diving, flightBlend);
+                } else {
+                    AurenPoseTransition.apply(model, this.flying, flightBlend * 0.45F);
+                    // Six ORIGINAL lightning-dragon CE flight frames, blended
+                    // continuously (never fabricated per-joint wing flapping).
+                    blendCycle(model, this.flight, age * 0.16F, flightBlend);
+                }
             } else {
-                AurenPoseTransition.apply(model, this.flying, 1.0F);
-                // Flight cycle is the six source keyframes from CE, not a
-                // hand-animated wing flap.
-                blendCycle(model, this.flight, age * 0.10F, 1.0F);
+                // Original CE hovering pose for takeoff and slow landing.
+                AurenPoseTransition.apply(model, this.hovering, flightBlend);
             }
             return;
         }
 
-        // Stay in the neutral original ground pose while standing still.
+        // Walking uses CE's four original walk keyframes.
         float strength = Mth.clamp(limbSwingAmount * 2.5F, 0.0F, 1.0F);
         if (strength > 0.02F) {
             blendCycle(model, this.walk, limbSwing * 0.22F, strength);
