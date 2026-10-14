@@ -2,10 +2,10 @@ package br.com.auren.minecraft.client;
 
 import br.com.auren.minecraft.AurenMinecraft;
 import br.com.auren.minecraft.entity.AurenDragon;
+import com.iafenvoy.uranus.client.model.AdvancedModelBox;
 import com.iafenvoy.uranus.client.model.TabulaModel;
 import com.iafenvoy.uranus.client.model.util.TabulaModelHandlerHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -43,9 +43,9 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
     }
 
     /**
-     * Lightweight procedural animation for the Tabula skeleton. Resets the
-     * original pose each frame; no CE entity classes or animation code needed.
-     * This is intentionally NOT the complete Ice and Fire flight/attack animator.
+     * CE original Lightning Dragon Tabula walk/flight keyframes and shoulder
+     * pose. The CE shoulder pose needs its original torso offset in addition
+     * to bone interpolation; no extra hand-crafted neck/wing/tail twisting.
      */
     private static void animate(TabulaModel<AurenDragon> model, AurenDragon dragon,
                                 float limbSwing, float limbSwingAmount,
@@ -59,8 +59,13 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
         if (shoulderBlend > 0.0F && dragon.isSmallForm()) {
             TabulaModel<AurenDragon> originalPose = TabulaModelHandlerHelper.getModel(SHOULDER_POSE);
             AurenPoseTransition.apply(model, originalPose, shoulderBlend);
-            // Our selected "living scarf" pose is an additive adjustment only.
-            AurenNeckPose.apply(model, age, shoulderBlend);
+            // CE DragonTabulaModelAnimator applies a special BodyUpper offsetZ
+            // while on the player's shoulder. This is part of the ORIGINAL
+            // shoulder animation; the Tabula keyframe alone is insufficient.
+            AdvancedModelBox torso = model.getCube("BodyUpper");
+            if (torso != null) {
+                torso.offsetZ += (-12.0F - torso.offsetZ) * shoulderBlend;
+            }
             return;
         }
 
@@ -80,12 +85,8 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
 
     @Override
     protected void scale(AurenDragon entity, PoseStack pose, float partialTick) {
-        float blend = entity.getShoulderBlend(partialTick);
-        if (entity.isSmallForm() && blend > 0.0F) {
-            // Smoothly rotate from normal orientation into the scarf pose.
-            pose.mulPose(Axis.YP.rotationDegrees(90.0F * blend));
-            pose.translate(0.0D, -0.035D * blend, 0.0D);
-        }
+        // The original CE sitting_shoulder pose already orients all bones.
+        // Do not rotate the entire dragon 90 degrees: that twists the pose.
         // Keep the original baby size; adult now approximates a CE stage-3 dragon.
         float factor = entity.isSmallForm() ? 0.42F : 3.25F;
         pose.scale(factor, factor, factor);

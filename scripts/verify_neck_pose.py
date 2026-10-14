@@ -1,72 +1,80 @@
-"""Check that v0.4's CE-inspired neck-wrap transition targets real bones in the bundled Tabula model.
+"""Verify Auren uses the original CE lightningdragon sitting_shoulder pose.
 
-Structural build test only: pose appearance must also be checked in Minecraft.
+This tests SOURCE INTEGRITY and eliminates a known distortion from v0.5.2:
+a custom neck-wrap additive pose and global 90-degree root rotation.
+
+The CE source renderer offsetZ detail is essential, but final visual placement
+still requires first/third-person testing in Minecraft on Zalith.
 """
 from __future__ import annotations
-
 import io
 import json
-import re
 import sys
 from pathlib import Path
 from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
-POSE = ROOT / "src/main/java/br/com/auren/minecraft/client/AurenNeckPose.java"
 RENDERER = ROOT / "src/main/java/br/com/auren/minecraft/client/AurenDragonRenderer.java"
 ENTITY = ROOT / "src/main/java/br/com/auren/minecraft/entity/AurenDragon.java"
-GRADLE = ROOT / "gradle.properties"
+TRANSITION = ROOT / "src/main/java/br/com/auren/minecraft/client/AurenPoseTransition.java"
+PROPS = ROOT / "gradle.properties"
 TABULA = "assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_sitting_shoulder.tbl"
 
 
-def iter_names(cubes):
+def bones(cubes):
     for cube in cubes:
         yield cube["name"]
-        yield from iter_names(cube.get("children", []))
+        yield from bones(cube.get("children", []))
 
 
 def verify():
     jars = sorted((ROOT / "build/libs").glob("*.jar"))
-    assert len(jars) == 1, f"Expected one built jar: {jars}"
+    assert len(jars) == 1, f"Expected a single built JAR: {jars}"
     with ZipFile(jars[0]) as outer:
-        assert TABULA in outer.namelist(), "Missing shoulder Tabula model"
+        assert TABULA in outer.namelist(), "Missing the original shoulder pose"
         with ZipFile(io.BytesIO(outer.read(TABULA))) as inner:
-            model = json.loads(inner.read("model.json"))
-    skeleton = set(iter_names(model["cubes"]))
-    pose_source = POSE.read_text(encoding="utf-8")
-    names = set(re.findall(r'rotate[XYZ]\(model, "([^"]+)"', pose_source))
-    names.update(re.findall(r'model\.getCube\("([^"]+)"', pose_source))
-    assert names, "Pose refers to no bones"
-    missing = names - skeleton
-    assert not missing, f"Pose references missing Tabula bones: {sorted(missing)}"
+            skeleton = set(bones(json.loads(inner.read("model.json"))["cubes"]))
+    assert "BodyUpper" in skeleton, "Original CE torso bone absent"
 
     renderer = RENDERER.read_text(encoding="utf-8")
     entity = ENTITY.read_text(encoding="utf-8")
-    version = GRADLE.read_text(encoding="utf-8")
-    assert "AurenNeckPose.apply(model, age, shoulderBlend);" in renderer
-    assert "AurenPoseTransition.apply(model, originalPose, shoulderBlend);" in renderer
-    assert "this.model = groundModel;" in renderer
-    assert "float shoulderBlend = dragon.getShoulderBlend(partialTick);" in renderer
-    assert "shoulderBlend > 0.0F && dragon.isSmallForm()" in renderer
-    assert "entity.isSmallForm() && blend > 0.0F" in renderer
-    assert "Axis.YP.rotationDegrees(90.0F * blend)" in renderer
-    assert "float factor = entity.isSmallForm() ? 0.42F : 3.25F;" in renderer
-    assert "double backward = 0.18D;" in entity
-    assert "mod_version=0.5.2-alpha" in version
-    assert "SHOULDER_ANIMATION_TICKS = 20.0F" in entity
-    assert "getShoulderBlend(float partialTick)" in entity
-    transition_source = (ROOT / "src/main/java/br/com/auren/minecraft/client/AurenPoseTransition.java").read_text(encoding="utf-8")
+    transition = TRANSITION.read_text(encoding="utf-8")
+    properties = PROPS.read_text(encoding="utf-8")
+
+    # Correct: CE sitting_shoulder, blend 0 -> 20 ticks, and CE torso offset.
+    assert 'lightningdragon/lightningdragon_sitting_shoulder' in renderer
+    assert 'AurenPoseTransition.apply(model, originalPose, shoulderBlend);' in renderer
+    assert 'torso.offsetZ += (-12.0F - torso.offsetZ) * shoulderBlend;' in renderer
+    assert 'this.model = groundModel;' in renderer
+    assert 'float shoulderBlend = dragon.getShoulderBlend(partialTick);' in renderer
+    assert 'shoulderBlend > 0.0F && dragon.isSmallForm()' in renderer
+    assert 'SHOULDER_ANIMATION_TICKS = 20.0F' in entity
+
+    # No more procedural twist over CE's original shoulder pose.
+    assert 'AurenNeckPose.apply' not in renderer
+    assert 'Axis.YP.rotationDegrees(90.0F * blend)' not in renderer
+    assert 'pose.mulPose(Axis.YP' not in renderer
+    assert not (ROOT / "src/main/java/br/com/auren/minecraft/client/AurenNeckPose.java").exists()
+
+    # CE shoulder positioning, body yaw only; no effect on follow AI.
+    assert 'double lateral = 0.5D;' in entity
+    assert 'double backward = 0.04D;' in entity
+    assert 'double y = player.getY() + 1.4D;' in entity
+    assert 'this.yHeadRot = player.yBodyRot;' in entity
+    assert 'float factor = entity.isSmallForm() ? 0.42F : 3.25F;' in renderer
+    assert 'mod_version=0.5.3-alpha' in properties
+
     for property_name in ("rotateAngleX", "rotateAngleY", "rotateAngleZ",
                           "rotationPointX", "rotationPointY", "rotationPointZ"):
-        assert f"from.{property_name}" in transition_source
-    assert "Math.atan2" in transition_source
-    print(f"PASS: v0.4 shoulder model includes {len(names)} valid animated bones; "
-          "neck pose isolated and baby scale preserved")
+        assert f"from.{property_name}" in transition
+    assert "Math.atan2" in transition
+    print("PASS: original CE sitting_shoulder pose and torso offset, "
+          "no handmade twist, proper shoulder anchor, baby/adult scale unchanged")
 
 
 if __name__ == "__main__":
     try:
         verify()
     except Exception as e:
-        print(f"FAIL neck pose verification: {e}", file=sys.stderr)
+        print(f"FAIL shoulder verification: {e}", file=sys.stderr)
         sys.exit(1)

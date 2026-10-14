@@ -204,22 +204,24 @@ public final class AurenDragon extends TamableAnimal {
                 this.setOnShoulder(false);
                 return;
             }
-            // Keep the torso behind the neck. The 3D pose curves the head
-            // onto the left shoulder and the tail to the right.
-            // At yaw 0 (+Z forward), left is +X and behind is -Z.
+            // Reproduce CE's first passenger shoulder anchor:
+            // body-yaw-relative +0.5 lateral and +1.4 above player's feet.
+            // At yaw 0 (+Z forward), left is +X.
+            // A small backward correction keeps the feet off the collar.
             double angle = Math.toRadians(player.yBodyRot);
-            double lateral = 0.075D;
-            double backward = 0.18D;
+            double lateral = 0.5D;
+            double backward = 0.04D;
             double x = player.getX() + Math.cos(angle) * lateral + Math.sin(angle) * backward;
             double z = player.getZ() + Math.sin(angle) * lateral - Math.cos(angle) * backward;
-            double y = player.getY() + player.getBbHeight() * 0.76D;
+            double y = player.getY() + 1.4D;
             this.getNavigation().stop();
             this.setDeltaMovement(Vec3.ZERO);
             this.noPhysics = true;
             this.setPos(x, y, z);
             this.setYRot(player.yBodyRot);
             this.yBodyRot = player.yBodyRot;
-            this.yHeadRot = player.yHeadRot;
+            // Shoulder rider should follow BODY yaw, not player's camera yaw.
+            this.yHeadRot = player.yBodyRot;
         } else if (!this.level().isClientSide() && this.getOwnerUUID() == null) {
             // An orphaned shoulder state must never float forever.
             this.setOnShoulder(false);
