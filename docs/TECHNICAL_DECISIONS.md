@@ -46,3 +46,12 @@ Ao contrário da versão v0.3, o renderizador **não alterna mais imediatamente 
 ### Testes
 
 O teste `scripts/verify_neck_pose.py` verifica nomes de ossos e invariantes da transição. Build e dependência aninhada passam por CI. O visual em Android e Windows permanece teste manual, e não deve ser considerado aprovado só por compilar.
+
+
+## V0.5 — animações originais da Community Edition, não animações inventadas
+
+Em vez de criar nossas próprias poses de voo e caminhada, importamos os arquivos `LightningDragon` oficiais da CE 1.21.1: quatro quadros `walk1..4`, seis `flight1..6` e as poses `flying`, `hovering` e `diving`. Todos vêm do commit imutável já utilizado em `build.gradle`, com hash Git blob SHA-1 verificado.
+
+O animador completo original **não funciona sem a lógica específica de `DragonBaseEntity` da CE**. Utilizamos apenas sua técnica de interpolação por nome das articulações nos quadros Tabula. A caminhada vanilla aciona o ciclo de caminhada. Durante salto/queda, o renderizador usa poses aéreas originais como demonstração; **não há voo mecânico real** ainda. A pose personalizada do pescoço e sua transição de 20 ticks foram preservadas.
+
+Ajustes de velocidade dos ciclos requerem teste visual no Zalith. Não afirmar que o voo está implementado só porque existem animações.
