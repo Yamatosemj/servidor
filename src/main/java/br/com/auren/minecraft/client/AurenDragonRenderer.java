@@ -5,6 +5,7 @@ import br.com.auren.minecraft.entity.AurenDragon;
 import com.iafenvoy.uranus.client.model.TabulaModel;
 import com.iafenvoy.uranus.client.model.util.TabulaModelHandlerHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -98,6 +99,12 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
         // Model yaw follows player's torso. Do NOT rotate the whole dragon
         // 90 degrees like v0.4: curl only its neck and tail bones.
         // Keep the original baby size; adult now approximates a CE stage-3 dragon.
+        // CE DragonBaseEntityRenderer.scale rotates the dragon around X by
+        // interpolated prevDragonPitch. Only mounted Auren uses this port;
+        // autonomous v0.6.2 rendering remains unchanged.
+        if (entity.isVehicle()) {
+            pose.mulPose(Axis.XP.rotationDegrees(entity.getRiderVisualPitch(partialTick)));
+        }
         float factor = entity.isSmallForm() ? 0.42F : 3.25F;
         pose.scale(factor, factor, factor);
     }

@@ -32,6 +32,11 @@ public final class AurenCommands {
                                     "Nenhum Auren domesticado encontrado em 16 blocos."));
                             return 0;
                         }
+                        if (dragon.isVehicle()) {
+                            context.getSource().sendFailure(Component.literal(
+                                    "Desmonte do Auren antes de usar o ombro."));
+                            return 0;
+                        }
                         if (dragon.isOnShoulder()) {
                             dragon.setOnShoulder(false);
                             context.getSource().sendSuccess(() ->

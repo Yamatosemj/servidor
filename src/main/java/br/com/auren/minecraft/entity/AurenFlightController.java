@@ -120,7 +120,7 @@ public final class AurenFlightController {
     public void tick() {
         if (!(dragon.level() instanceof ServerLevel level)) return;
         int state = dragon.getFlightMode();
-        if (state == GROUNDED) return;
+        if (state == GROUNDED || dragon.getControllingPassenger() != null) return;
 
         if (dragon.isOnShoulder() || !dragon.isAlive()
                 || dragon.isInWater() || dragon.isInLava()) {
