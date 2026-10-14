@@ -2,7 +2,6 @@ package br.com.auren.minecraft.client;
 
 import br.com.auren.minecraft.AurenMinecraft;
 import br.com.auren.minecraft.entity.AurenDragon;
-import com.iafenvoy.uranus.client.model.AdvancedModelBox;
 import com.iafenvoy.uranus.client.model.TabulaModel;
 import com.iafenvoy.uranus.client.model.util.TabulaModelHandlerHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -65,52 +64,9 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
             return;
         }
 
-        float idle = (float) Math.sin(age * 0.115F);
-        float movement = dragon.isOnShoulder() ? 0F : Math.min(1F, limbSwingAmount * 2.5F);
-        float stride = (float) Math.sin(limbSwing * 0.68F) * movement;
-
-        // All named bones come from the Lightning Dragon Tabula file.
-        AdvancedModelBox body = model.getCube("BodyUpper");
-        if (body != null) body.rotationPointY += idle * 0.075F;
-
-        AdvancedModelBox neck = model.getCube("Neck1");
-        if (neck != null) neck.rotateAngleX += idle * 0.026F;
-        AdvancedModelBox head = model.getCube("Head");
-        if (head != null) {
-            head.rotateAngleY += clamp(yaw * (float) Math.PI / 180F * 0.35F, -0.35F, 0.35F);
-            head.rotateAngleX += clamp(pitch * (float) Math.PI / 180F * 0.35F, -0.24F, 0.24F);
-        }
-
-        for (int i = 1; i <= 4; i++) {
-            AdvancedModelBox tail = model.getCube("Tail" + i);
-            if (tail != null) tail.rotateAngleY += (float) Math.sin(age * 0.10F - i * 0.65F)
-                    * (0.025F + movement * 0.042F);
-        }
-
-        if (!dragon.isOnShoulder()) {
-            rotateX(model, "ThighL", stride * 0.24F);
-            rotateX(model, "ThighR", -stride * 0.24F);
-            rotateX(model, "armL1", -stride * 0.14F);
-            rotateX(model, "armR1", stride * 0.14F);
-            // The shoulder/wing roots have very subtle breathing motion.
-            float wingBreath = idle * (0.018F + movement * 0.02F);
-            rotateZ(model, "armL1", wingBreath);
-            rotateZ(model, "armR1", -wingBreath);
-        }
-    }
-
-    private static float clamp(float value, float min, float max) {
-        return Math.max(min, Math.min(max, value));
-    }
-
-    private static void rotateX(TabulaModel<AurenDragon> model, String name, float amount) {
-        AdvancedModelBox part = model.getCube(name);
-        if (part != null) part.rotateAngleX += amount;
-    }
-
-    private static void rotateZ(TabulaModel<AurenDragon> model, String name, float amount) {
-        AdvancedModelBox part = model.getCube(name);
-        if (part != null) part.rotateAngleZ += amount;
+        // The original CE Tabula walk and flight frames, not hand-crafted
+        // joint swings, are the source of animation outside shoulder mode.
+        AurenOriginalAnimations.instance().apply(model, dragon, limbSwing, limbSwingAmount, age);
     }
 
     @Override

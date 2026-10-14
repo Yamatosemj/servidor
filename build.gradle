@@ -54,6 +54,32 @@ def assets = [
         ['models/tabula/lightningdragon/lightningdragon_ground.tbl', 'b6fb4bf7a465b5cfe48889ce7dafcff0ea9d2576'],
     'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_sitting_shoulder.tbl':
         ['models/tabula/lightningdragon/lightningdragon_sitting_shoulder.tbl', 'bd359b95a57428df293fc1fdcda6775f44674590'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_walk1.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_walk1.tbl', 'c81e818a8d8f98d391af207d40dcd6da20d2a7e8'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_walk2.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_walk2.tbl', '0be2125156f14862f8f3d2d220653368c17d162b'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_walk3.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_walk3.tbl', '2fb84e370c4104d9326526492b989fb77420154c'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_walk4.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_walk4.tbl', 'a0bc945b662c08ff417dca2051d8c5167de333b5'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_flight1.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_flight1.tbl', '1eb4a57187c6bc11dbc03001cc63073e07d4ee34'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_flight2.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_flight2.tbl', '4e36a39d60fbf83431d24cc3cc7b56bb9c6874c1'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_flight3.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_flight3.tbl', '153207a323cca43ec48f5ae2e4dd53304101a99b'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_flight4.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_flight4.tbl', 'a8676758d8a0fac3d35110560722545f8ad2f696'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_flight5.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_flight5.tbl', '082a656f7d751effb9b96c87fc0e53025e2d77df'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_flight6.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_flight6.tbl', '4b8540f672441d0dfd0c4e04f6095bea126f2fb9'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_flying.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_flying.tbl', '8fa48d1a1a543967fa6209c3bc2ae20fcd5e4e52'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_hovering.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_hovering.tbl', '51f56f65e48d7e9a97f602b53e9b7654bacea9c6'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_diving.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_diving.tbl', '5cab4fcf95365a959a05efca49d2dbd9f55d9b8f'],
     'assets/aurenminecraft/textures/entity/auren_black_1.png':
         ['textures/entity/lightningdragon/black_1.png', '775f7acc54bfbd51ed49e742459993982d786898'],
     'assets/aurenminecraft/textures/entity/auren_black_5.png':

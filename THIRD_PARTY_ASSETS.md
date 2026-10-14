@@ -18,3 +18,17 @@ Os caminhos dos arquivos são remapeados ao namespace `aurenminecraft` no build.
 **Identificação adicional:** a cópia embutida do Uranus possui seu próprio `META-INF/neoforge.mods.toml` com `modId="uranus"`, versão `3.0-beta.1`. O GitHub Actions verifica sua presença e a licença incluída antes da publicação do artefato.
 
 **Licença do código próprio:** LGPL-3.0-or-later (escolhida para simplificar a compatibilidade entre componentes). Ao redistribuir, manter créditos e cumprir todos os avisos/licenças aplicáveis. A origem de recursos previamente derivados do Ice and Fire original deve ser revisada antes de publicar versões estáveis.
+
+
+## Original animation poses — Auren v0.5
+
+We additionally package **13 unchanged Tabula pose files** from the same immutable
+IceAndFire Community Edition 1.21.1 commit already credited above:
+`lightningdragon_walk1..4.tbl`, `lightningdragon_flight1..6.tbl`,
+`lightningdragon_flying.tbl`, `lightningdragon_hovering.tbl` and
+`lightningdragon_diving.tbl`.
+
+The SHA-1 Git blob IDs for each file appear in `build.gradle` and are verified
+before packaging. All source-model attribution and license conditions remain as
+stated above. `AurenOriginalAnimations.java` adapts the original pose
+interpolation technique, not the complete original animator class.
