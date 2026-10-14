@@ -79,7 +79,7 @@ public final class AurenOriginalAnimations {
 
         if (mode != AurenFlightController.GROUNDED || flightBlend > 0.01F) {
             if (mode == AurenFlightController.FLYING) {
-                if (dragon.getDeltaMovement().y < -0.29D) {
+                if (dragon.getDeltaMovement().y < -0.18D) {
                     AurenPoseTransition.apply(model, this.diving, flightBlend);
                 } else {
                     AurenPoseTransition.apply(model, this.flying, flightBlend * 0.45F);

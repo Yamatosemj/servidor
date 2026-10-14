@@ -107,15 +107,17 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
         this.dragon.getLookControl().setLookAt(this.owner, 10.0F, 10.0F);
         // The controller receives a moving air target EVERY tick. Keeping
         // the target fresh lets the dragon turn naturally around the owner.
-        if (this.dragon.getFlightController().follow(this.owner)) {
-            this.navigation.stop();
-        } else {
-            // If roofed in or submerged, fall back to safe walking.
-            this.navigation.moveTo(this.owner, WALK_SPEED);
-        }
+        boolean airborne = this.dragon.getFlightController().follow(this.owner);
+        if (airborne) this.navigation.stop();
 
+        // Full pathfinder recalculation every tick is costly on Zalith.
+        // Only the lightweight aerial steering needs a target each tick.
         if (--this.repathCooldown > 0) return;
         this.repathCooldown = REPATH_INTERVAL_TICKS;
+        if (!airborne) {
+            // Low roof, cramped enclosure or water: ordinary path navigation.
+            this.navigation.moveTo(this.owner, WALK_SPEED);
+        }
         double distanceSq = this.dragon.distanceToSqr(this.owner);
         if (distanceSq >= EMERGENCY_TELEPORT_DISTANCE * EMERGENCY_TELEPORT_DISTANCE
                 && this.teleportNearOwner()) {

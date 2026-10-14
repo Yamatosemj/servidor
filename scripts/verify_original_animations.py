@@ -59,6 +59,7 @@ def check():
     assert "dragon.getFlightBlend(partialTick)" in source
     assert "AurenFlightController.FLYING" in source
     assert "blendCycle(model, this.flight, age * 0.16F, flightBlend)" in source
+    assert "dragon.getDeltaMovement().y < -0.18D" in source
     assert "AurenPoseTransition.apply(model, awake, shoulderBlend);" in renderer
     assert 'lightningdragon/lightningdragon_sleeping' in renderer
     assert "AurenPoseTransition.applyBones(model, folded, shoulderBlend," in renderer
