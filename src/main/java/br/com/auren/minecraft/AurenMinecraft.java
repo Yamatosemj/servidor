@@ -1,6 +1,7 @@
 package br.com.auren.minecraft;
 
 import br.com.auren.minecraft.entity.AurenDragon;
+import br.com.auren.minecraft.network.AurenRiderNetwork;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -27,6 +28,7 @@ public final class AurenMinecraft {
 
     public AurenMinecraft(IEventBus modBus) {
         ENTITIES.register(modBus);
+        modBus.addListener(AurenRiderNetwork::registerPayloads);
         NeoForge.EVENT_BUS.addListener(AurenCommands::register);
         modBus.addListener(this::registerAttributes);
     }
