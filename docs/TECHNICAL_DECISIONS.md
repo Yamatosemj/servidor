@@ -275,3 +275,32 @@ alvo ao se afastar ~8 blocos, atingir alvo, obstruí-lo ou após 60 ticks.
 A base do movimento original (aproximação, yaw 4 graus, pitch e impulso)
 permanece a mesma. Esses dois ajustes são adaptações deliberadas ao
 tamanho/dinâmica do Auren, não código idêntico à CE.
+
+
+## v0.6.2-alpha — preferência terrestre e estabilização vertical (14/10/2026)
+
+**Evidência:** vídeo de jogo: voo visualmente aos saltos e decolagem imediata
+ao dono se afastar. O objetivo é tratar o defeito de movimento, sem inventar
+novas mecânicas.
+
+**Causas no código:** o `AurenAdultFollowOwnerGoal.tick()` chamava
+`flightController.follow()` sempre, mesmo com caminho livre no chão; isso
+forçava a troca para navegação aérea. Já o port de
+`IafDragonFlightManager.update()` somava +0.1 Y/tick do upstream mesmo com
+`noGravity=true` durante o voo do Auren. Essa cópia literal não preservava
+as premissas de física da entidade original.
+
+**Decisão:** reutilizar o `FlightMoveHelper` e o `AdvancedPathNavigate`
+CE/Uranus, mantendo navegação terrestre como primeira escolha. Após 30 ticks
+de falta de progresso, ou perseguição de >=40 ticks ainda longa (>32 blocos
+adulto, >14 filhote), pode decolar quando houver espaço. No ar, manter a
+direção/aceleração horizontal CE e limitar somente Y com suavização por erro
+de altitude do waypoint. Reproduzir os seis quadros de voo em cadência 0.2
+pose/tick, a partir de `flightCycle += 2` e `currentIndex = flightCycle /10`
+no código original.
+
+**Preservação:** adulto segue 15/8, filhote 4.5/1.7; teleporte emergencial
+>=50 com validação de pouso; tickets de chunk e pose de ombro intactos.
+Testes automatizados verificam o código e o build, **não comprovam**
+qualidade visual nem ausência de oscillação física no jogo. O teste em
+Zalith continua obrigatório antes do merge.
