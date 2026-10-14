@@ -118,10 +118,19 @@ public final class AurenFlightController {
         int state = dragon.getFlightMode();
         if (state == GROUNDED) return;
 
-        if (dragon.isOnShoulder() || dragon.isOrderedToSit()
-                || dragon.isInWater() || dragon.isInLava() || !dragon.isAlive()) {
+        if (dragon.isOnShoulder() || !dragon.isAlive()) {
             reset();
             return;
+        }
+        if (dragon.isInWater() || dragon.isInLava()) {
+            reset();
+            return;
+        }
+        if (dragon.isOrderedToSit() && state != LANDING) {
+            // A midair sit command must initiate a real landing, not
+            // snap the flying state off and drop from five blocks.
+            land();
+            state = LANDING;
         }
 
         if (state == LANDING) {
