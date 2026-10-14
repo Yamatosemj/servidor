@@ -45,6 +45,16 @@ def verify():
     assert 'lightningdragon/lightningdragon_sitting_shoulder' in renderer
     assert 'AurenPoseTransition.apply(model, originalPose, shoulderBlend);' in renderer
     assert 'torso.offsetZ += (-12.0F - torso.offsetZ) * shoulderBlend;' in renderer
+    assert 'AurenOriginalShoulderIdle.apply(model, age, shoulderBlend);' in renderer
+    idle = (ROOT / "src/main/java/br/com/auren/minecraft/client/AurenOriginalShoulderIdle.java").read_text(encoding="utf-8")
+    assert 'float speedIdle = 0.05F;' in idle
+    assert 'float degreeIdle = 0.5F * blend;' in idle
+    assert 'model.chainSwing(tailParts, speedIdle, degreeIdle * 0.25F, -2' in idle
+    assert 'model.chainWave(tailParts, speedIdle, degreeIdle * 0.15F, -2' in idle
+    assert 'model.chainWave(neckParts, speedIdle, degreeIdle * -0.15F, -3' in idle
+    assert 'model.walk(model.getCube("Neck1"), speedIdle, degreeIdle * 0.05F' in idle
+    for part in ("BodyUpper", "ThighR", "ThighL", "armR1", "armL1"):
+        assert f'model.bob(model.getCube("{part}")' in idle
     assert 'this.model = groundModel;' in renderer
     assert 'float shoulderBlend = dragon.getShoulderBlend(partialTick);' in renderer
     assert 'shoulderBlend > 0.0F && dragon.isSmallForm()' in renderer
@@ -62,14 +72,14 @@ def verify():
     assert 'double y = player.getY() + 1.4D;' in entity
     assert 'this.yHeadRot = player.yBodyRot;' in entity
     assert 'float factor = entity.isSmallForm() ? 0.42F : 3.25F;' in renderer
-    assert 'mod_version=0.5.3-alpha' in properties
+    assert 'mod_version=0.5.4-alpha' in properties
 
     for property_name in ("rotateAngleX", "rotateAngleY", "rotateAngleZ",
                           "rotationPointX", "rotationPointY", "rotationPointZ"):
         assert f"from.{property_name}" in transition
     assert "Math.atan2" in transition
     print("PASS: original CE sitting_shoulder pose and torso offset, "
-          "no handmade twist, proper shoulder anchor, baby/adult scale unchanged")
+          "CE idle animation now running, proper shoulder anchor, scale unchanged")
 
 
 if __name__ == "__main__":

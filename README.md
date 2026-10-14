@@ -1,4 +1,27 @@
-# Auren Minecraft — v0.5.3-alpha (Minecraft 1.21.1 / NeoForge)
+# Auren Minecraft — v0.5.4-alpha (Minecraft 1.21.1 / NeoForge)
+
+## v0.5.4 — original IceAndFire CE shoulder idle animation
+
+In v0.5.3 the baby correctly used the **original CE sitting_shoulder static
+pose** but appeared frozen because the renderer returned **before applying the
+original CE idle motion**.
+
+This version ports the unchanged core of the CE animator's awake idle sequence
+(speed = 0.05, degree = 0.5 and the original per-bone amplitudes/phase offsets)
+to the already-posed baby: tail swinging and waving, neck waving, and subtle
+body/leg/wing bobbing. The amplitude ramps with the existing 20-tick shoulder
+transition. No new pose/animation is authored: the original IceAndFire routines
+operate on the original Lightning Dragon skeleton using Uranus' built-in
+animation methods.
+
+**Scope:** while perched on the player's shoulder only. Follow behavior,
+50-block adult emergency teleport, temporary chunk ticket, CE walk/flight
+animations, size and shoulder anchor stay unchanged.
+
+**Test on Zalith:** wait still with the baby perched for 10–20 seconds and
+watch head/neck, tail, and body. It should no longer freeze in a rigid stance.
+Its movements are deliberately subtle because CE uses slow idle animation.
+Compilation and static checks do NOT replace visual testing on Android.
 
 ## v0.5.3 — original CE shoulder pose (fix for twisted baby on neck)
 
@@ -33,7 +56,7 @@ instead of becoming frozen when simulation distance is low. The small Auren
 and neck mechanic remain unchanged. This still does not implement flight.
 
 **One-time caveat for existing saves:** if the adult's chunk was already
-unloaded *before installing v0.5.3*, you need to approach his last known
+unloaded *before installing v0.5.4*, you need to approach his last known
 location once to load him and start the first ticket. A durable unloaded
 entity index is not part of this focused update.
 
@@ -90,7 +113,7 @@ entity states, which are not present in Auren; it is not copied wholesale.
 
 ## Playing and testing
 
-1. Remove earlier Auren JARs from `mods` and install the one for v0.5.3.
+1. Remove earlier Auren JARs from `mods` and install the one for v0.5.4.
 2. Minecraft Java **1.21.1**, NeoForge **21.1.248+**.
 3. Summon with `/summon aurenminecraft:auren`; empty-hand interact to tame.
 4. Observe the big dragon walking: the feet/body should now use the original

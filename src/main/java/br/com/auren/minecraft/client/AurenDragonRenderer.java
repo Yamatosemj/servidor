@@ -45,7 +45,8 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
     /**
      * CE original Lightning Dragon Tabula walk/flight keyframes and shoulder
      * pose. The CE shoulder pose needs its original torso offset in addition
-     * to bone interpolation; no extra hand-crafted neck/wing/tail twisting.
+     * to bone interpolation; CE also runs continuous idle animations on the
+     * posed bones. No extra hand-crafted neck/wing/tail twisting.
      */
     private static void animate(TabulaModel<AurenDragon> model, AurenDragon dragon,
                                 float limbSwing, float limbSwingAmount,
@@ -66,6 +67,10 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
             if (torso != null) {
                 torso.offsetZ += (-12.0F - torso.offsetZ) * shoulderBlend;
             }
+            // In CE, sitting_shoulder is not a full animation: the same
+            // animating dragon also runs CE's continuous idle bone motions.
+            // V0.5.3 returned BEFORE those motions and froze him in place.
+            AurenOriginalShoulderIdle.apply(model, age, shoulderBlend);
             return;
         }
 
