@@ -86,3 +86,27 @@ documented Auren-specific safety and size adjustments. The existing
 Uranus `AdvancedPathNavigate` type is reused *directly*, not copied.
 
 **Preserve LGPL attribution when redistributing or adapting this class.**
+
+
+## v0.6.3 — IceAndFire CE mounted-flight implementation (LGPL-3.0-or-later)
+
+The mounted motion and rider state behavior in
+`src/main/java/br/com/auren/minecraft/entity/AurenDragon.java` is adapted
+from CE revision `aa2f11a6b79acb48a1094765d610cdaca79e3d18`:
+
+- `entity/DragonBaseEntity.java`: `travel`, `move`, `updateRider`,
+  `updatePitch`, `getRiderPosition`, `getRideHeightBase`,
+  `getRideHorizontalBase`, `positionRider`
+- `entity/util/dragon/IafDragonLogic.java`: transition from hovering to
+  flying, hovering lift
+- `entity/LightningDragonEntity.java`: movement limits 0.15/0.4
+- `network/payload/DragonControlC2SPayload.java`,
+  `network/NetworkManager.java`, `network/ServerNetworkHandlers.java`,
+  `event/handler/ClientEvents.java`: rider input / validated transport
+
+The primary adaptions are removal of unrelated combat, age growth, inventory
+and stamina systems, reuse of the Auren v0.6.2 autonomous follow when not
+mounted, and adapting CE stage-3 rider position to Auren's render scale.
+All credit and original LGPL terms remain with upstream IceAndFire CE authors.
+The complete upstream animation buffer architecture is not bundled; the
+visual experience still requires validation in Zalith.
