@@ -22,6 +22,8 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.block.Blocks;
@@ -83,11 +85,37 @@ public final class AurenFireBreath {
                 eye, endpoint, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, dragon));
         Vec3 burnTarget = blockHit.getType() == HitResult.Type.MISS
                 ? endpoint : blockHit.getLocation();
+        BlockHitResult impactBlock = blockHit.getType() == HitResult.Type.BLOCK
+                ? blockHit : null;
+
+        // The upstream CE block-only ray can pass through a mob in open sky.
+        // Use vanilla ProjectileUtil to select the first hostile/non-allied
+        // entity intersecting the sight ray, then apply CE area-breath there.
+        EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
+                level, dragon, eye, burnTarget, new AABB(eye, burnTarget).inflate(1.0D),
+                entity -> entity instanceof LivingEntity target && target.isAlive()
+                        && target != rider && target != dragon
+                        && !dragon.isAlliedTo(target)
+                        && !(target instanceof TamableAnimal tame
+                        && tame.isTame() && tame.getOwnerUUID() != null
+                        && tame.getOwnerUUID().equals(dragon.getOwnerUUID())));
+        if (entityHit != null) {
+            burnTarget = entityHit.getLocation();
+            impactBlock = null;
+        }
+
+        Vec3 head = getHeadPosition();
+        // Do not allow a mouth behind a wall to breathe through solid blocks.
+        BlockHitResult mouthBlock = level.clip(new ClipContext(
+                head, burnTarget, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, dragon));
+        if (mouthBlock.getType() == HitResult.Type.BLOCK) {
+            burnTarget = mouthBlock.getLocation();
+            impactBlock = mouthBlock;
+        }
         if (!level.hasChunkAt(BlockPos.containing(burnTarget))) return;
 
         // CE's burnProgress / 40 regulates the stream's visual reach.
         this.burnProgress = Math.min(CE_BURN_PROGRESS_MAX, this.burnProgress + 2);
-        Vec3 head = getHeadPosition();
         double progress = this.burnProgress / (double) CE_BURN_PROGRESS_MAX;
         Vec3 streamEnd = head.lerp(burnTarget, progress);
         for (int i = 1; i <= 12; i++) {
@@ -100,7 +128,7 @@ public final class AurenFireBreath {
         // CE destruction manager applies a stage-scaled area breath at the
         // impact. Auren throttles hit ticks for compatibility on Zalith.
         if (this.burnProgress == CE_BURN_PROGRESS_MAX && dragon.tickCount % 5 == 0) {
-            applyBreathImpact(level, rider, streamEnd, blockHit);
+            applyBreathImpact(level, rider, streamEnd, impactBlock);
         }
     }
 
@@ -161,7 +189,7 @@ public final class AurenFireBreath {
 
         // CE breath ignites terrain only where mobGriefing permits. Do not
         // transplant the mod-specific ash/charred blocks or destroy terrain.
-        if (blockHit.getType() == HitResult.Type.BLOCK
+        if (blockHit != null && blockHit.getType() == HitResult.Type.BLOCK
                 && level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)
                 && dragon.getRandom().nextBoolean()) {
             BlockPos firePos = blockHit.getBlockPos().relative(blockHit.getDirection());
