@@ -1,4 +1,39 @@
-# Auren Minecraft — v0.6.1-alpha (Minecraft 1.21.1 / NeoForge)
+# Auren Minecraft — v0.6.2-alpha (Minecraft 1.21.1 / NeoForge)
+
+## v0.6.2 — ground-first follow and smoother CE flight (test build)
+
+After the in-game video revealed two wing beats followed by apparent aerial
+hopping, and the dragon taking off immediately instead of walking, code
+inspection exposed two specific v0.6.1 problems:
+
+1. The follow goal invoked `flightController.follow(owner)` EVERY tick, even
+   while grounded. The method begins takeoff when it has headroom, bypassing
+   regular ground pathfinding almost entirely.
+2. The upstream CE flight manager injects +0.1 Y velocity when targeting a
+   higher point. Our port did that with `noGravity=true`, so upward momentum
+   could build without the gravity model used by the original dragon.
+
+Fixes (no additional dependencies/features):
+- Every follow begins with ordinary ground navigation. After ~30 ticks of
+  failed/stalled progress, the Auren may switch to the CE flight mover.
+  An extended chase can also trigger takeoff after at least ~40 ticks walking
+  if still over 32 blocks away (adult) or 14 (baby).
+- Keep the original CE `FlightMoveHelper` yaw, acceleration, pitch, waypoint
+  sampling and the Uranus flying navigator; remove its incompatible repeated
+  vertical boost. Stabilize Y velocity only toward the existing CE waypoint,
+  leaving CE horizontal steering unchanged. Dampen movement briefly if the
+  flight manager has no unobstructed waypoint.
+- Match the CE animation cadence: its 6 flight poses advance by 2/10 frame
+  per tick, rather than the prototype 0.16.
+- Adult start/stop 15/8, baby 4.5/1.7, safe emergency teleport 50+, chunk
+  ticket and shoulder positioning are unchanged.
+- The PR remains experimental: CI builds and checks structural invariants,
+  but only an actual Zalith test can verify smooth movement/landings.
+
+**Zalith checks:** first walk 16–25 blocks away from the adult on flat terrain
+(it should walk, not immediately fly); let it follow behind an obstacle;
+try a prolonged 35+ block chase; film a sustained flight from the side;
+then test a baby at 5 blocks, a 50+ block teleport and shoulder mode.
 
 ## v0.6.1 — directly ported IceAndFire CE flight engine (not a homegrown flight controller)
 
