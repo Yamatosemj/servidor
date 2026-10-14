@@ -1,54 +1,47 @@
-# Auren Minecraft
+# Auren Minecraft — Protótipo NeoForge 1.21.1
 
-Mod experimental para representar o **Auren** como um único companheiro dragão no Minecraft, com transformações e futura integração com o assistente Auren principal.
+**Uma única entidade Auren**, representada por um dragão de raios inspirado na IceAndFire Community Edition, com forma adulta e filhote/ombro.
 
-> **Status:** planejamento. Ainda não existe protótipo jogável nem integração com IA.
+**Estado:** protótipo experimental. O código está em desenvolvimento e precisa de build do GitHub Actions e validação visual no jogo. **Não há IA, voo, montaria ou ataque de raios nesta etapa.**
 
-## Plataforma definida
+## Compatibilidade
 
-- **Minecraft:** Java Edition 1.21.1
-- **Loader:** NeoForge para 1.21.1 (versão exata a fixar)
-- **Desenvolvimento:** Java 21 / Gradle
-- **Projeto principal:** [aurenOFC](https://github.com/Yamatosemj/aurenOFC), separado deste repositório
+- Minecraft Java **1.21.1**
+- **NeoForge 21.1.248** ou mais recente dentro do ramo 1.21.1
+- **Uranus 3.0-beta.1** para NeoForge 1.21.1 ([arquivo correspondente](https://www.curseforge.com/minecraft/mc-mods/uranus/files/8682870))
+- **Ice and Fire NÃO é exigido:** baixamos somente 2 modelos Tabula e 2 texturas do dragão de raios durante o build.
 
-## Identidade e aparências — decisão de escopo
+## Teste previsto quando o build passar
 
-**Auren é uma entidade única**, com memória e personalidade próprias. Não vamos acrescentar os demais dragões, criaturas ou sistemas de progressão do Ice and Fire como conteúdo do mod Auren.
+1. Baixe o `.jar` gerado na aba **Actions** deste repositório e instale junto com Uranus no perfil NeoForge.
+2. Entre em um mundo com comandos habilitados.
+3. Use `/summon aurenminecraft:auren` para invocar um Auren.
+4. Clique com **mão vazia** nele para torná-lo seu companheiro.
+5. **Agache e clique com mão vazia** para alternar adulto ↔ filhote.
+6. Na forma filhote, **clique com mão vazia** para colocá-lo no ombro; **agache** para soltá-lo.
 
-A referência escolhida para **modelos e animações** é a [IceAndFire Community Edition](https://github.com/IAFEnvoy/IceAndFire-CE), ramo **1.21.1**, correspondente a Minecraft 1.21.1 + NeoForge. Arquivo publicado de referência: `iceandfire-2.1.4.jar` (11/10/2026). Nenhum recurso foi copiado ainda.
+Esses passos descrevem a intenção do protótipo. **O comportamento ainda precisa ser testado dentro do cliente**; compilação do Java sozinha não garante que os modelos sejam exibidos corretamente.
 
-**Apenas duas apresentações principais do dragão:**
+## Estrutura
 
-1. **Dragão grande / adulto:** voo, acompanhamento externo, combate, montaria; tamanho inspirado no estágio 5.
-2. **Dragão filhote:** acompanhamento em interiores, permanência no ombro e assistente de itens; tamanho inspirado no estágio 1.
+- `src/main/java/br/com/auren/minecraft/` — entidade, estado sincronizado e renderizador Tabula.
+- `src/main/templates/META-INF/` — metadados e dependências NeoForge.
+- `build.gradle` — Gradle/NeoForge e download verificável dos recursos originais.
+- `docs/TECHNICAL_DECISIONS.md` — pesquisa, decisões e limitações.
+- `THIRD_PARTY_ASSETS.md` — procedência/licenças dos recursos de terceiros.
+- `.github/workflows/build.yml` — compila automaticamente e anexa artefatos de build.
 
-No código da Community Edition 1.21.1, o dragão domesticado com estágio inferior a 2 pode subir no jogador ao interagir com a mão vazia, e existem animações `*_sitting_shoulder.tbl` para dragões de fogo, gelo e raios. **Isso comprova a existência da mecânica original, não o funcionamento automático dentro do nosso mod independente**.
+## Recursos da Community Edition
 
-O dragão de raios é **a sugestão inicial**, pois combina com a futura forma de braço lança-raios. Elemento, variante e textura final ainda precisam ser escolhidos.
+Os recursos são recuperados de um commit fixado da [IceAndFire Community Edition 1.21.1](https://github.com/IAFEnvoy/IceAndFire-CE/tree/1.21.1), com verificação de SHA antes do empacotamento.
 
-### Demais transformações planejadas
+Assim mantemos **somente o Auren** no jogo, mas usamos Uranus como biblioteca técnica para ler arquivos Tabula. Consulte os créditos e direitos em `THIRD_PARTY_ASSETS.md`.
 
-Forma pequena doméstica, forma Chibi/de ombro, forma mini/inventário, ferramenta e forma de braço **não exigem necessariamente novos modelos principais**. Podem reutilizar o modelo de filhote, animações e representações de item/equipamento, se o protótipo demonstrar viabilidade. Habilidades únicas ficam para fases posteriores.
+## Próximas etapas
 
-## Estratégia de implementação
+- Confirmar compilação de um jar NeoForge 1.21.1.
+- Validar o dragão adulto/filhote e posição do ombro em jogo.
+- Corrigir escala, câmera, sombras, colisões e persistência.
+- Só depois implementar as animações completas, voo, ataques elétricos e conexão ao Auren principal.
 
-**Objetivo final:** um mod Auren enxuto, contendo apenas sua entidade e os sistemas necessários. Há duas abordagens a comparar tecnicamente:
-
-- **Add-on com dependência da Community Edition:** reusa renderização, mecânicas e entidades diretamente, mas exige instalar a Community Edition completa (com todo o conteúdo dela).
-- **Mod independente com recursos selecionados e adaptação autorizada:** evita instalar a Community Edition completa, mas exige implementar/adaptar renderizador, animações, controle, IA e transformações; custo técnico maior.
-
-Como o objetivo declarado é **usar apenas o Auren**, investigar prioritariamente a viabilidade da segunda opção, sem supor que basta importar dois arquivos de modelo. Confirmar direitos dos recursos e conformidade com a licença LGPL-3.0 e outros créditos aplicáveis antes de copiar/distribuir assets.
-
-Comportamentos locais devem cuidar de movimento, ombro, combate e transformações sem depender da IA externa. Uma ponte futura enviará eventos e comandos para o Auren principal em Python.
-
-## Primeira prova de conceito
-
-1. Fixar toolchain NeoForge 1.21.1 / Java 21 e levantar os arquivos de modelo, animação e textura estritamente necessários.
-2. Provar renderização de **um Auren adulto e um Auren filhote**, usando o mesmo tipo de dragão e sem incluir os outros mobs.
-3. Implementar troca manual entre duas formas preservando identidade/estado.
-4. Testar filhote no ombro, com entrada/saída e sincronização multiplayer.
-5. Só então implementar comandos, comportamento de companheiro e futura ligação com a IA.
-
-## Repositório
-
-Reaproveitado do projeto antigo `servidor`. O conteúdo anterior foi removido da branch principal por commit, preservando o histórico Git.
+Este repositório era o antigo `servidor`, cujo histórico foi mantido.
