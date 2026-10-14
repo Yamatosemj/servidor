@@ -18,7 +18,8 @@ RENDERER = ROOT / "src/main/java/br/com/auren/minecraft/client/AurenDragonRender
 ENTITY = ROOT / "src/main/java/br/com/auren/minecraft/entity/AurenDragon.java"
 TRANSITION = ROOT / "src/main/java/br/com/auren/minecraft/client/AurenPoseTransition.java"
 PROPS = ROOT / "gradle.properties"
-TABULA = "assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_sitting_shoulder.tbl"
+TABULA = "assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_sleeping.tbl"
+TABULA_SHOULDER = "assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_sitting_shoulder.tbl"
 
 
 def bones(cubes):
@@ -35,16 +36,36 @@ def verify():
         with ZipFile(io.BytesIO(outer.read(TABULA))) as inner:
             skeleton = set(bones(json.loads(inner.read("model.json"))["cubes"]))
     assert "BodyUpper" in skeleton, "Original CE torso bone absent"
+    # Regression: sleeping is a distinct, genuinely tucked/resting source pose.
+    with ZipFile(jars[0]) as jar:
+        with ZipFile(io.BytesIO(jar.read(TABULA_SHOULDER))) as original:
+            shoulder = json.loads(original.read("model.json"))
+
+    def find_bone(cubes, name):
+        for cube in cubes:
+            if cube["name"] == name:
+                return cube
+            result = find_bone(cube.get("children", []), name)
+            if result is not None:
+                return result
+        return None
+
+    with ZipFile(jars[0]) as jar:
+        with ZipFile(io.BytesIO(jar.read(TABULA))) as curled:
+            sleeping = json.loads(curled.read("model.json"))
+    assert find_bone(sleeping["cubes"], "BodyUpper")["rotation"][0] < find_bone(shoulder["cubes"], "BodyUpper")["rotation"][0]
+    assert abs(find_bone(sleeping["cubes"], "armL1")["rotation"][0]) < abs(find_bone(shoulder["cubes"], "armL1")["rotation"][0])
+    assert find_bone(sleeping["cubes"], "LegR")["rotation"][0] < find_bone(shoulder["cubes"], "LegR")["rotation"][0]
 
     renderer = RENDERER.read_text(encoding="utf-8")
     entity = ENTITY.read_text(encoding="utf-8")
     transition = TRANSITION.read_text(encoding="utf-8")
     properties = PROPS.read_text(encoding="utf-8")
 
-    # Correct: CE sitting_shoulder, blend 0 -> 20 ticks, and CE torso offset.
-    assert 'lightningdragon/lightningdragon_sitting_shoulder' in renderer
-    assert 'AurenPoseTransition.apply(model, originalPose, shoulderBlend);' in renderer
-    assert 'torso.offsetZ += (-12.0F - torso.offsetZ) * shoulderBlend;' in renderer
+    # Correct: original CE sleeping posture + CE idle, blended over 20 ticks.
+    assert 'lightningdragon/lightningdragon_sleeping' in renderer
+    assert 'AurenPoseTransition.apply(model, restPose, shoulderBlend);' in renderer
+    assert 'torso.offsetZ +=' not in renderer
     assert 'AurenOriginalShoulderIdle.apply(model, age, shoulderBlend);' in renderer
     idle = (ROOT / "src/main/java/br/com/auren/minecraft/client/AurenOriginalShoulderIdle.java").read_text(encoding="utf-8")
     assert 'float speedIdle = 0.05F;' in idle
@@ -67,19 +88,19 @@ def verify():
     assert not (ROOT / "src/main/java/br/com/auren/minecraft/client/AurenNeckPose.java").exists()
 
     # CE shoulder positioning, body yaw only; no effect on follow AI.
-    assert 'double lateral = 0.5D;' in entity
+    assert 'double lateral = 0.30D;' in entity
     assert 'double backward = 0.04D;' in entity
-    assert 'double y = player.getY() + 1.4D;' in entity
+    assert 'double y = player.getY() + 1.30D;' in entity
     assert 'this.yHeadRot = player.yBodyRot;' in entity
     assert 'float factor = entity.isSmallForm() ? 0.42F : 3.25F;' in renderer
-    assert 'mod_version=0.5.4-alpha' in properties
+    assert 'mod_version=0.5.5-alpha' in properties
 
     for property_name in ("rotateAngleX", "rotateAngleY", "rotateAngleZ",
                           "rotationPointX", "rotationPointY", "rotationPointZ"):
         assert f"from.{property_name}" in transition
     assert "Math.atan2" in transition
-    print("PASS: original CE sitting_shoulder pose and torso offset, "
-          "CE idle animation now running, proper shoulder anchor, scale unchanged")
+    print("PASS: CE sleeping keyframe is folded vs standing shoulder, "
+          "CE idle animation runs on shoulder; anchor near neck, scale unchanged")
 
 
 if __name__ == "__main__":

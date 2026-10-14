@@ -32,3 +32,14 @@ The SHA-1 Git blob IDs for each file appear in `build.gradle` and are verified
 before packaging. All source-model attribution and license conditions remain as
 stated above. `AurenOriginalAnimations.java` adapts the original pose
 interpolation technique, not the complete original animator class.
+
+
+## More original CE Lightning Dragon posture resources (Auren v0.5.5)
+
+The unchanged `lightningdragon_sitting.tbl` (Git blob
+`45cab84a19e5f558f50581c5ec9ea36dde2a64da`) and
+`lightningdragon_sleeping.tbl` (Git blob
+`363a94e348621b6dd1cdd78eae7028d5e90a4465`) from the
+same pinned IceAndFire-CE 1.21.1 commit are now also included.
+The latter is used in shoulder mode for a natural curled/resting posture.
+Original authorship/asset licensing is unchanged.
