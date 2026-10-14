@@ -42,7 +42,7 @@ for required in (
     "this.glidingSpeedBonus + this.getDeltaMovement().y * -0.05D",
     "this.glidingSpeedBonus * 0.01D",
     "speed *= 1.5F",
-    "str afing *= 0.1F".replace(" ", ""),
+    "strafing *= 0.1F",
     "forward = Mth.abs(Mth.cos(this.getXRot()",
     "vertical = Mth.abs(Mth.sin(this.getXRot()",
     "new Vec3(0.9D, 0.9D, 0.9D)",
