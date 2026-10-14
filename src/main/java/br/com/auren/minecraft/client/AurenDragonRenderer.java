@@ -86,8 +86,8 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
             pose.mulPose(Axis.YP.rotationDegrees(90.0F * blend));
             pose.translate(0.0D, -0.035D * blend, 0.0D);
         }
-        // Keep the original baby size in every pose, as requested.
-        float factor = entity.isSmallForm() ? 0.42F : 5.8F;
+        // Keep the original baby size; adult now approximates a CE stage-3 dragon.
+        float factor = entity.isSmallForm() ? 0.42F : 3.25F;
         pose.scale(factor, factor, factor);
     }
 

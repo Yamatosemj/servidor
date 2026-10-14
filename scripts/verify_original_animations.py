@@ -56,7 +56,7 @@ def check():
         assert f'load("{name}")' in source
     assert "AurenOriginalAnimations.instance().apply" in renderer
     assert "AurenNeckPose.apply" in renderer
-    assert "mod_version=0.5.0-alpha" in version
+    assert "mod_version=0.5.1-alpha" in version
     print(f"PASS: {len(NAMES)} compatible original Lightning Dragon "
           f"Tabula models are bundled and referenced; neck pose retained")
 

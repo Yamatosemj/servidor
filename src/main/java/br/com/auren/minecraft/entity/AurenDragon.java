@@ -114,13 +114,31 @@ public final class AurenDragon extends TamableAnimal {
     protected EntityDimensions getDefaultDimensions(Pose pose) {
         return isSmallForm()
                 ? EntityDimensions.scalable(0.5F, 0.7F)
-                : EntityDimensions.scalable(1.65F, 2.0F);
+                : EntityDimensions.scalable(1.05F, 1.3F);
     }
 
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(1, new FloatGoal(this));
-        this.goalSelector.addGoal(2, new FollowOwnerGoal(this, 1.15D, 4.5F, 1.7F));
+        // Keep the vanilla behavior for the small form only.
+        this.goalSelector.addGoal(2, new FollowOwnerGoal(this, 1.15D, 4.5F, 1.7F) {
+            @Override
+            public boolean canUse() {
+                return AurenDragon.this.isSmallForm()
+                        && !AurenDragon.this.isOnShoulder()
+                        && super.canUse();
+            }
+
+            @Override
+            public boolean canContinueToUse() {
+                return AurenDragon.this.isSmallForm()
+                        && !AurenDragon.this.isOnShoulder()
+                        && super.canContinueToUse();
+            }
+        });
+        // Adult keeps a wider distance, and must never use the baby goal's
+        // vanilla teleport threshold (~12 blocks).
+        this.goalSelector.addGoal(2, new AurenAdultFollowOwnerGoal(this));
         this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.65D));
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
