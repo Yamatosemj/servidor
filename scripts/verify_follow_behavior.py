@@ -30,7 +30,18 @@ def verify():
                    "level.noCollision(this.dragon, destinationBox)",
                    "level.getFluidState(candidate).isEmpty()"):
         assert safety in adult, f"missing teleport safety: {safety}"
-    assert "mod_version=0.5.1-alpha" in props
+    chunkloader = (ROOT / "src/main/java/br/com/auren/minecraft/entity/AurenAdultChunkLoader.java").read_text(encoding="utf-8")
+    assert "new AurenAdultChunkLoader()" in entity
+    assert "this.adultChunkLoader.tick(this, serverLevel)" in entity
+    assert "this.adultChunkLoader.release(this, serverLevel)" in entity
+    assert "TicketType.create" in chunkloader
+    assert "TICKET_TIMEOUT_TICKS = 100" in chunkloader
+    assert "TICKET_REFRESH_TICKS = 20" in chunkloader
+    assert "addRegionTicket" in chunkloader
+    assert "removeRegionTicket" in chunkloader
+    assert "!dragon.isSmallForm()" in chunkloader
+    assert "owner.level() == level" in chunkloader
+    assert "mod_version=0.5.2-alpha" in props
     print("PASS: baby follows at 4.5/1.7; adult at 15/8; teleports only at 50+ with safe landing")
 
 

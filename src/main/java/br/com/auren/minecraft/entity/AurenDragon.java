@@ -7,6 +7,7 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.AgeableMob;
@@ -44,6 +45,10 @@ public final class AurenDragon extends TamableAnimal {
     private static final float SHOULDER_ANIMATION_TICKS = 20.0F;
     private float previousShoulderProgress;
     private float shoulderProgress;
+
+    // A bounded temporary region ticket keeps a tamed ADULT ticking while
+    // its online owner moves beyond the simulation distance.
+    private final AurenAdultChunkLoader adultChunkLoader = new AurenAdultChunkLoader();
 
     public AurenDragon(EntityType<? extends TamableAnimal> type, Level level) {
         super(type, level);
@@ -181,6 +186,9 @@ public final class AurenDragon extends TamableAnimal {
 
     @Override
     public void tick() {
+        if (this.level() instanceof ServerLevel serverLevel) {
+            this.adultChunkLoader.tick(this, serverLevel);
+        }
         // Animate both entering and leaving shoulder mode. Kept client-side
         // and derived from the synced state so latency cannot spam packets.
         this.previousShoulderProgress = this.shoulderProgress;
@@ -216,6 +224,14 @@ public final class AurenDragon extends TamableAnimal {
             // An orphaned shoulder state must never float forever.
             this.setOnShoulder(false);
         }
+    }
+
+    @Override
+    public void remove(RemovalReason reason) {
+        if (this.level() instanceof ServerLevel serverLevel) {
+            this.adultChunkLoader.release(this, serverLevel);
+        }
+        super.remove(reason);
     }
 
     @Override
