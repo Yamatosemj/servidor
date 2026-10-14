@@ -69,7 +69,7 @@ def verify():
     assert "this.yHeadRot = player.yBodyRot;" in entity
     assert "SHOULDER_ANIMATION_TICKS = 20.0F;" in entity
     assert "float factor = entity.isSmallForm() ? 0.42F : 3.25F;" in render
-    assert "mod_version=0.6.2-alpha" in version
+    assert "mod_version=0.6.3-alpha" in version
     print("PASS: reference neck wrap + CE folded wings, awake head, no root yaw, original anchor")
 
 
