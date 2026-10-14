@@ -4,7 +4,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 
@@ -33,7 +32,6 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
     private static final int MAX_TELEPORT_ATTEMPTS = 20;
 
     private final AurenDragon dragon;
-    private final PathNavigation navigation;
     private final boolean baby;
     private LivingEntity owner;
     private int repathCooldown;
@@ -46,7 +44,6 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
     public AurenAdultFollowOwnerGoal(AurenDragon dragon, boolean baby) {
         this.dragon = dragon;
         this.baby = baby;
-        this.navigation = dragon.getNavigation();
         this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
 
@@ -99,7 +96,7 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
     @Override
     public void stop() {
         this.owner = null;
-        this.navigation.stop();
+        this.dragon.getNavigation().stop();
         this.dragon.getFlightController().land();
     }
 
@@ -111,7 +108,7 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
         // The controller receives a moving air target EVERY tick. Keeping
         // the target fresh lets the dragon turn naturally around the owner.
         boolean airborne = this.dragon.getFlightController().follow(this.owner);
-        if (airborne) this.navigation.stop();
+        if (airborne) this.dragon.getNavigation().stop();
 
         // Full pathfinder recalculation every tick is costly on Zalith.
         // Only the lightweight aerial steering needs a target each tick.
@@ -119,7 +116,7 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
         this.repathCooldown = REPATH_INTERVAL_TICKS;
         if (!airborne) {
             // Low roof, cramped enclosure or water: ordinary path navigation.
-            this.navigation.moveTo(this.owner, WALK_SPEED);
+            this.dragon.getNavigation().moveTo(this.owner, WALK_SPEED);
         }
         double distanceSq = this.dragon.distanceToSqr(this.owner);
         if (distanceSq >= EMERGENCY_TELEPORT_DISTANCE * EMERGENCY_TELEPORT_DISTANCE
@@ -167,7 +164,7 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
 
                 this.dragon.getFlightController().reset();
                 this.dragon.setPos(posX, posY, posZ);
-                this.navigation.stop();
+                this.dragon.getNavigation().stop();
                 return true;
             }
         }
