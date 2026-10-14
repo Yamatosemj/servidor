@@ -1,0 +1,18 @@
+Third-party notices for Auren Minecraft
+
+Uranus 3.0-beta.1
+  Copyright (c) 2024 IAFEnvoy and contributors.
+  Source: https://github.com/IAFEnvoy/Uranus
+  License: GNU Lesser General Public License version 3 or later (LGPL-3.0).
+  Supplied as an intact JAR using NeoForge Jar-in-Jar.
+
+IceAndFire Community Edition (source of selected Tabula poses/textures)
+  Copyright (c) 2024 IAFEnvoy and contributors, with original Ice and Fire
+  authors' credits and rights remaining with their respective owners.
+  Source: https://github.com/IAFEnvoy/IceAndFire-CE
+  Fixed commit: aa2f11a6b79acb48a1094765d610cdaca79e3d18
+  Project license: LGPL-3.0 or later.
+  Four chosen model/texture files are copied byte-for-byte at build time.
+
+This software does not claim ownership of the third-party resources.
+See the repository THIRD_PARTY_ASSETS.md for provenance and distribution notes.
