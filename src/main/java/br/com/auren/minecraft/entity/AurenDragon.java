@@ -14,6 +14,9 @@ import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -56,6 +59,14 @@ public final class AurenDragon extends TamableAnimal {
     private float previousFlightProgress;
     private float flightProgress;
     private final AurenFlightController flightController = new AurenFlightController(this);
+
+    // IceAndFire CE's CONTROL_STATE bits: 0 = jump/climb, 1 = descend.
+    // Client sets its local value and forwards it only to the owning server.
+    // Never persist transient controls across reloads.
+    private byte riderControlState;
+    private int riderTakeoffTicks;
+    private int riderAirTicks;
+    private boolean wasPilotMounted;
 
     // CE's DragonBaseEntity.switchNavigator(0/1) changes BOTH the path
     // navigator and the MoveControl. Keep the original instances to restore
@@ -108,6 +119,165 @@ public final class AurenDragon extends TamableAnimal {
         return this.flightController;
     }
 
+    /** Port of CE DragonBaseEntity.getControllingPassenger: only the owner pilots. */
+    @Nullable
+    @Override
+    public LivingEntity getControllingPassenger() {
+        Entity passenger = this.getFirstPassenger();
+        return passenger instanceof Player player && this.isOwnedBy(player) ? player : null;
+    }
+
+    /** Port of CE canAddPassenger, limited to one adult/owner pilot. */
+    @Override
+    protected boolean canAddPassenger(Entity passenger) {
+        return !this.isVehicle() && !this.isSmallForm() && !this.isOnShoulder()
+                && passenger instanceof Player player && this.isTame()
+                && this.isOwnedBy(player);
+    }
+
+    public byte getRiderControlState() {
+        return this.riderControlState;
+    }
+
+    public void setRiderControlState(byte state) {
+        this.riderControlState = (byte) (state & 3);
+    }
+
+    private boolean riderGoingUp() {
+        return (this.riderControlState & 1) != 0;
+    }
+
+    private boolean riderGoingDown() {
+        return (this.riderControlState & 2) != 0;
+    }
+
+    /** CE positionRider, scaled to Auren's single stage-3-sized model. */
+    @Override
+    public void positionRider(Entity passenger, MoveFunction callback) {
+        if (!this.hasPassenger(passenger)) return;
+        // CE keeps the rider above the neck/back and turns with the camera.
+        // The Auren has a smaller hitbox than the original multipart dragon.
+        double seatHeight = this.getBbHeight() * 0.94D;
+        callback.accept(passenger, this.getX(), this.getY() + seatHeight, this.getZ());
+        if (passenger == this.getControllingPassenger()) {
+            this.setYRot(passenger.getYRot());
+            this.yBodyRot = this.getYRot();
+            this.yHeadRot = passenger.getYHeadRot();
+        }
+    }
+
+    /**
+     * Port of CE DragonBaseEntity.updateRider: hold jump to take off;
+     * X/Dragon Down descends. Riding physics is handled in travel().
+     * The autonomous CE FlightMoveHelper is deliberately never run for a pilot.
+     */
+    private void tickMountedRider(LivingEntity rider) {
+        this.wasPilotMounted = true;
+        this.getNavigation().stop();
+        if (this.getFlightMode() == AurenFlightController.GROUNDED) {
+            this.setNoGravity(false);
+            this.riderAirTicks = 0;
+            this.riderTakeoffTicks = riderGoingUp()
+                    ? Math.min(40, this.riderTakeoffTicks + 2)
+                    : Math.max(0, this.riderTakeoffTicks - 1);
+            if (this.riderTakeoffTicks > 20 && this.onGround()
+                    && !this.isInWater() && !this.isInLava()
+                    && this.level().hasChunkAt(this.blockPosition().above(2))
+                    && this.level().noCollision(this,
+                            this.getBoundingBox().move(0, 1.3D, 0))) {
+                this.setFlightMode(AurenFlightController.TAKING_OFF);
+                this.setNoGravity(true);
+                this.fallDistance = 0;
+                this.setDeltaMovement(this.getDeltaMovement().add(0, 0.29D, 0));
+                this.riderTakeoffTicks = 0;
+            }
+            return;
+        }
+
+        this.setNoGravity(true);
+        this.fallDistance = 0;
+        this.riderAirTicks++;
+        if (this.getFlightMode() == AurenFlightController.TAKING_OFF
+                && this.riderAirTicks >= 12) {
+            this.setFlightMode(AurenFlightController.FLYING);
+        }
+        // Same CE principle: descending into terrain ends mounted flight.
+        if (this.riderAirTicks >= 12 && (this.onGround() || this.verticalCollisionBelow)) {
+            this.flightController.reset();
+            this.riderTakeoffTicks = 0;
+            this.riderAirTicks = 0;
+        }
+    }
+
+    /**
+     * Adaptation of CE DragonBaseEntity.travel (rider movement only).
+     * CE ground movement uses rider's vanilla strafe/forward; flying uses
+     * moveRelative -> move(MoverType.SELF) -> equal-axis drag 0.9.
+     * The vanilla vehicle packet handles movement on the controlling client.
+     */
+    @Override
+    public void travel(Vec3 input) {
+        LivingEntity rider = this.getControllingPassenger();
+        if (rider == null) {
+            super.travel(input);
+            return;
+        }
+
+        this.setYRot(rider.getYRot());
+        this.yBodyRot = this.getYRot();
+        this.yHeadRot = rider.getYHeadRot();
+
+        if (this.getFlightMode() == AurenFlightController.TAKING_OFF
+                || this.getFlightMode() == AurenFlightController.FLYING) {
+            double forward = rider.zza;
+            double strafe = rider.xxa * 0.4D;
+            double vertical = 0.0D;
+            float speed = (float) this.getAttributeValue(Attributes.MOVEMENT_SPEED) * 5.2F;
+
+            // CE's "mouse-controlled yaw and pitch" when sprint-gliding.
+            // Normal flight uses up/down control bits from the original packet.
+            if (rider.isSprinting() && forward > 0.0D) {
+                speed *= 1.5F;
+                strafe *= 0.25D;
+                float pitchRadians = rider.getXRot() * ((float) Math.PI / 180F);
+                vertical = -Mth.sin(pitchRadians);
+                forward *= Mth.abs(Mth.cos(pitchRadians));
+            }
+            if (riderGoingUp() && !riderGoingDown()) vertical = 1.0D;
+            else if (riderGoingDown() && !riderGoingUp()) vertical = -1.0D;
+            else if (riderGoingUp()) vertical = 0.0D;
+
+            if (this.isControlledByLocalInstance()) {
+                float flyingSpeed = speed * 0.1F;
+                this.setSpeed(flyingSpeed);
+                this.moveRelative(flyingSpeed, new Vec3(strafe, vertical, forward));
+                this.move(MoverType.SELF, this.getDeltaMovement());
+                this.setDeltaMovement(this.getDeltaMovement().scale(0.9D));
+                if (this.horizontalCollision) {
+                    Vec3 motion = this.getDeltaMovement();
+                    this.setDeltaMovement(motion.x, Math.max(motion.y, 0.1D), motion.z);
+                }
+                this.calculateEntityAnimation(false);
+            } else {
+                this.setDeltaMovement(Vec3.ZERO);
+            }
+            this.tryCheckInsideBlocks();
+        } else {
+            // CE walking branch: same input, strafe reduced, reverse slowed.
+            float speed = (float) this.getAttributeValue(Attributes.MOVEMENT_SPEED) * 1.8F;
+            double forward = rider.zza * (rider.zza > 0 ? 1.0D : 0.2D);
+            double strafe = rider.xxa * 0.5D;
+            if (rider.isSprinting()) forward *= 1.2D;
+            if (this.isControlledByLocalInstance()) {
+                this.setSpeed(speed);
+                super.travel(new Vec3(strafe, input.y, forward));
+            } else {
+                this.setDeltaMovement(Vec3.ZERO);
+            }
+            this.tryCheckInsideBlocks();
+        }
+    }
+
     /**
      * Adaptation of original CE DragonBaseEntity.switchNavigator(1).
      * AdvancedPathNavigate ships in the existing embedded Uranus dependency.
@@ -150,6 +320,7 @@ public final class AurenDragon extends TamableAnimal {
     }
 
     public void setSmallForm(boolean small) {
+        if (this.isVehicle()) return;
         if (!small && isOnShoulder()) setOnShoulder(false);
         if (!this.level().isClientSide() && this.getFlightMode() != AurenFlightController.GROUNDED) {
             this.flightController.land();
@@ -160,6 +331,7 @@ public final class AurenDragon extends TamableAnimal {
 
     /** Updates state once; the normal tick keeps its position synchronized. */
     public void setOnShoulder(boolean enabled) {
+        if (this.isVehicle()) return;
         if (enabled && !this.isSmallForm()) this.setSmallForm(true);
         if (enabled && !this.level().isClientSide()) this.flightController.reset();
         boolean wasOnShoulder = this.isOnShoulder();
@@ -200,7 +372,17 @@ public final class AurenDragon extends TamableAnimal {
         // Both use real aerial motion; teleport is a 50+ block last resort.
         this.goalSelector.addGoal(2, new AurenAdultFollowOwnerGoal(this, true));
         this.goalSelector.addGoal(2, new AurenAdultFollowOwnerGoal(this));
-        this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.65D));
+        this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.65D) {
+            @Override
+            public boolean canUse() {
+                return !AurenDragon.this.isVehicle() && super.canUse();
+            }
+
+            @Override
+            public boolean canContinueToUse() {
+                return !AurenDragon.this.isVehicle() && super.canContinueToUse();
+            }
+        });
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
     }
@@ -213,6 +395,20 @@ public final class AurenDragon extends TamableAnimal {
                     this.tame(player);
                     player.displayClientMessage(Component.literal("Auren: agora sou seu companheiro."), true);
                 } else if (this.isOwnedBy(player)) {
+                    // CE DragonBaseEntity.mobInteract: adult, empty hand,
+                    // non-sneaking owner mounts the tame dragon.
+                    if (!this.isSmallForm() && !player.isShiftKeyDown()) {
+                        if (!this.isVehicle() && !player.isPassenger()) {
+                            this.flightController.reset();
+                            this.setOrderedToSit(false);
+                            this.getNavigation().stop();
+                            player.startRiding(this, true);
+                            this.riderControlState = 0;
+                            this.riderTakeoffTicks = 0;
+                            this.riderAirTicks = 0;
+                        }
+                        return InteractionResult.sidedSuccess(false);
+                    }
                     if (player.isShiftKeyDown()) {
                         if (this.isOnShoulder()) {
                             this.setOnShoulder(false);
@@ -261,6 +457,20 @@ public final class AurenDragon extends TamableAnimal {
                         + (destination > this.shoulderProgress ? 1.0F
                         : destination < this.shoulderProgress ? -1.0F : 0.0F),
                 0.0F, SHOULDER_ANIMATION_TICKS);
+        // Server owns takeoff state, client owns ridden movement (CE pattern).
+        if (!this.level().isClientSide()) {
+            LivingEntity pilot = this.getControllingPassenger();
+            if (pilot != null) {
+                this.tickMountedRider(pilot);
+            } else if (this.wasPilotMounted) {
+                // Vanilla dismount in midair: recover gravity and land safely.
+                this.wasPilotMounted = false;
+                this.riderControlState = 0;
+                this.riderTakeoffTicks = 0;
+                this.riderAirTicks = 0;
+                this.flightController.land();
+            }
+        }
         super.tick();
         if (!this.level().isClientSide()) this.flightController.tick();
         if (!this.isOnShoulder()) return;
@@ -314,6 +524,10 @@ public final class AurenDragon extends TamableAnimal {
         // Flight targets are transient. Safe server reload: return to vanilla
         // gravity instead of persisting a stale midair destination.
         if (!this.level().isClientSide()) this.flightController.reset();
+        this.wasPilotMounted = false;
+        this.riderControlState = 0;
+        this.riderTakeoffTicks = 0;
+        this.riderAirTicks = 0;
         this.setSmallForm(tag.getBoolean("SmallForm"));
         this.setOnShoulder(tag.getBoolean("OnShoulder"));
     }
