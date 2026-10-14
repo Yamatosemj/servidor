@@ -74,13 +74,14 @@ public final class AurenDragon extends TamableAnimal {
     /** Updates state once; the normal tick keeps its position synchronized. */
     public void setOnShoulder(boolean enabled) {
         if (enabled && !this.isSmallForm()) this.setSmallForm(true);
+        boolean wasOnShoulder = this.isOnShoulder();
         this.entityData.set(SHOULDER, enabled);
         this.setNoAi(enabled);
         this.setNoGravity(enabled);
         this.noPhysics = enabled;
         this.getNavigation().stop();
         this.setDeltaMovement(Vec3.ZERO);
-        if (!enabled && this.getOwner() instanceof Player player) {
+        if (wasOnShoulder && !enabled && this.getOwner() instanceof Player player) {
             // Move clear of the player to prevent immediately clipping into them.
             this.setPos(player.getX() + 0.9D, player.getY() + 0.1D, player.getZ());
         }
@@ -90,6 +91,10 @@ public final class AurenDragon extends TamableAnimal {
     public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
         super.onSyncedDataUpdated(key);
         if (SMALL.equals(key)) this.refreshDimensions();
+        if (SHOULDER.equals(key)) {
+            this.noPhysics = this.isOnShoulder();
+            this.setNoGravity(this.isOnShoulder());
+        }
     }
 
     @Override
