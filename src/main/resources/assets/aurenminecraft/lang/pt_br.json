@@ -1,1 +1,5 @@
-{"entity.aurenminecraft.auren":"Auren"}
+{
+  "entity.aurenminecraft.auren": "Auren",
+  "key.aurenminecraft.dragon_breath": "Sopro de fogo do Auren",
+  "key.aurenminecraft.dragon_down": "Descer com o Auren"
+}

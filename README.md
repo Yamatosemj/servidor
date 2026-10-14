@@ -1,4 +1,48 @@
-# Auren Minecraft — v0.6.3-alpha (Minecraft 1.21.1 / NeoForge)
+# Auren Minecraft — v0.6.4-alpha (Minecraft 1.21.1 / NeoForge)
+
+## v0.6.4-alpha — sopro de fogo do Fire Dragon original (montado)
+
+**Novo comando:** segurar `R` montado na forma adulta domesticada: após
+~1 segundo, um sopro contínuo sai do focinho na direção apontada pelo
+jogador. No Zalith, mapear uma tecla virtual para `R` na tela de jogo.
+Soltar a tecla, desmontar, morrer ou voltar à forma filhote encerra a ação.
+
+**Código-fonte reutilizado** da IceAndFire Community Edition 1.21.1
+(`aa2f11a6...`, LGPL-3.0-or-later):
+- `FireDragonEntity.riderShootFire`: ramo do sopro contínuo, sem a
+  variante aleatória `FireDragonChargeEntity` nesta etapa.
+- `DragonBaseEntity.isActuallyBreathingFire`: 20 ticks de preparação;
+  `rayTraceRider`: olho do piloto + direção da câmera, alcance
+  `10 * estágio` (estágio fixo 3 = 30 blocos).
+- `DragonBaseEntity.performNormalBreathAttack`: progresso do jato até
+  `40`, origem calculada por `getHeadPosition` com adaptação do tamanho
+  atual do Auren.
+- `IafDragonDestructionManager.destroyAreaBreath` (ramo Fire do estágio
+  3): efeito ao atingir a área de 3.5 blocos, dano de estágio 3 * 2,
+  incendiar criaturas por `5 + estágio*5` segundos. Dano limitado a
+  um pulso a cada 5 ticks para evitar excesso em Zalith.
+
+**Compatibilidade:** a rede CE de controle do piloto passa o bit `strike=8`
+junto com subir `1` e descer `2`, validando **dono montado** no servidor.
+O cliente não escolhe coordenadas de ataque. Não atinge piloto, dragão,
+outros animais domesticados pelo mesmo dono nem aliados. Proteção contra
+chunks não carregados. A colocação de fogo no bloco de impacto só ocorre
+com `mobGriefing=true` e suporte válido para fogo.
+
+**Limitações declaradas:** o Fire Dragon original tem partículas e sons
+próprios, blocos carbonizados e uma bola de fogo especial, que dependem de
+recursos e entidades do mod completo. Aqui o jato original está adaptado
+com partículas `FLAME` e som vanilla, sem detonações nem transformação
+permanente do terreno. A posição da boca é calculada, não obtida dos ossos
+animados; precisa de vídeo em terceira pessoa. A v0.6.3 montada também
+continua em teste: CI valida código/build, não demonstra comportamento
+idêntico ao Ice and Fire no mundo real.
+
+**Teste em jogo:** montar, manter R, ver as chamas sair da frente da cabeça,
+mirar um zumbi e conferir dano/fogo; soltar R e confirmar parada; mirar
+bloco com mobGriefing ligada/desligada; testar um lobo domesticado, filhote,
+desmontar durante o sopro e voar enquanto respira fogo. A comparação com
+o Fire Dragon original fica pendente até a reprodução visual no Zalith.
 ## v0.6.3 — pilotar o Auren adulto com o sistema original da CE
 
 ### Correção de fidelidade após teste real (14/10/2026)

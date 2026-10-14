@@ -14,7 +14,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
-/** Only the CE rider up/down bits are needed; never trust client positions. */
+/** CE rider controls: up=1, down=2, strike/breath=8; no client positions. */
 public record AurenDragonControlPayload(int dragonId, byte controlState)
         implements CustomPacketPayload {
     public static final Type<AurenDragonControlPayload> ID = new Type<>(

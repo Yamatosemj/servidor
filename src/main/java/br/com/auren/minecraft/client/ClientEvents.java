@@ -22,12 +22,16 @@ public final class ClientEvents {
     // Same descent key as the original IceAndFire Community Edition.
     private static final KeyMapping DRAGON_DOWN = new KeyMapping(
             "key.aurenminecraft.dragon_down", GLFW.GLFW_KEY_X, "key.categories.gameplay");
+    // CE IafKeyMappings.DRAGON_BREATH default is R.
+    private static final KeyMapping DRAGON_BREATH = new KeyMapping(
+            "key.aurenminecraft.dragon_breath", GLFW.GLFW_KEY_R, "key.categories.gameplay");
     private static int lastPilotId = -1;
     private static byte lastPilotControls = -1;
 
     @SubscribeEvent
     public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(DRAGON_DOWN);
+        event.register(DRAGON_BREATH);
     }
 
     /** Port of CE ClientEvents.onLivingUpdate rider input, once per client tick. */
@@ -48,7 +52,8 @@ public final class ClientEvents {
         }
 
         byte controls = (byte) ((mc.options.keyJump.isDown() ? 1 : 0)
-                | (DRAGON_DOWN.isDown() ? 2 : 0));
+                | (DRAGON_DOWN.isDown() ? 2 : 0)
+                | (DRAGON_BREATH.isDown() ? 8 : 0));
         dragon.setRiderControlState(controls);
         if (dragon.getId() != lastPilotId || controls != lastPilotControls) {
             PacketDistributor.sendToServer(new AurenDragonControlPayload(
