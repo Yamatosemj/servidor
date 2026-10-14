@@ -60,6 +60,8 @@ public final class AurenDragon extends TamableAnimal {
     private float previousFlightProgress;
     private float flightProgress;
     private final AurenFlightController flightController = new AurenFlightController(this);
+    // Separate CE FireDragon.riderShootFire port; never affects auto-escort.
+    private final AurenFireBreath fireBreath = new AurenFireBreath(this);
 
     // IceAndFire CE's CONTROL_STATE bits: 0 = jump/climb, 1 = descend.
     // Client sets its local value and forwards it only to the owning server.
@@ -151,7 +153,12 @@ public final class AurenDragon extends TamableAnimal {
     }
 
     public void setRiderControlState(byte state) {
-        this.riderControlState = (byte) (state & 3);
+        // CE CONTROL_STATE: up=1, down=2, strike/breath=8.
+        this.riderControlState = (byte) (state & 11);
+    }
+
+    public boolean isRiderFiring() {
+        return (this.riderControlState & 8) != 0;
     }
 
     private boolean riderGoingUp() {
@@ -619,6 +626,7 @@ public final class AurenDragon extends TamableAnimal {
                 // Vanilla dismount in midair: recover gravity and land safely.
                 this.wasPilotMounted = false;
                 this.riderControlState = 0;
+                this.fireBreath.reset();
                 this.riderTakeoffTicks = 0;
                 this.riderAirTicks = 0;
                 this.glidingSpeedBonus = 0.0F;
@@ -629,7 +637,10 @@ public final class AurenDragon extends TamableAnimal {
             }
         }
         super.tick();
-        if (!this.level().isClientSide()) this.flightController.tick();
+        if (!this.level().isClientSide()) {
+            this.flightController.tick();
+            this.fireBreath.tick();
+        }
         if (!this.isOnShoulder()) return;
         if (this.getOwner() instanceof Player player && player.isAlive() && player.level() == this.level()) {
             if (!this.level().isClientSide() && player.isShiftKeyDown()) {
@@ -661,6 +672,7 @@ public final class AurenDragon extends TamableAnimal {
 
     @Override
     public void remove(RemovalReason reason) {
+        this.fireBreath.reset();
         if (!this.level().isClientSide()) this.flightController.reset();
         if (this.level() instanceof ServerLevel serverLevel) {
             this.adultChunkLoader.release(this, serverLevel);
@@ -683,6 +695,7 @@ public final class AurenDragon extends TamableAnimal {
         if (!this.level().isClientSide()) this.flightController.reset();
         this.wasPilotMounted = false;
         this.riderControlState = 0;
+        this.fireBreath.reset();
         this.riderTakeoffTicks = 0;
         this.riderAirTicks = 0;
         this.glidingSpeedBonus = 0.0F;
