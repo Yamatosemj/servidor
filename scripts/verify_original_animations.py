@@ -74,7 +74,7 @@ def check():
     assert "AurenNeckPose.apply(model, shoulderBlend);" in renderer
     assert "AurenOriginalShoulderIdle.apply(model, age, shoulderBlend);" in renderer
     assert "pose.mulPose(" not in renderer
-    assert "mod_version=0.6.2-alpha" in version
+    assert "mod_version=0.6.3-alpha" in version
     print(f"PASS: {len(NAMES)} compatible original Lightning Dragon "
           f"Tabula models are bundled and referenced; original CE folded wings and illustrated awake neck wrap integrated")
 
