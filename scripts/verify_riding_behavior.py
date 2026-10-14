@@ -20,10 +20,10 @@ for value in (
     "getControllingPassenger()", "this.isOwnedBy(player)",
     "canAddPassenger(Entity passenger)", "!this.isSmallForm()",
     "positionRider(Entity passenger, MoveFunction callback)",
-    "public void travel(Vec3 input)", "this.moveRelative(flyingSpeed",
+    "public void travel(Vec3 pTravelVector)", "this.moveRelative(flyingSpeed",
     "this.move(MoverType.SELF, this.getDeltaMovement())",
-    "this.getDeltaMovement().scale(0.9D)",
-    "super.travel(new Vec3(strafe, input.y, forward))",
+    "new Vec3(0.9D, 0.9D, 0.9D)",
+    "super.travel(new Vec3(strafing, vertical, forward))",
     "private void tickMountedRider(LivingEntity rider)",
     "this.riderTakeoffTicks > 20", "this.onGround()",
     "this.setFlightMode(AurenFlightController.TAKING_OFF)",
@@ -32,6 +32,36 @@ for value in (
     "private boolean wasPilotMounted", "this.wasPilotMounted = false",
 ):
     assert value in dragon, f"Missing CE mounted control behavior: {value}"
+
+
+# CE LightningDragon 1.21.1 exact movement coefficients and state logic.
+for required in (
+    "CE_LIGHTNING_MIN_SPEED = 0.15F",
+    "CE_LIGHTNING_MAX_SPEED = 0.4F",
+    "Mth.map(speed,",
+    "this.glidingSpeedBonus + this.getDeltaMovement().y * -0.05D",
+    "this.glidingSpeedBonus * 0.01D",
+    "speed *= 1.5F",
+    "str afing *= 0.1F".replace(" ", ""),
+    "forward = Mth.abs(Mth.cos(this.getXRot()",
+    "vertical = Mth.abs(Mth.sin(this.getXRot()",
+    "new Vec3(0.9D, 0.9D, 0.9D)",
+    "this.riderTakeoffTicks += 2",
+    "if (this.riderTakeoffTicks > 0) this.riderTakeoffTicks--",
+    "if (rider.zza > 0.0F) this.setFlightMode(AurenFlightController.FLYING)",
+    "else this.setFlightMode(AurenFlightController.TAKING_OFF)",
+    "this.getRideHorizontalBase()",
+    "this.getRideHeightBase()",
+    "this.updateRiderPitch(this.yOld - this.getY())",
+):
+    assert required in dragon, f"Original CE rider flight mechanic missing: {required}"
+
+assert "speed *= 1.5F;" in dragon
+assert "speed *= 1.8F" in dragon
+# Avoid returning to the broken 0.6.3 always-FLYING 12-tick transition.
+assert "this.riderAirTicks >= 12" not in dragon
+assert "0.94D" not in dragon
+assert "getDeltaMovement().scale(0.9D)" not in dragon
 
 assert "&& !this.dragon.isVehicle()" in follow
 assert "dragon.getControllingPassenger() != null" in flight
