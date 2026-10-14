@@ -72,6 +72,7 @@ public final class AurenDragon extends TamableAnimal {
     private float glidingSpeedBonus;
     private float riderWalkingExtraY;
     private float dragonPitch;
+    private float previousDragonPitch;
     // From CE LightningDragonEntity constructor (not arbitrary multipliers).
     private static final float CE_LIGHTNING_MIN_SPEED = 0.15F;
     private static final float CE_LIGHTNING_MAX_SPEED = 0.4F;
@@ -218,6 +219,13 @@ public final class AurenDragon extends TamableAnimal {
         Vec3 pos = this.getRiderPosition();
         // CE DragonBaseEntity.positionRider positions feet above riderPos.
         callback.accept(passenger, pos.x, pos.y + passenger.getBbHeight(), pos.z);
+    }
+
+    /** CE DragonBaseEntityRenderer interpolates prevDragonPitch each frame. */
+    public float getRiderVisualPitch(float partialTick) {
+        return this.isVehicle()
+                ? Mth.lerp(partialTick, this.previousDragonPitch, this.dragonPitch)
+                : 0.0F;
     }
 
     /** From CE DragonBaseEntity.updatePitch (rider motion feedback). */
@@ -584,6 +592,8 @@ public final class AurenDragon extends TamableAnimal {
         if (this.level() instanceof ServerLevel serverLevel) {
             this.adultChunkLoader.tick(this, serverLevel);
         }
+        // Source CE DragonBaseEntity prevDragonPitch, used by renderer.scale.
+        this.previousDragonPitch = this.dragonPitch;
         // Update synchronized CE-style interpolation for actual flight modes.
         this.previousFlightProgress = this.flightProgress;
         float flightDestination = this.getFlightMode() == AurenFlightController.GROUNDED
@@ -614,6 +624,7 @@ public final class AurenDragon extends TamableAnimal {
                 this.glidingSpeedBonus = 0.0F;
                 this.riderWalkingExtraY = 0.0F;
                 this.dragonPitch = 0.0F;
+                this.previousDragonPitch = 0.0F;
                 this.flightController.land();
             }
         }
@@ -677,6 +688,7 @@ public final class AurenDragon extends TamableAnimal {
         this.glidingSpeedBonus = 0.0F;
         this.riderWalkingExtraY = 0.0F;
         this.dragonPitch = 0.0F;
+        this.previousDragonPitch = 0.0F;
         this.setSmallForm(tag.getBoolean("SmallForm"));
         this.setOnShoulder(tag.getBoolean("OnShoulder"));
     }
