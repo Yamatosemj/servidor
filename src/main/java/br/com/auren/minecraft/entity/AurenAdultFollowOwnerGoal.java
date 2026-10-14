@@ -75,9 +75,17 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        if (!adultMayFollow(this.owner)) return false;
         double stop = this.baby ? BABY_STOP_DISTANCE : STOP_DISTANCE;
-        return adultMayFollow(this.owner)
-                && this.dragon.distanceToSqr(this.owner) > stop * stop;
+        // Compare HORIZONTAL distance in air. Cruising height would otherwise
+        // keep the baby above its ground stop distance forever.
+        if (this.dragon.getFlightMode() != AurenFlightController.GROUNDED) {
+            double dx = this.owner.getX() - this.dragon.getX();
+            double dz = this.owner.getZ() - this.dragon.getZ();
+            double airborneStop = this.baby ? 2.0D : stop;
+            return dx * dx + dz * dz > airborneStop * airborneStop;
+        }
+        return this.dragon.distanceToSqr(this.owner) > stop * stop;
     }
 
     @Override

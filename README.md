@@ -20,9 +20,11 @@ IceAndFire mod itself.
 - **Cruise:** velocity-based pursuit of the owner's changing location;
   predictive upward detour when a forward bounding-box would collide.
   No phasing through walls and no force-loading target chunks.
-- **Landing:** on reaching owner, losing the target or encountering persistent
-  collision, gravity is restored and speed is damped. Landing pose is the
-  original CE hovering model; flight state is cleared on touchdown.
+- **Landing:** on reaching the owner horizontally (8 blocks adult, about
+  2 blocks baby), losing the target or persistent collision, gravity is
+  restored and speed is damped. The baby will not hover forever simply
+  because cruising altitude exceeds its ground stop distance. Landing uses
+  CE hovering and clears the state at touchdown.
 - **Animation:** a synced integer flight state plus 10-tick blend selects
   the original CE hovering/flying/diving Tabula poses and 6 flight frames.
   Ordinary jump no longer automatically triggers the flying state.

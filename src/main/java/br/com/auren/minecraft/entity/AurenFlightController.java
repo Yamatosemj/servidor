@@ -60,13 +60,13 @@ public final class AurenFlightController {
             dragon.setDeltaMovement(dragon.getDeltaMovement().add(0, 0.29D, 0));
             this.flightTicks = 0;
         } else if (dragon.getFlightMode() == LANDING) {
-            // Owner moved away again while the Auren was descending.
-            dragon.setFlightMode(FLYING);
-            dragon.setNoGravity(true);
+            // Finish descent before another takeoff. Re-enabling noGravity
+            // every tick here could strand the dragon under a low ceiling.
+            return false;
         }
 
         double altitude = dragon.isSmallForm() ? 2.8D : 5.2D;
-        double horizontalOffset = dragon.isSmallForm() ? 2.7D : 6.0D;
+        double horizontalOffset = dragon.isSmallForm() ? 1.55D : 5.0D;
         Vec3 delta = dragon.position().subtract(owner.position());
         Vec3 horizontal = new Vec3(delta.x, 0, delta.z);
         if (horizontal.lengthSqr() < 0.01D) {
