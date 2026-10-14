@@ -292,7 +292,11 @@ public final class AurenDragon extends TamableAnimal {
         }
 
         if (!this.isOverAirForRider() && (riderGoingDown() || rider.getXRot() > 10.0F)) {
-            this.flightController.reset();
+            // CE updateRider landing clears flying/hovering, NOT velocity.
+            // flightController.reset() belongs to the autonomous path and
+            // would zero our momentum, making rider land unnaturally hard.
+            this.setFlightMode(AurenFlightController.GROUNDED);
+            this.setNoGravity(false);
             this.riderTakeoffTicks = 0;
             this.riderAirTicks = 0;
             this.glidingSpeedBonus = 0.0F;
