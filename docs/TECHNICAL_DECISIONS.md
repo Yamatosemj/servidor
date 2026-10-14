@@ -13,7 +13,7 @@
 
 Os modelos `.tbl` são arquivos ZIP contendo `model.json`, carregados por `TabulaModelHandlerHelper`. A classe `TabulaModel` converte cubos/transformações Tabula em geometria renderizável. Reimplementar esse pipeline agora teria mais risco do que depender da Uranus, a biblioteca já usada pela Community Edition.
 
-**O Ice and Fire original / Community Edition não é dependência do nosso mod.** Uranus é uma dependência separada, necessária em runtime.
+**O Ice and Fire original / Community Edition não é dependência do nosso mod.** O Uranus continua sendo uma dependência técnica de runtime, mas seu JAR original é distribuído *dentro* do arquivo do Auren via NeoForge Jar-in-Jar (sem copiar classes, sem sombrear nem reempacotar código). Assim esperamos que o NeoForge registre o `modId=uranus` automaticamente. **A detecção dentro do cliente Android ainda precisa ser testada.**
 
 ## Limitações desta primeira prova
 
@@ -24,7 +24,7 @@ Os modelos `.tbl` são arquivos ZIP contendo `model.json`, carregados por `Tabul
 - Não há voo, raios, montaria, IA externa, inventário ou ferramentas nesta versão.
 - A posição de ombro é uma implementação inicial e precisa de validação visual e de multiplayer em Minecraft.
 - Não existe build local validada neste ambiente. GitHub Actions tenta compilar e empacotar o jar.
-- Dependência Uranus vem do Curse Maven (artefato identificado no build da Community Edition), precisa ser instalada junto do jar final.
+- Uranus 3.0-beta.1 vem do Curse Maven e agora está embutido via Jar-in-Jar. O artefato do GitHub é verificado estruturalmente: precisa incluir `META-INF/jarjar/metadata.json` e um Uranus válido como mod NeoForge. Não precisa de segundo arquivo na pasta `mods`.
 
 ## Licenças e procedência
 
@@ -32,7 +32,7 @@ Os quatro arquivos externos escolhidos são baixados durante o build a partir de
 
 ## Próximas validações
 
-1. Build Gradle com download de recursos e dependência Uranus.
-2. Minecraft cliente: ver dragão em ambas as escalas sem partes deslocadas; testar pose de ombro e desmonte.
+1. Build Gradle com download de recursos, verificação do Uranus embutido e um único JAR instalável.
+2. Minecraft cliente **sem Uranus separado**: confirmar que NeoForge reconhece a dependência embutida; depois ver o dragão em ambas as escalas sem partes deslocadas, testar pose de ombro e desmonte.
 3. Persistência de forma e dono após sair do mundo.
 4. Só depois melhorar posicionamento, caminhada, animação, voo e comandos de assistente.
