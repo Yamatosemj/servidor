@@ -1,4 +1,148 @@
-# Auren Minecraft — v0.5.6-alpha (Minecraft 1.21.1 / NeoForge)
+# Auren Minecraft — v0.6.2-alpha (Minecraft 1.21.1 / NeoForge)
+
+## v0.6.2 — ground-first follow and smoother CE flight (test build)
+
+After the in-game video revealed two wing beats followed by apparent aerial
+hopping, and the dragon taking off immediately instead of walking, code
+inspection exposed two specific v0.6.1 problems:
+
+1. The follow goal invoked `flightController.follow(owner)` EVERY tick, even
+   while grounded. The method begins takeoff when it has headroom, bypassing
+   regular ground pathfinding almost entirely.
+2. The upstream CE flight manager injects +0.1 Y velocity when targeting a
+   higher point. Our port did that with `noGravity=true`, so upward momentum
+   could build without the gravity model used by the original dragon.
+
+Fixes (no additional dependencies/features):
+- Every follow begins with ordinary ground navigation. After ~30 ticks of
+  failed/stalled progress, the Auren may switch to the CE flight mover.
+  An extended chase can also trigger takeoff after at least ~40 ticks walking
+  if still over 32 blocks away (adult) or 14 (baby).
+- Keep the original CE `FlightMoveHelper` yaw, acceleration, pitch, waypoint
+  sampling and the Uranus flying navigator; remove its incompatible repeated
+  vertical boost. Stabilize Y velocity only toward the existing CE waypoint,
+  leaving CE horizontal steering unchanged. Dampen movement briefly if the
+  flight manager has no unobstructed waypoint.
+- Match the CE animation cadence: its 6 flight poses advance by 2/10 frame
+  per tick, rather than the prototype 0.16.
+- Adult start/stop 15/8, baby 4.5/1.7, safe emergency teleport 50+, chunk
+  ticket and shoulder positioning are unchanged.
+- The PR remains experimental: CI builds and checks structural invariants,
+  but only an actual Zalith test can verify smooth movement/landings.
+
+**Zalith checks:** first walk 16–25 blocks away from the adult on flat terrain
+(it should walk, not immediately fly); let it follow behind an obstacle;
+try a prolonged 35+ block chase; film a sustained flight from the side;
+then test a baby at 5 blocks, a 50+ block teleport and shoulder mode.
+
+## v0.6.1 — directly ported IceAndFire CE flight engine (not a homegrown flight controller)
+
+The user confirmed v0.6.0 actually flies, **but flies too slowly**. The old
+v0.6.0 homegrown steering/velocity code has now been replaced by the original
+IceAndFire Community Edition 1.21.1 algorithms, **adapted to AurenDragon**:
+
+- `AurenIafDragonFlightManager.FlightMoveHelper`: CE's yaw turning,
+  `approachDegrees`, `approach` acceleration, pitch and air movement.
+- `AurenIafDragonFlightManager.update` plus `getBlockInViewEscort`:
+  the CE escort target chooser, adapted for a player-owned Auren and smaller
+  baby size. It samples candidate airborne destinations and checks that they
+  are collision-free, line-of-sight reachable and already in loaded chunks.
+- `AurenDragon.useIceAndFireFlightNavigation`: switches to the **same
+  Uranus AdvancedPathNavigate MovementType.FLYING** used by the original CE;
+  restores the original ground navigator/controller on landing. The Uranus
+  dependency was already included in v0.5, so **NO new dependency**.
+- CE waypoint heights are scaled to **2–3 blocks (baby)** and
+  **4–6 blocks (adult)**, rather than the original large-dragon 8–24:
+  this matches Auren's existing landing thresholds and prevents endless
+  hovering. Waypoints refresh only after substantial owner movement or
+  blockage so CE's smooth 4° turn/acceleration can build speed.
+- The previous AurenFlightController is now **only a lifecycle adapter**:
+  checking headroom, takeoff, landing, gravity, owner/disconnection and
+  stuck timeout. **It no longer invents custom air acceleration and turns.**
+- Minimal documented robustness changes from the upstream CE code: handle
+  vertical division-by-zero, clamp horizontal sign and acceleration symmetrically,
+  and avoid compounding slow-down into persistent speed every tick during
+  close-up owner-follow (the CE was tuned for distant escort waypoints).
+- Existing owner-follow thresholds remain **adult 15/8, baby 4.5/1.7**.
+  The tested **50+ block safe teleport**, temporary chunk ticket and original
+  CE Tabula flight models/secondary animation remain intact.
+- PR #15's experimental shoulder pose remains **separate**; no shoulder,
+  adult-size, combat, ritual or mounting changes are included.
+
+### Verify in Zalith
+
+1. Replace the previous JAR; summon and tame Auren.
+2. Move **16–30 blocks** from the adult on flat ground. Observe flight speed,
+   turning rate, altitude and landing compared with v0.6.0.
+3. Test the baby beyond 4.5 blocks, both in open air and under low ceilings.
+4. Try a wall/trees, then 55–65 blocks (50-block emergency teleport).
+5. Test save/reload midflight, sitting midflight and shoulder toggle.
+6. Send a short video or observations: this port compiles, but **the source
+   CE algorithms need playtesting when adapted to Auren's smaller hitbox,
+   following distances and different entity base**.
+
+**Important scope:** the port does not automatically provide IceAndFire
+riding, dragon combat, fire/lightning breath, inventory, full stage growth or
+every AI goal. Those have separate dependencies and integration requirements.
+The original CE flight movement and owner-escort target selection are now
+real source-derived code rather than a brand-new imitation.
+
+## v0.6.0 — flight foundation: autonomous follow, takeoff and landing
+
+**Real flight** is now implemented for both forms. Auren uses velocity,
+server-side flight state and native collision instead of merely changing the
+renderer while falling. The controller adapts the IceAndFire CE separation of
+flight manager / aerial target / move control, but does not require the
+IceAndFire mod itself.
+
+- **Adult** still starts following beyond **15 blocks**, stops within **8**.
+- **Small form** keeps its proven comfortable **4.5/1.7** follow thresholds,
+  but flies instead of using vanilla FollowOwnerGoal teleport at ~12 blocks.
+- **Emergency teleport is 50+ blocks for both forms**, reusing the original
+  safety tests and destination search. The previously working adult ticket
+  also stays active for the small form when not on the shoulder, preventing
+  unload before teleport.
+- **Takeoff:** check headroom, initial vertical thrust, hover pose, then
+  transition to six original lightning-dragon flight frames.
+- **Cruise:** velocity-based pursuit of the owner's changing location;
+  predictive upward detour when a forward bounding-box would collide.
+  No phasing through walls and no force-loading target chunks.
+- **Landing:** on reaching the owner horizontally (8 blocks adult, about
+  2 blocks baby), losing the target or persistent collision, gravity is
+  restored and speed is damped. The baby will not hover forever simply
+  because cruising altitude exceeds its ground stop distance. Landing uses
+  CE hovering and clears the state at touchdown.
+- **Animation:** a synced integer flight state plus 10-tick blend selects
+  the original CE hovering/flying/diving Tabula poses and 6 flight frames.
+  It also ports the original CE continuous in-flight body bob, neck/tail
+  waves, thighs and toes motion; the animation is not stiff keyframes alone.
+  Ordinary jump no longer automatically triggers the flying state.
+- Shoulder pose on main remains exactly v0.5.6. **The experimental v0.5.7
+  shoulder revision stays isolated on PR #15** and is not included here.
+- Existing **Uranus 3.0-beta.1 already supplies every Tabula dependency**;
+  no additional mod dependency or IceAndFire installation is required.
+
+### How to test flight in Zalith
+
+1. Install a single Auren JAR (remove the previous version from `mods`).
+2. Use `/summon aurenminecraft:auren` and tame with an empty hand.
+3. In a flat clear area, walk more than **15 blocks** from the adult.
+   It should rise, flap its ORIGINAL CE wings, follow in the air and land.
+4. Walk away again, then test the **baby** beyond 4.5 blocks, not on shoulder.
+5. After both move successfully, try a low obstacle, building wall and trees.
+   The controller can choose a basic upward avoidance direction, but **is not
+   yet the complete CE 3D pathfinder**. Some complex enclosures may trap it.
+6. Travel 55–65 blocks away; it should still use the 50-block emergency
+   teleport when a safe ground destination exists.
+7. Test leaving/re-entering the world during/after flight; verify gravity and
+   original shoulder interaction continue to work.
+
+**Known limits:** stage-3 player riding and flight controls, fire/lightning
+breath, advanced 3D A* navigation, stamina, combat and user-specific UI are
+separate features. This version aims for working autonomous flying FIRST.
+GitHub CI compile/static tests are NOT a substitute for runtime testing.
+Do not mark aerial steering, player collision and landing as visually
+approved until Zalith footage confirms.
 
 ## v0.5.6 — awake, folded-wing neck wrap from user illustration
 

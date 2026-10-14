@@ -1,49 +1,135 @@
-"""Static regression tests for the baby's vanilla and adult's custom follow rules.
+"""Regression safety gate for the DIRECT IceAndFire Community Edition flight port.
 
-Run with the existing GitHub CI. In-game pathing/teleporting must still be tested.
+Tests confirm that Auren keeps the original CE movement algorithms and
+existing owner/teleport/chunk ticket rules. GitHub CI also compiles the mod.
+They do NOT claim to simulate flying inside the game; Zalith still required.
 """
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ENTITY = ROOT / "src/main/java/br/com/auren/minecraft/entity/AurenDragon.java"
-ADULT = ROOT / "src/main/java/br/com/auren/minecraft/entity/AurenAdultFollowOwnerGoal.java"
-PROPS = ROOT / "gradle.properties"
-
+FOLLOW = ROOT / "src/main/java/br/com/auren/minecraft/entity/AurenAdultFollowOwnerGoal.java"
+FLIGHT = ROOT / "src/main/java/br/com/auren/minecraft/entity/AurenFlightController.java"
+CE = ROOT / "src/main/java/br/com/auren/minecraft/entity/AurenIafDragonFlightManager.java"
+LOADER = ROOT / "src/main/java/br/com/auren/minecraft/entity/AurenAdultChunkLoader.java"
 
 def verify():
     entity = ENTITY.read_text(encoding="utf-8")
-    adult = ADULT.read_text(encoding="utf-8")
-    props = PROPS.read_text(encoding="utf-8")
+    follow = FOLLOW.read_text(encoding="utf-8")
+    flight = FLIGHT.read_text(encoding="utf-8")
+    ce = CE.read_text(encoding="utf-8")
+    loader = LOADER.read_text(encoding="utf-8")
+    version = (ROOT / "gradle.properties").read_text(encoding="utf-8")
 
-    assert "new FollowOwnerGoal(this, 1.15D, 4.5F, 1.7F)" in entity, "baby settings changed"
-    assert "return AurenDragon.this.isSmallForm()" in entity, "baby gating missing"
-    assert "&& !AurenDragon.this.isOnShoulder()" in entity, "shoulder gating missing"
-    assert "new AurenAdultFollowOwnerGoal(this)" in entity, "adult goal not registered"
-    assert "START_DISTANCE = 15.0D" in adult
-    assert "STOP_DISTANCE = 8.0D" in adult
-    assert "EMERGENCY_TELEPORT_DISTANCE = 50.0D" in adult
-    assert ">= EMERGENCY_TELEPORT_DISTANCE * EMERGENCY_TELEPORT_DISTANCE" in adult
-    assert "!this.dragon.isSmallForm()" in adult
-    assert "!this.dragon.isOnShoulder()" in adult
-    assert "this.navigation.moveTo(this.owner, WALK_SPEED)" in adult
-    for safety in ("level.hasChunkAt(candidate)", "Direction.UP",
-                   "level.noCollision(this.dragon, destinationBox)",
-                   "level.getFluidState(candidate).isEmpty()"):
-        assert safety in adult, f"missing teleport safety: {safety}"
-    chunkloader = (ROOT / "src/main/java/br/com/auren/minecraft/entity/AurenAdultChunkLoader.java").read_text(encoding="utf-8")
-    assert "new AurenAdultChunkLoader()" in entity
-    assert "this.adultChunkLoader.tick(this, serverLevel)" in entity
-    assert "this.adultChunkLoader.release(this, serverLevel)" in entity
-    assert "TicketType.create" in chunkloader
-    assert "TICKET_TIMEOUT_TICKS = 100" in chunkloader
-    assert "TICKET_REFRESH_TICKS = 20" in chunkloader
-    assert "addRegionTicket" in chunkloader
-    assert "removeRegionTicket" in chunkloader
-    assert "!dragon.isSmallForm()" in chunkloader
-    assert "owner.level() == level" in chunkloader
-    assert "mod_version=0.5.6-alpha" in props
-    print("PASS: baby follows at 4.5/1.7; adult at 15/8; teleports only at 50+ with safe landing")
+    # No more re-created Auren acceleration/steering algorithm.
+    for expected in (
+        "class FlightMoveHelper extends MoveControl",
+        "class AurenIafDragonFlightManager",
+        "float approach(float number, float max, float min)",
+        "float approachDegrees(float number, float max, float min)",
+        "float degreesDifferenceAbs(float f1, float f2)",
+        "this.dragon.horizontalCollision",
+        "this.flightManager.invalidateTarget();",
+        "float yawTurn = Mth.wrapDegrees(this.dragon.getYRot() + 90);",
+        "approachDegrees(",
+        "this.speedModifier, 1.8F",
+        "this.speedModifier, 0.2F",
+        "float finPitch =",
+        "motionCap = 0.2D",
+        "ClipContext.Block.COLLIDER",
+        "getBlockInViewEscort(LivingEntity owner)",
+        "Heightmap.Types.MOTION_BLOCKING_NO_LEAVES",
+        "// Auren's flight uses noGravity=true",
+        "WAYPOINT_REEVALUATE_TICKS = 60",
+        "this.lastOwnerPos.distanceToSqr(owner.position()) > 64.0D",
+        "int baseHeight = dragon.isSmallForm() ? 2 : 4;",
+        "int heightRange = dragon.isSmallForm() ? 2 : 3;",
+    ):
+        assert expected in ce, f"Missing original CE flight mechanic: {expected}"
 
+    for expected in (
+        "new AurenIafDragonFlightManager(dragon)",
+        "new AurenIafDragonFlightManager.FlightMoveHelper(",
+        "this.iafFlightManager.update(this.owner)",
+        "dragon.useIceAndFireFlightNavigation(",
+        "dragon.useOriginalGroundNavigation();",
+        "dragon.setFlightMode(TAKING_OFF)",
+        "dragon.setFlightMode(FLYING)",
+        "dragon.setFlightMode(LANDING)",
+        "dragon.setNoGravity(true)",
+        "dragon.setNoGravity(false)",
+        "TARGET_TIMEOUT_TICKS = 20",
+        "MAX_OBSTRUCTION_TICKS = 65",
+    ):
+        assert expected in flight, f"Flight lifecycle missing: {expected}"
+
+    # Real CE/Uranus nav switch; ensure stuck handler doesn't quietly force
+    # the old rapid pet teleport. Restores ground navigation after flight.
+    for expected in (
+        "new AdvancedPathNavigate(this, this.level()",
+        "AdvancedPathNavigate.MovementType.FLYING",
+        "PathingStuckHandler.createStuckHandler()",
+        "this.navigation = this.savedGroundNavigation;",
+        "this.moveControl = this.savedGroundMoveControl;",
+        "SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT)",
+        "this.flightController.tick()",
+        "this.flightController.reset()",
+    ):
+        assert expected in entity, f"CE navigation/state sync missing: {expected}"
+
+    # Auren cannot borrow the CE +0.1 Y/tick boost because it has no gravity.
+    assert "dragon.getDeltaMovement().add(0, 0.1D, 0)" not in ce
+    assert "double desiredVerticalSpeed = Mth.clamp(" in flight
+    assert "double stabilizedY = Mth.lerp(" in flight
+    assert "Mth.clamp(stabilizedY, -0.20D, 0.22D)" in flight
+    assert "dragon.setDeltaMovement(dragon.getDeltaMovement().scale(0.85D))" in flight
+
+    # Baby/adult distances retained, including the 50+ emergency teleport.
+    assert "new AurenAdultFollowOwnerGoal(this, true)" in entity
+    assert "new AurenAdultFollowOwnerGoal(this)" in entity
+    assert "new FollowOwnerGoal" not in entity
+    assert "this.dragon.getNavigation().stop()" in follow
+    assert "private final PathNavigation navigation" not in follow
+    # Walk first, and only switch to the CE flight mover after repeated
+    # ground path failure/stalling or after 40 ticks of a long chase.
+    for expected in (
+        "GROUND_WALK_BEFORE_FLIGHT_TICKS = 40",
+        "GROUND_STALL_TICKS = 30",
+        "ADULT_LONG_CHASE_DISTANCE = 32.0D",
+        "BABY_LONG_CHASE_DISTANCE = 14.0D",
+        "getNavigation().moveTo(this.owner, WALK_SPEED)",
+        "this.stalledGroundTicks >= GROUND_STALL_TICKS",
+        "this.groundPursuitTicks >= GROUND_WALK_BEFORE_FLIGHT_TICKS",
+        "if (blocked || longPursuit)",
+        "if (flightMode != AurenFlightController.GROUNDED) return;",
+        "START_DISTANCE = 15.0D",
+        "STOP_DISTANCE = 8.0D",
+        "BABY_START_DISTANCE = 4.5D",
+        "BABY_STOP_DISTANCE = 1.7D",
+        "EMERGENCY_TELEPORT_DISTANCE = 50.0D",
+        "this.dragon.getFlightController().follow(this.owner)",
+        "this.dragon.getFlightController().land()",
+        "this.dragon.getFlightController().reset()",
+        "level.hasChunkAt(candidate)",
+        "Direction.UP",
+        "level.noCollision(this.dragon, destinationBox)",
+        "level.getFluidState(candidate).isEmpty()",
+    ):
+        assert expected in follow, f"Follow/teleport regression: {expected}"
+
+    for expected in (
+        "TicketType.create",
+        "addRegionTicket",
+        "removeRegionTicket",
+        "!dragon.isOnShoulder()",
+        "owner.level() == level",
+        "TICKET_TIMEOUT_TICKS = 100",
+        "TICKET_REFRESH_TICKS = 20",
+    ):
+        assert expected in loader, f"Chunk ticket regression: {expected}"
+    assert "&& !dragon.isSmallForm()" not in loader
+    assert "mod_version=0.6.2-alpha" in version
+    print("PASS: ground-first CE follow; bounded vertical speed; 15/8 adult, 4.5/1.7 baby; safe 50+ teleport; bounded tickets")
 
 if __name__ == "__main__":
     verify()

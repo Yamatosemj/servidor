@@ -4,44 +4,59 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 
 import java.util.EnumSet;
 
 /**
- * Adult-only follow behavior. Never uses vanilla FollowOwnerGoal, which
- * hard-codes teleportation at a distance unsuitable for Auren's huge form.
+ * Auren follow + emergency teleport with a REAL autonomous flight controller.
+ * Original adult teleport search and stop/start boundaries are preserved.
+ * The baby uses the SAME safe flight system, with its old 4.5/1.7 range.
  *
  * Movement: start following at >15 blocks, stop at <=8 blocks.
  * Emergency teleport: only beyond 50 blocks, and only to a safe destination
  * approximately 8..12 blocks away. If no safe point exists, do not teleport.
  *
- * The baby retains the existing vanilla follow goal and shoulder mechanics.
+ * Baby never takes off while on the shoulder; no teleport until 50 blocks.
  */
 public final class AurenAdultFollowOwnerGoal extends Goal {
     static final double START_DISTANCE = 15.0D;
     static final double STOP_DISTANCE = 8.0D;
+    static final double BABY_START_DISTANCE = 4.5D;
+    static final double BABY_STOP_DISTANCE = 1.7D;
     static final double EMERGENCY_TELEPORT_DISTANCE = 50.0D;
 
     private static final double WALK_SPEED = 1.05D;
     private static final int REPATH_INTERVAL_TICKS = 10;
     private static final int MAX_TELEPORT_ATTEMPTS = 20;
+    // Match CE's separation of terrestrial and aerial navigation.
+    private static final int GROUND_WALK_BEFORE_FLIGHT_TICKS = 40;
+    private static final int GROUND_STALL_TICKS = 30;
+    private static final double ADULT_LONG_CHASE_DISTANCE = 32.0D;
+    private static final double BABY_LONG_CHASE_DISTANCE = 14.0D;
 
     private final AurenDragon dragon;
-    private final PathNavigation navigation;
+    private final boolean baby;
     private LivingEntity owner;
     private int repathCooldown;
+    private int groundPursuitTicks;
+    private int stalledGroundTicks;
+    private double previousOwnerDistance;
 
     public AurenAdultFollowOwnerGoal(AurenDragon dragon) {
+        this(dragon, false);
+    }
+
+    /** Shares the adult's proven safe teleport code with the small form. */
+    public AurenAdultFollowOwnerGoal(AurenDragon dragon, boolean baby) {
         this.dragon = dragon;
-        this.navigation = dragon.getNavigation();
+        this.baby = baby;
         this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
 
     private boolean adultMayFollow(LivingEntity player) {
-        return !this.dragon.isSmallForm()
+        return this.dragon.isSmallForm() == this.baby
                 && !this.dragon.isOnShoulder()
                 && this.dragon.isTame()
                 && !this.dragon.isOrderedToSit()
@@ -55,7 +70,8 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
     public boolean canUse() {
         LivingEntity current = this.dragon.getOwner();
         if (!adultMayFollow(current)) return false;
-        if (this.dragon.distanceToSqr(current) <= START_DISTANCE * START_DISTANCE) {
+        double start = this.baby ? BABY_START_DISTANCE : START_DISTANCE;
+        if (this.dragon.distanceToSqr(current) <= start * start) {
             return false;
         }
         this.owner = current;
@@ -64,19 +80,35 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        return adultMayFollow(this.owner)
-                && this.dragon.distanceToSqr(this.owner) > STOP_DISTANCE * STOP_DISTANCE;
+        if (!adultMayFollow(this.owner)) return false;
+        double stop = this.baby ? BABY_STOP_DISTANCE : STOP_DISTANCE;
+        // Compare HORIZONTAL distance in air. Cruising height would otherwise
+        // keep the baby above its ground stop distance forever.
+        if (this.dragon.getFlightMode() != AurenFlightController.GROUNDED) {
+            double dx = this.owner.getX() - this.dragon.getX();
+            double dz = this.owner.getZ() - this.dragon.getZ();
+            double airborneStop = this.baby ? 2.0D : stop;
+            double dy = Math.abs(this.owner.getY() - this.dragon.getY());
+            double airborneHeight = this.baby ? 3.5D : 6.3D;
+            return dx * dx + dz * dz > airborneStop * airborneStop
+                    || dy > airborneHeight;
+        }
+        return this.dragon.distanceToSqr(this.owner) > stop * stop;
     }
 
     @Override
     public void start() {
         this.repathCooldown = 0;
+        this.groundPursuitTicks = 0;
+        this.stalledGroundTicks = 0;
+        this.previousOwnerDistance = this.dragon.distanceTo(this.owner);
     }
 
     @Override
     public void stop() {
         this.owner = null;
-        this.navigation.stop();
+        this.dragon.getNavigation().stop();
+        this.dragon.getFlightController().land();
     }
 
     @Override
@@ -84,18 +116,52 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
         if (this.owner == null) return;
 
         this.dragon.getLookControl().setLookAt(this.owner, 10.0F, 10.0F);
+        int flightMode = this.dragon.getFlightMode();
+
+        // In the air, refresh CE's moving escort destination each tick.
+        // Calling follow() on the ground initiates takeoff, so don't do that.
+        if (flightMode == AurenFlightController.TAKING_OFF
+                || flightMode == AurenFlightController.FLYING) {
+            if (this.dragon.getFlightController().follow(this.owner)) {
+                this.dragon.getNavigation().stop();
+            }
+        }
+
+        // Ground pathfinding every tick is costly on Zalith.
         if (--this.repathCooldown > 0) return;
         this.repathCooldown = REPATH_INTERVAL_TICKS;
 
         double distanceSq = this.dragon.distanceToSqr(this.owner);
         if (distanceSq >= EMERGENCY_TELEPORT_DISTANCE * EMERGENCY_TELEPORT_DISTANCE
-                && this.teleportNearOwner()) {
-            return;
-        }
+                && this.teleportNearOwner()) return;
 
-        // Do not run straight into the owner's position: navigation will be
-        // stopped by canContinueToUse() once the 8-block limit is reached.
-        this.navigation.moveTo(this.owner, WALK_SPEED);
+        // The CE navigator switches back to ground only after touchdown.
+        if (flightMode != AurenFlightController.GROUNDED) return;
+
+        // Walk FIRST. Air travel is a fallback, not the default follow action.
+        boolean hasGroundRoute = this.dragon.getNavigation().moveTo(this.owner, WALK_SPEED);
+        double distance = Math.sqrt(distanceSq);
+        if (hasGroundRoute && this.previousOwnerDistance - distance > 0.3D) {
+            this.stalledGroundTicks = 0;
+        } else {
+            this.stalledGroundTicks += REPATH_INTERVAL_TICKS;
+        }
+        this.previousOwnerDistance = distance;
+        this.groundPursuitTicks += REPATH_INTERVAL_TICKS;
+
+        boolean blocked = this.stalledGroundTicks >= GROUND_STALL_TICKS;
+        double longChase = this.baby ? BABY_LONG_CHASE_DISTANCE
+                : ADULT_LONG_CHASE_DISTANCE;
+        boolean longPursuit = this.groundPursuitTicks >= GROUND_WALK_BEFORE_FLIGHT_TICKS
+                && distanceSq >= longChase * longChase;
+
+        if (blocked || longPursuit) {
+            // Same CE mover/escort used in v0.6.1, but only when necessary.
+            // If the ceiling blocks takeoff, keep the active ground route.
+            if (this.dragon.getFlightController().follow(this.owner)) {
+                this.dragon.getNavigation().stop();
+            }
+        }
     }
 
     /**
@@ -135,8 +201,9 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
                         posZ - this.dragon.getZ());
                 if (!level.noCollision(this.dragon, destinationBox)) continue;
 
+                this.dragon.getFlightController().reset();
                 this.dragon.setPos(posX, posY, posZ);
-                this.navigation.stop();
+                this.dragon.getNavigation().stop();
                 return true;
             }
         }

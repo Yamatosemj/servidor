@@ -19,10 +19,13 @@ import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
-import net.minecraft.world.entity.ai.goal.FollowOwnerGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.ai.control.MoveControl;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import com.iafenvoy.uranus.object.entity.pathfinding.raycoms.AdvancedPathNavigate;
+import com.iafenvoy.uranus.object.entity.pathfinding.raycoms.PathingStuckHandler;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -39,12 +42,26 @@ public final class AurenDragon extends TamableAnimal {
             SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> SHOULDER =
             SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Integer> FLIGHT_MODE =
+            SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT);
 
     // Client-side animation progress, mirroring CE ridingProgress 0..20 ticks.
     // The desired state is synced by SHOULDER, never by sending every frame.
     private static final float SHOULDER_ANIMATION_TICKS = 20.0F;
     private float previousShoulderProgress;
     private float shoulderProgress;
+    // Flight animation progress is client-side and interpolated, just like
+    // CE's flyProgress and hoverProgress. Flight authority is server-side.
+    private static final float FLIGHT_ANIMATION_TICKS = 10.0F;
+    private float previousFlightProgress;
+    private float flightProgress;
+    private final AurenFlightController flightController = new AurenFlightController(this);
+
+    // CE's DragonBaseEntity.switchNavigator(0/1) changes BOTH the path
+    // navigator and the MoveControl. Keep the original instances to restore
+    // ground walking after landing or emergency teleport.
+    private PathNavigation savedGroundNavigation;
+    private MoveControl savedGroundMoveControl;
 
     // A bounded temporary region ticket keeps a tamed ADULT ticking while
     // its online owner moves beyond the simulation distance.
@@ -67,6 +84,7 @@ public final class AurenDragon extends TamableAnimal {
         super.defineSynchedData(builder);
         builder.define(SMALL, false);
         builder.define(SHOULDER, false);
+        builder.define(FLIGHT_MODE, AurenFlightController.GROUNDED);
     }
 
     public boolean isSmallForm() {
@@ -77,6 +95,54 @@ public final class AurenDragon extends TamableAnimal {
         return this.entityData.get(SHOULDER);
     }
 
+    public int getFlightMode() {
+        return this.entityData.get(FLIGHT_MODE);
+    }
+
+    /** Server-controlled flight state, synced for CE animation selection. */
+    void setFlightMode(int mode) {
+        if (!this.level().isClientSide()) this.entityData.set(FLIGHT_MODE, mode);
+    }
+
+    public AurenFlightController getFlightController() {
+        return this.flightController;
+    }
+
+    /**
+     * Adaptation of original CE DragonBaseEntity.switchNavigator(1).
+     * AdvancedPathNavigate ships in the existing embedded Uranus dependency.
+     * Explicit no-teleport stuck handler: the ONLY teleport is the proven
+     * 50-block emergency fallback in AurenAdultFollowOwnerGoal.
+     */
+    public void useIceAndFireFlightNavigation(MoveControl flightMoveControl) {
+        if (this.savedGroundNavigation != null) return;
+        this.savedGroundNavigation = this.navigation;
+        this.savedGroundMoveControl = this.moveControl;
+        this.navigation.stop();
+        this.navigation = new AdvancedPathNavigate(this, this.level(),
+                AdvancedPathNavigate.MovementType.FLYING,
+                Math.max(0.5F, this.getBbWidth()),
+                Math.max(0.7F, this.getBbHeight()),
+                PathingStuckHandler.createStuckHandler());
+        this.navigation.setCanFloat(true);
+        this.moveControl = flightMoveControl;
+    }
+
+    /** Adaptation of original CE DragonBaseEntity.switchNavigator(0). */
+    public void useOriginalGroundNavigation() {
+        if (this.savedGroundNavigation == null) return;
+        this.navigation.stop();
+        this.navigation = this.savedGroundNavigation;
+        this.moveControl = this.savedGroundMoveControl;
+        this.savedGroundNavigation = null;
+        this.savedGroundMoveControl = null;
+    }
+
+    public float getFlightBlend(float partialTick) {
+        return Mth.clamp(Mth.lerp(partialTick, this.previousFlightProgress,
+                this.flightProgress) / FLIGHT_ANIMATION_TICKS, 0.0F, 1.0F);
+    }
+
     /** Blend factor for an interpolated frame: 0 = walking, 1 = resting on neck. */
     public float getShoulderBlend(float partialTick) {
         return Mth.clamp(Mth.lerp(partialTick, this.previousShoulderProgress,
@@ -85,6 +151,9 @@ public final class AurenDragon extends TamableAnimal {
 
     public void setSmallForm(boolean small) {
         if (!small && isOnShoulder()) setOnShoulder(false);
+        if (!this.level().isClientSide() && this.getFlightMode() != AurenFlightController.GROUNDED) {
+            this.flightController.land();
+        }
         this.entityData.set(SMALL, small);
         this.refreshDimensions();
     }
@@ -92,6 +161,7 @@ public final class AurenDragon extends TamableAnimal {
     /** Updates state once; the normal tick keeps its position synchronized. */
     public void setOnShoulder(boolean enabled) {
         if (enabled && !this.isSmallForm()) this.setSmallForm(true);
+        if (enabled && !this.level().isClientSide()) this.flightController.reset();
         boolean wasOnShoulder = this.isOnShoulder();
         this.entityData.set(SHOULDER, enabled);
         this.setNoAi(enabled);
@@ -125,24 +195,10 @@ public final class AurenDragon extends TamableAnimal {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(1, new FloatGoal(this));
-        // Keep the vanilla behavior for the small form only.
-        this.goalSelector.addGoal(2, new FollowOwnerGoal(this, 1.15D, 4.5F, 1.7F) {
-            @Override
-            public boolean canUse() {
-                return AurenDragon.this.isSmallForm()
-                        && !AurenDragon.this.isOnShoulder()
-                        && super.canUse();
-            }
-
-            @Override
-            public boolean canContinueToUse() {
-                return AurenDragon.this.isSmallForm()
-                        && !AurenDragon.this.isOnShoulder()
-                        && super.canContinueToUse();
-            }
-        });
-        // Adult keeps a wider distance, and must never use the baby goal's
-        // vanilla teleport threshold (~12 blocks).
+        // One CE-inspired flight system, but SEPARATE comfortable ranges:
+        // adult begins at 15, stops at 8; baby begins at 4.5, stops at 1.7.
+        // Both use real aerial motion; teleport is a 50+ block last resort.
+        this.goalSelector.addGoal(2, new AurenAdultFollowOwnerGoal(this, true));
         this.goalSelector.addGoal(2, new AurenAdultFollowOwnerGoal(this));
         this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.65D));
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));
@@ -189,6 +245,14 @@ public final class AurenDragon extends TamableAnimal {
         if (this.level() instanceof ServerLevel serverLevel) {
             this.adultChunkLoader.tick(this, serverLevel);
         }
+        // Update synchronized CE-style interpolation for actual flight modes.
+        this.previousFlightProgress = this.flightProgress;
+        float flightDestination = this.getFlightMode() == AurenFlightController.GROUNDED
+                ? 0.0F : FLIGHT_ANIMATION_TICKS;
+        this.flightProgress = Mth.clamp(this.flightProgress
+                        + (flightDestination > this.flightProgress ? 1.0F
+                        : flightDestination < this.flightProgress ? -1.0F : 0.0F),
+                0.0F, FLIGHT_ANIMATION_TICKS);
         // Animate both entering and leaving shoulder mode. Kept client-side
         // and derived from the synced state so latency cannot spam packets.
         this.previousShoulderProgress = this.shoulderProgress;
@@ -198,6 +262,7 @@ public final class AurenDragon extends TamableAnimal {
                         : destination < this.shoulderProgress ? -1.0F : 0.0F),
                 0.0F, SHOULDER_ANIMATION_TICKS);
         super.tick();
+        if (!this.level().isClientSide()) this.flightController.tick();
         if (!this.isOnShoulder()) return;
         if (this.getOwner() instanceof Player player && player.isAlive() && player.level() == this.level()) {
             if (!this.level().isClientSide() && player.isShiftKeyDown()) {
@@ -229,6 +294,7 @@ public final class AurenDragon extends TamableAnimal {
 
     @Override
     public void remove(RemovalReason reason) {
+        if (!this.level().isClientSide()) this.flightController.reset();
         if (this.level() instanceof ServerLevel serverLevel) {
             this.adultChunkLoader.release(this, serverLevel);
         }
@@ -245,6 +311,9 @@ public final class AurenDragon extends TamableAnimal {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
+        // Flight targets are transient. Safe server reload: return to vanilla
+        // gravity instead of persisting a stale midair destination.
+        if (!this.level().isClientSide()) this.flightController.reset();
         this.setSmallForm(tag.getBoolean("SmallForm"));
         this.setOnShoulder(tag.getBoolean("OnShoulder"));
     }

@@ -182,3 +182,125 @@ e o blend de 20 ticks continua.
 Não foram alterados o Auren adulto, escalas, IA, voo, andar, teleporte
 de emergência a 50 blocos nem tickets de chunk. Teste visual de frente
 e costas no Zalith é obrigatório antes de aprovar aparência.
+
+
+## V0.6.0 — voo autônomo real e quadros CE vinculados ao estado (14/10/2026)
+
+O modelo da v0.5.6 já continha todos os seis `flight1..6.tbl`,
+`hovering.tbl` e `diving.tbl` da Community Edition, mas nenhum controlador
+de voo real. Adotamos a divisão arquitetural usada no `IafDragonFlightManager`
+(estado, objetivo, movimento), **sem importar o mod IceAndFire CE completo**
+e suas dependências. A Uranus já embarcada continua sendo a única dependência
+de animação.
+
+- `AurenFlightController` aplica `deltaMovement` REAL no servidor, com
+  decolagem em duas fases, piloto automático em direção ao dono, verificação
+  preventiva de colisão e chunks carregados, tentativa de desvio para cima,
+  pouso por gravidade e cancelamento de estados transitórios.
+- `AurenAdultFollowOwnerGoal` agora trabalha com forma adulta (15/8) ou
+  pequena (4.5/1.7), preservando exatamente a lógica de teleporte seguro
+  para >=50 blocos; a pequena não usa mais o vanilla FollowOwnerGoal
+  de 12 blocos.
+- Chunk ticket temporário de 100 ticks estendido ao filhote **fora do ombro**,
+  enquanto dono estiver online na mesma dimensão. Estado de ombro libera
+  o ticket imediatamente e desativa voo. Não há force-loading permanente.
+- `AurenDragon.FLIGHT_MODE` sincronizado ao cliente permite interpolar os
+  quadros CE originais por 10 ticks: `hovering` na decolagem/pouso,
+  `flight1..6` durante deslocamento, `diving` durante descida acentuada.
+  Não é uma animação autoral de bater asas.
+- Ao recarregar o mundo, voo não persiste sem alvo; reset seguro para
+  gravidade e passeio terrestre. Mudar para ombro, sentar ou teleportar
+  cancela alvo/voo.
+- Limitações declaradas: *não* há ainda montaria/controle de voo pelo
+  jogador, combate, stamina ou pathfinder A* 3D completo do IceAndFire.
+  Fuga de áreas muito fechadas requer avaliação real no Zalith.
+
+Escopo independente: PR #15 da pose experimental v0.5.7 permanece aberto
+e separado; nenhum ajuste do ombro foi combinado na v0.6.0.
+
+
+### Complemento: donos em altitude diferente
+
+A primeira revisão considerava somente distância horizontal para pouso em voo.
+Isso solucionava o bebê pairando, mas falharia se o jogador estivesse vários
+blocos acima/abaixo do dragão (morros/torres/cânions). A condição final
+também exige proximidade vertical (<=3.5 blocos filhote; <=6.3 adulto) antes
+de encerrar voo e pousar. Os limites são superiores às altitudes alvo
+de cruzeiro (2.8 / 5.2) e evitam pousar no fundo da montanha.
+
+
+## V0.6.1 — usuário pediu importar **o código original**, sem recriar voo
+
+**Problema:** a v0.6.0 importava quadros CE, mas `AurenFlightController`
+ainda usava direção, velocidade, desaceleração e curvas inventadas, fazendo
+o Auren voar devagar apesar de o IceAndFire ter movimento testado.
+
+**Mudança de arquitetura (isolada da pose do pescoço):**
+- Novo `AurenIafDragonFlightManager.java`: porta `FlightMoveHelper` original
+  de `IafDragonFlightManager` (yaw em incrementos de 4°, aceleração por
+  `approach`, `speedModifier` variando até 1.8, cálculo pitch e velocidade
+  angular) e a escolha original de waypoint `DragonUtils.getBlockInViewEscort`.
+  Modificações apenas para classe Auren, situação dono, escala, evitar NaN e
+  coordenadas/chunks/colisão seguras. Deixa explícita licença LGPL-3.0.
+- `AurenDragon`: reproduz `DragonBaseEntity.switchNavigator(1/0)` usando
+  `AdvancedPathNavigate(MovementType.FLYING)` da Uranus já embutida, e
+  restaura o nav/MoveControl terrestre ao encerrar voo. Handler desabilita
+  teleportes internos do pathfinder: só temos o fallback de 50+ blocos.
+- `AurenFlightController`: **não decide mais como acelerar/curvar**, apenas
+  mantém o ciclo de vida voo/decolagem/pouso/gravidade e chama o manager CE.
+- `AurenAdultFollowOwnerGoal`: usa sempre `dragon.getNavigation()` atual,
+  evitando ponteiro stale quando se alterna nav terrestre/aérea.
+- O movimento CE de escolta originalmente tem tolerâncias/altitudes maiores;
+  amostragem foi adaptada para Auren baby/adulto, com verificações de chunks
+  carregados e destino com linha de visada.
+- Mantidos valores de aproximação adulto 15/8, filhote 4.5/1.7, teleporte de
+  emergência >50, tickets temporários, animações CE, postura de ombro v0.5.6.
+- Documentar o que **não é** portado: controles de cavalgada, ataque,
+  stamina, inventário e outras subclasses e registros do IAF CE.
+
+**Limite de validação:** CI Gradle + testes estruturais confirmam que o código
+compila e invoca o manager, mas **não medem velocidade real no Zalith**.
+Sem declarar sucesso de velocidade até teste do usuário.
+
+
+### Revisão antes do CI final — altitude e aceleração de escolta
+
+Após o primeiro build aprovado, a auditoria de regras mostrou que aplicar
+literalmente os destinos em altura de 8–24 blocos da CE impediria Auren
+de pousar quando atingisse seu raio próprio (filhote 2, adulto 8).
+O método original `getBlockInViewEscort` foi mantido, mas parametrizado
+em altura `2..3` filhote e `4..6` adulto. A atualização de alvos
+também deixa de oscilar a cada 3 blocos de movimento do dono; só muda
+alvo ao se afastar ~8 blocos, atingir alvo, obstruí-lo ou após 60 ticks.
+A base do movimento original (aproximação, yaw 4 graus, pitch e impulso)
+permanece a mesma. Esses dois ajustes são adaptações deliberadas ao
+tamanho/dinâmica do Auren, não código idêntico à CE.
+
+
+## v0.6.2-alpha — preferência terrestre e estabilização vertical (14/10/2026)
+
+**Evidência:** vídeo de jogo: voo visualmente aos saltos e decolagem imediata
+ao dono se afastar. O objetivo é tratar o defeito de movimento, sem inventar
+novas mecânicas.
+
+**Causas no código:** o `AurenAdultFollowOwnerGoal.tick()` chamava
+`flightController.follow()` sempre, mesmo com caminho livre no chão; isso
+forçava a troca para navegação aérea. Já o port de
+`IafDragonFlightManager.update()` somava +0.1 Y/tick do upstream mesmo com
+`noGravity=true` durante o voo do Auren. Essa cópia literal não preservava
+as premissas de física da entidade original.
+
+**Decisão:** reutilizar o `FlightMoveHelper` e o `AdvancedPathNavigate`
+CE/Uranus, mantendo navegação terrestre como primeira escolha. Após 30 ticks
+de falta de progresso, ou perseguição de >=40 ticks ainda longa (>32 blocos
+adulto, >14 filhote), pode decolar quando houver espaço. No ar, manter a
+direção/aceleração horizontal CE e limitar somente Y com suavização por erro
+de altitude do waypoint. Reproduzir os seis quadros de voo em cadência 0.2
+pose/tick, a partir de `flightCycle += 2` e `currentIndex = flightCycle /10`
+no código original.
+
+**Preservação:** adulto segue 15/8, filhote 4.5/1.7; teleporte emergencial
+>=50 com validação de pouso; tickets de chunk e pose de ombro intactos.
+Testes automatizados verificam o código e o build, **não comprovam**
+qualidade visual nem ausência de oscillação física no jogo. O teste em
+Zalith continua obrigatório antes do merge.

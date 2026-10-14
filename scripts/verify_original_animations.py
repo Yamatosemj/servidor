@@ -55,13 +55,26 @@ def check():
     for name in ("flying", "hovering", "diving"):
         assert f'load("{name}")' in source
     assert "AurenOriginalAnimations.instance().apply" in renderer
+    assert "dragon.getFlightMode()" in source
+    assert "dragon.getFlightBlend(partialTick)" in source
+    assert "AurenOriginalFlightMotion.apply(model, age, flightBlend);" in source
+    motion = (ROOT / "src/main/java/br/com/auren/minecraft/client/"
+              "AurenOriginalFlightMotion.java").read_text(encoding="utf-8")
+    for required in ("model.chainWave(tailWithBody", "model.chainWave(neck",
+                     "model.chainWave(toesL", "model.chainWave(toesR",
+                     "model.walk(model.getCube(\"ThighR\")",
+                     "model.bob(model.getCube(\"BodyUpper\")"):
+        assert required in motion, f"Original CE flight motion missing: {required}"
+    assert "AurenFlightController.FLYING" in source
+    assert "blendCycle(model, this.flight, age * 0.2F, flightBlend)" in source
+    assert "dragon.getDeltaMovement().y < -0.18D" in source
     assert "AurenPoseTransition.apply(model, awake, shoulderBlend);" in renderer
     assert 'lightningdragon/lightningdragon_sleeping' in renderer
     assert "AurenPoseTransition.applyBones(model, folded, shoulderBlend," in renderer
     assert "AurenNeckPose.apply(model, shoulderBlend);" in renderer
     assert "AurenOriginalShoulderIdle.apply(model, age, shoulderBlend);" in renderer
     assert "pose.mulPose(" not in renderer
-    assert "mod_version=0.5.6-alpha" in version
+    assert "mod_version=0.6.2-alpha" in version
     print(f"PASS: {len(NAMES)} compatible original Lightning Dragon "
           f"Tabula models are bundled and referenced; original CE folded wings and illustrated awake neck wrap integrated")
 
