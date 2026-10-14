@@ -359,3 +359,35 @@ apenas up/down; dados de direção do passageiro via interface vanilla.
 A compatibilidade touch, a altura do assento e a suavidade visual ainda
 dependem de teste dentro do jogo, não apenas GitHub Actions.
 
+
+
+## v0.6.4-alpha — escopo do FireDragon.riderShootFire
+
+Foco: ataque contínuo do `FireDragonEntity`, solicitado pelo jogador; não
+importar o mod inteiro, não criar sistema de combate paralelo não necessário.
+Implementação em `AurenFireBreath.java` diretamente proveniente de
+`FireDragonEntity.riderShootFire`, `DragonBaseEntity.rayTraceRider`,
+`performNormalBreathAttack`, `getHeadPosition`, e
+`IafDragonDestructionManager.destroyAreaBreath` no commit CE
+`aa2f11a6b79acb48a1094765d610cdaca79e3d18` (LGPL-3.0-or-later).
+
+Port necessário porque `AurenDragon extends TamableAnimal`, não
+`DragonBaseEntity`; métodos com `DragonBaseEntity` e registries Iaf não
+podem ser chamados diretamente sem importar toda árvore de dependências.
+Estado/progresso separados do voo autônomo. A entrada usa bit CE
+`CONTROL_STATE.strike=8`, registro R original, encaminhado no pacote
+existente com validação de dono montado; mira é calculada no servidor
+a partir do jogador. Sem pacotes novos, entidades de projétil ou
+dependências extras.
+
+Desvios limitados e explícitos: `ParticleTypes.FLAME`/`SoundEvents.BLAZE_SHOOT`
+para assets não importados, sem `FireDragonChargeEntity`, sem blocos especiais
+carbonizados/Dragon Forge; terrenos somente incendiáveis com mobGriefing.
+O dano da área `stage*attackDamageFire = 3*2=6` tem janela de 5 ticks,
+para reduzir risco de múltiplos hits em Zalith. Protege dono, montaria,
+domesticados do mesmo dono, aliados e chunks não carregados.
+
+O cálculo de `getHeadPosition` foi portado, mas adaptado à escala fixa
+3.25 de renderização do Auren. Necessário teste de alinhamento visual
+em jogo; não afirmar equivalência completa de geometria/partículas/sons.
+Voo autônomo v0.6.2, voo montado v0.6.3, ombro e teleporte intactos.
