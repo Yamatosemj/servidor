@@ -134,3 +134,30 @@ existente de entrada/saída de ombro de 20 ticks. Não cria novas poses própria
 Preserva anchor, escala 0,42/3,25, animações originais de caminhar/voar,
 acompanhamento das formas, limite de teleporte adulto 50 blocos, chunk tickets.
 A aprovação visual exige teste pelo jogador no Zalith.
+
+
+## V0.5.5 — correção da postura ereta no ombro confirmada por captura de tela
+
+Na captura de tela real no Zalith v0.5.4, o filhote se mexe corretamente
+com idle da CE, mas parece **um dragão em pé atrás do personagem**, asas
+semiabertas e cabeça erguida. Inspecionamos os arquivos binários originais:
+`sitting_shoulder.tbl` tem `BodyUpper.rotationX=-17.78°`,
+`Head.rotationX=80.87°` e asas no ombro ainda abertas; não é uma pose
+para se deitar.
+
+Alternativa usando apenas arquivos da Community Edition, sem inventar
+animações: **`lightningdragon_sleeping.tbl`** original do mesmo commit
+pinned, verificado pelo Git blob SHA-1. Esta pose dobra mais o corpo
+(`BodyUpper=-28.7°`), pernas (`LegR=-33°`), asas
+(`armL1.rotationX=10°`) e curva a cauda. São mudanças verificadas
+pela análise estrutural dos .tbl; render visual é teste posterior.
+Aplicamos essa pose só quando no ombro, interpolação 20 ticks,
+mais os movimentos de repouso CE já existentes. Retiramos `offsetZ=-12`
+exclusivo de `sitting_shoulder` e aproximamos posição central para
+lateral 0.30 e altura 1.30.
+
+O filhote fora do ombro não muda. O adulto e o teleporte/chunkloader
+foram confirmados pelo jogador e não foram modificados.
+
+A verdadeira forma de cachecol em volta do pescoço (cabeça em um ombro,
+cauda no outro) ainda exigirá pose/asset próprio; a CE não contém isso.
