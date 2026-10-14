@@ -6,6 +6,7 @@ import com.iafenvoy.uranus.client.model.AdvancedModelBox;
 import com.iafenvoy.uranus.client.model.TabulaModel;
 import com.iafenvoy.uranus.client.model.util.TabulaModelHandlerHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
@@ -46,6 +47,10 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
                                 float limbSwing, float limbSwingAmount,
                                 float age, float yaw, float pitch, float scale) {
         model.resetToDefaultPose();
+        if (dragon.isSmallForm() && dragon.isOnShoulder()) {
+            AurenNeckPose.apply(model, age);
+            return;
+        }
 
         float idle = (float) Math.sin(age * 0.115F);
         float movement = dragon.isOnShoulder() ? 0F : Math.min(1F, limbSwingAmount * 2.5F);
@@ -99,12 +104,19 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
     public void render(AurenDragon entity, float yaw, float partialTick, PoseStack pose,
                        MultiBufferSource buffer, int packedLight) {
         this.model = entity.isSmallForm() && entity.isOnShoulder() ? shoulderModel : groundModel;
-        this.shadowRadius = entity.isSmallForm() ? 0.2F : 1.7F;
+        this.shadowRadius = entity.isOnShoulder() ? 0.0F : entity.isSmallForm() ? 0.2F : 1.7F;
         super.render(entity, yaw, partialTick, pose, buffer, packedLight);
     }
 
     @Override
     protected void scale(AurenDragon entity, PoseStack pose, float partialTick) {
+        if (entity.isSmallForm() && entity.isOnShoulder()) {
+            // Lay the dragon sideways across the player's shoulders.
+            // Head faces the left side; tail bends over the right.
+            pose.mulPose(Axis.YP.rotationDegrees(90.0F));
+            pose.translate(0.0D, -0.035D, 0.0D);
+        }
+        // Keep the original baby size in every pose, as requested.
         float factor = entity.isSmallForm() ? 0.42F : 5.8F;
         pose.scale(factor, factor, factor);
     }
