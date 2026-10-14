@@ -157,11 +157,15 @@ public final class AurenDragon extends TamableAnimal {
                 this.setOnShoulder(false);
                 return;
             }
-            // Follow the owner's body orientation. Works even without a player mount.
+            // Keep the torso behind the neck. The 3D pose curves the head
+            // onto the left shoulder and the tail to the right.
+            // At yaw 0 (+Z forward), left is +X and behind is -Z.
             double angle = Math.toRadians(player.yBodyRot);
-            double x = player.getX() + Math.cos(angle) * 0.38D;
-            double z = player.getZ() + Math.sin(angle) * 0.38D;
-            double y = player.getY() + player.getBbHeight() * 0.82D;
+            double lateral = 0.075D;
+            double backward = 0.18D;
+            double x = player.getX() + Math.cos(angle) * lateral + Math.sin(angle) * backward;
+            double z = player.getZ() + Math.sin(angle) * lateral - Math.cos(angle) * backward;
+            double y = player.getY() + player.getBbHeight() * 0.76D;
             this.getNavigation().stop();
             this.setDeltaMovement(Vec3.ZERO);
             this.noPhysics = true;
