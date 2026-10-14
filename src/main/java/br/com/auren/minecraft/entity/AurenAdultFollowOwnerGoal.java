@@ -83,7 +83,10 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
             double dx = this.owner.getX() - this.dragon.getX();
             double dz = this.owner.getZ() - this.dragon.getZ();
             double airborneStop = this.baby ? 2.0D : stop;
-            return dx * dx + dz * dz > airborneStop * airborneStop;
+            double dy = Math.abs(this.owner.getY() - this.dragon.getY());
+            double airborneHeight = this.baby ? 3.5D : 6.3D;
+            return dx * dx + dz * dz > airborneStop * airborneStop
+                    || dy > airborneHeight;
         }
         return this.dragon.distanceToSqr(this.owner) > stop * stop;
     }

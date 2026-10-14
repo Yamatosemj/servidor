@@ -217,3 +217,13 @@ de animação.
 
 Escopo independente: PR #15 da pose experimental v0.5.7 permanece aberto
 e separado; nenhum ajuste do ombro foi combinado na v0.6.0.
+
+
+### Complemento: donos em altitude diferente
+
+A primeira revisão considerava somente distância horizontal para pouso em voo.
+Isso solucionava o bebê pairando, mas falharia se o jogador estivesse vários
+blocos acima/abaixo do dragão (morros/torres/cânions). A condição final
+também exige proximidade vertical (<=3.5 blocos filhote; <=6.3 adulto) antes
+de encerrar voo e pousar. Os limites são superiores às altitudes alvo
+de cruzeiro (2.8 / 5.2) e evitam pousar no fundo da montanha.

@@ -24,6 +24,8 @@ def verify():
     assert "this.dragon.getFlightController().land();" in follow
     assert "double airborneStop = this.baby ? 2.0D : stop;" in follow
     assert "dx * dx + dz * dz > airborneStop * airborneStop" in follow
+    assert "double dy = Math.abs(this.owner.getY() - this.dragon.getY());" in follow
+    assert "double airborneHeight = this.baby ? 3.5D : 6.3D;" in follow
     assert "this.dragon.getFlightController().reset();" in follow
     # Keep the real working, safety-checked 50-block teleport rather than
     # restoring the vanilla 12-block pet teleport by accident.
