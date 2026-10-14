@@ -161,3 +161,24 @@ foram confirmados pelo jogador e não foram modificados.
 
 A verdadeira forma de cachecol em volta do pescoço (cabeça em um ombro,
 cauda no outro) ainda exigirá pose/asset próprio; a CE não contém isso.
+
+ 
+## V0.5.6 — pose de pescoço ilustrada pelo usuário (14/10/2026)
+
+A ficha frontal/traseira do Auren estabelece a pose-alvo: cabeça/pescoço
+sobre ombro esquerdo, corpo atrás da nuca, asas fechadas, cauda sobre o
+ombro direito. V0.5.5 aparentava dormir; v0.4 girava 90 graus e ficava
+torto apesar da distância confortável ao jogador.
+
+Retomada a curvatura customizada anterior do pescoço/cauda (invertendo
+o yaw do pescoço para alcançar o lado esquerdo), mas **sem rotação do
+modelo inteiro** e sem keyframes de asas feitos à mão. O renderizador
+usa `sitting_shoulder.tbl` da CE para corpo acordado, `sleeping.tbl`
+somente para os quatro ossos principais das asas, e mantém a animação
+idle original da CE sobre essa composição. A posição no pescoço volta
+à da v0.4 (lateral=0.075, atrás=0.18, altura=0.76 da altura do player),
+e o blend de 20 ticks continua.
+
+Não foram alterados o Auren adulto, escalas, IA, voo, andar, teleporte
+de emergência a 50 blocos nem tickets de chunk. Teste visual de frente
+e costas no Zalith é obrigatório antes de aprovar aparência.

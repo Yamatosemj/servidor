@@ -1,4 +1,29 @@
-# Auren Minecraft — v0.5.5-alpha (Minecraft 1.21.1 / NeoForge)
+# Auren Minecraft — v0.5.6-alpha (Minecraft 1.21.1 / NeoForge)
+
+## v0.5.6 — awake, folded-wing neck wrap from user illustration
+
+The user supplied a front/back drawing: the baby Auren's head and neck
+rest on the LEFT shoulder; torso lies behind the neck, wings are folded,
+and tail extends toward the RIGHT shoulder. The previous version looked
+asleep rather than alert, and v0.4 had the model sideways.
+
+- Restore the v0.4 neck/tail wrap concept with corrected neck bend and no
+  global 90-degree renderer rotation.
+- Use the awake original CE `sitting_shoulder.tbl` pose as the base,
+  rather than the full original `sleeping.tbl`.
+- Interpolate ONLY the four principal wing bones from CE's original folded
+  sleeping pose; wing keyframes are not improvised.
+- Keep the continuous original CE idle movements already working.
+- Reuse the comfortable nape anchor from v0.4 (0.075 left, 0.18 behind,
+  Y = 0.76 × player height), with torso-aligned yaw.
+- Keep baby scale 0.42, adult scale 3.25, normal animations and **fully
+  unchanged adult follow (15 blocks), emergency teleport (50 blocks)
+  and temporary chunk loader**.
+
+**Must be checked in Zalith:** front and back screenshots beside the reference.
+The build tests the bone mappings, but does not render the player/dragon
+in-game. If the head or tail appears mirrored or intersects the model,
+adjust the joint yaw/anchor only; do not change working follow AI.
 
 ## v0.5.5 — original CE curled/resting shoulder posture
 
@@ -83,7 +108,7 @@ instead of becoming frozen when simulation distance is low. The small Auren
 and neck mechanic remain unchanged. This still does not implement flight.
 
 **One-time caveat for existing saves:** if the adult's chunk was already
-unloaded *before installing v0.5.5*, you need to approach his last known
+unloaded *before installing v0.5.6*, you need to approach his last known
 location once to load him and start the first ticket. A durable unloaded
 entity index is not part of this focused update.
 
@@ -140,7 +165,7 @@ entity states, which are not present in Auren; it is not copied wholesale.
 
 ## Playing and testing
 
-1. Remove earlier Auren JARs from `mods` and install the one for v0.5.5.
+1. Remove earlier Auren JARs from `mods` and install the one for v0.5.6.
 2. Minecraft Java **1.21.1**, NeoForge **21.1.248+**.
 3. Summon with `/summon aurenminecraft:auren`; empty-hand interact to tame.
 4. Observe the big dragon walking: the feet/body should now use the original
