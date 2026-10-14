@@ -44,7 +44,11 @@ def verify():
     assert "AurenOriginalShoulderIdle.apply(model, age, shoulderBlend);" in render
     assert "AurenPoseTransition.applyBones(model, folded, shoulderBlend," in render
     assert '"armL1", "armL2", "armR1", "armR2"' in render
-    assert "pose.mulPose(" not in render
+    # The original CE uses dynamic X body pitch while mounted. This is
+    # allowed and must not reintroduce the old static 90-degree shoulder yaw.
+    assert "if (entity.isVehicle())" in render
+    assert "pose.mulPose(Axis.XP.rotationDegrees(entity.getRiderVisualPitch(partialTick)))" in render
+    assert "Axis.YP.rotationDegrees(90" not in render
     assert "torso.offsetZ" not in render
 
     for name in ("Neck1", "Neck2", "Neck3", "Tail1", "Tail2", "Tail3", "Tail4", "Tail5", "Head"):
