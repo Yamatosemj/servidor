@@ -110,10 +110,10 @@ public final class AurenIafDragonFlightManager {
             this.targetTicks = 0;
         }
 
-        if (this.target != null && this.target.y >= dragon.getY()) {
-            // Source CE IafDragonFlightManager.update upward boost.
-            dragon.setDeltaMovement(dragon.getDeltaMovement().add(0, 0.1D, 0));
-        }
+        // CE adds +0.1 Y per tick to counter its standard dragon gravity.
+        // Auren's flight uses noGravity=true: retaining the unbounded boost
+        // creates airborne 'jumps'. CE's FlightMoveHelper still controls
+        // yaw/pitch/horizontal acceleration; lifecycle bounds vertical speed.
     }
 
     /**
