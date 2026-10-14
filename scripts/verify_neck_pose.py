@@ -34,8 +34,8 @@ def verify():
             model = json.loads(inner.read("model.json"))
     skeleton = set(iter_names(model["cubes"]))
     pose_source = POSE.read_text(encoding="utf-8")
-    names = set(re.findall(r'rotate[XYZ]\\(model, "([^"]+)"', pose_source))
-    names.update(re.findall(r'model\\.getCube\\("([^"]+)"', pose_source))
+    names = set(re.findall(r'rotate[XYZ]\(model, "([^"]+)"', pose_source))
+    names.update(re.findall(r'model\.getCube\("([^"]+)"', pose_source))
     assert names, "Pose refers to no bones"
     missing = names - skeleton
     assert not missing, f"Pose references missing Tabula bones: {sorted(missing)}"
