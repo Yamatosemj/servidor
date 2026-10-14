@@ -24,15 +24,29 @@ public final class AurenPoseTransition {
         if (target == null || blend <= 0.0F) return;
         float t = Mth.clamp(blend, 0.0F, 1.0F);
         for (AdvancedModelBox from : current.getCubes().values()) {
-            AdvancedModelBox to = target.getCube(from.boxName);
-            if (to == null) continue;
-            from.rotateAngleX += angleDelta(from.rotateAngleX, to.rotateAngleX) * t;
-            from.rotateAngleY += angleDelta(from.rotateAngleY, to.rotateAngleY) * t;
-            from.rotateAngleZ += angleDelta(from.rotateAngleZ, to.rotateAngleZ) * t;
-            from.rotationPointX += (to.rotationPointX - from.rotationPointX) * t;
-            from.rotationPointY += (to.rotationPointY - from.rotationPointY) * t;
-            from.rotationPointZ += (to.rotationPointZ - from.rotationPointZ) * t;
+            blendBone(from, target.getCube(from.boxName), t);
         }
+    }
+
+    /** Interpolate only selected CE bones, without copying a sleeping head. */
+    public static void applyBones(TabulaModel<AurenDragon> current,
+                                  TabulaModel<AurenDragon> target, float blend,
+                                  String... names) {
+        if (target == null || blend <= 0.0F) return;
+        float t = Mth.clamp(blend, 0.0F, 1.0F);
+        for (String name : names) {
+            blendBone(current.getCube(name), target.getCube(name), t);
+        }
+    }
+
+    private static void blendBone(AdvancedModelBox from, AdvancedModelBox to, float t) {
+        if (from == null || to == null) return;
+        from.rotateAngleX += angleDelta(from.rotateAngleX, to.rotateAngleX) * t;
+        from.rotateAngleY += angleDelta(from.rotateAngleY, to.rotateAngleY) * t;
+        from.rotateAngleZ += angleDelta(from.rotateAngleZ, to.rotateAngleZ) * t;
+        from.rotationPointX += (to.rotationPointX - from.rotationPointX) * t;
+        from.rotationPointY += (to.rotationPointY - from.rotationPointY) * t;
+        from.rotationPointZ += (to.rotationPointZ - from.rotationPointZ) * t;
     }
 
     /** Shortest angular distance, avoiding 360-degree flips across +/- pi. */

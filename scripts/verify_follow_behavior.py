@@ -41,7 +41,7 @@ def verify():
     assert "removeRegionTicket" in chunkloader
     assert "!dragon.isSmallForm()" in chunkloader
     assert "owner.level() == level" in chunkloader
-    assert "mod_version=0.5.5-alpha" in props
+    assert "mod_version=0.5.6-alpha" in props
     print("PASS: baby follows at 4.5/1.7; adult at 15/8; teleports only at 50+ with safe landing")
 
 
