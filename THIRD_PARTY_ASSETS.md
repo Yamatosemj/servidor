@@ -67,3 +67,22 @@ The original authorship/licensing remains with the CE authors. The existing
 LGPL license notices must be preserved. The Auren distribution still uses the
 already bundled Uranus **3.0-beta.1** via NeoForge Jar-in-Jar. No additional
 external mod dependency is required for this flight implementation.
+
+
+## v0.6.1 — direct IceAndFire CE flight code port (LGPL-3.0-or-later)
+
+`AurenIafDragonFlightManager.java` is an adapted port of **original code**
+from IceAndFire Community Edition 1.21.1, distributed under LGPL v3 or
+later. Original IAFEnvoy author attribution is included in its source header.
+
+Source files:
+- [IafDragonFlightManager.java](https://github.com/IAFEnvoy/IceAndFire-CE/blob/1.21.1/src/main/java/com/iafenvoy/iceandfire/entity/util/dragon/IafDragonFlightManager.java): FlightMoveHelper, approach/turning/acceleration, target update
+- [DragonUtils.java](https://github.com/IAFEnvoy/IceAndFire-CE/blob/1.21.1/src/main/java/com/iafenvoy/iceandfire/entity/util/dragon/DragonUtils.java): getBlockInViewEscort sampling
+- [DragonBaseEntity.java](https://github.com/IAFEnvoy/IceAndFire-CE/blob/1.21.1/src/main/java/com/iafenvoy/iceandfire/entity/DragonBaseEntity.java): switchNavigator(ground/flying)
+
+Only combat-specific references were removed; the CE algorithms and
+navigational structure are retained as source-derived components, with
+documented Auren-specific safety and size adjustments. The existing
+Uranus `AdvancedPathNavigate` type is reused *directly*, not copied.
+
+**Preserve LGPL attribution when redistributing or adapting this class.**

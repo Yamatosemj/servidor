@@ -227,3 +227,37 @@ blocos acima/abaixo do dragão (morros/torres/cânions). A condição final
 também exige proximidade vertical (<=3.5 blocos filhote; <=6.3 adulto) antes
 de encerrar voo e pousar. Os limites são superiores às altitudes alvo
 de cruzeiro (2.8 / 5.2) e evitam pousar no fundo da montanha.
+
+
+## V0.6.1 — usuário pediu importar **o código original**, sem recriar voo
+
+**Problema:** a v0.6.0 importava quadros CE, mas `AurenFlightController`
+ainda usava direção, velocidade, desaceleração e curvas inventadas, fazendo
+o Auren voar devagar apesar de o IceAndFire ter movimento testado.
+
+**Mudança de arquitetura (isolada da pose do pescoço):**
+- Novo `AurenIafDragonFlightManager.java`: porta `FlightMoveHelper` original
+  de `IafDragonFlightManager` (yaw em incrementos de 4°, aceleração por
+  `approach`, `speedModifier` variando até 1.8, cálculo pitch e velocidade
+  angular) e a escolha original de waypoint `DragonUtils.getBlockInViewEscort`.
+  Modificações apenas para classe Auren, situação dono, escala, evitar NaN e
+  coordenadas/chunks/colisão seguras. Deixa explícita licença LGPL-3.0.
+- `AurenDragon`: reproduz `DragonBaseEntity.switchNavigator(1/0)` usando
+  `AdvancedPathNavigate(MovementType.FLYING)` da Uranus já embutida, e
+  restaura o nav/MoveControl terrestre ao encerrar voo. Handler desabilita
+  teleportes internos do pathfinder: só temos o fallback de 50+ blocos.
+- `AurenFlightController`: **não decide mais como acelerar/curvar**, apenas
+  mantém o ciclo de vida voo/decolagem/pouso/gravidade e chama o manager CE.
+- `AurenAdultFollowOwnerGoal`: usa sempre `dragon.getNavigation()` atual,
+  evitando ponteiro stale quando se alterna nav terrestre/aérea.
+- O movimento CE de escolta originalmente tem tolerâncias/altitudes maiores;
+  amostragem foi adaptada para Auren baby/adulto, com verificações de chunks
+  carregados e destino com linha de visada.
+- Mantidos valores de aproximação adulto 15/8, filhote 4.5/1.7, teleporte de
+  emergência >50, tickets temporários, animações CE, postura de ombro v0.5.6.
+- Documentar o que **não é** portado: controles de cavalgada, ataque,
+  stamina, inventário e outras subclasses e registros do IAF CE.
+
+**Limite de validação:** CI Gradle + testes estruturais confirmam que o código
+compila e invoca o manager, mas **não medem velocidade real no Zalith**.
+Sem declarar sucesso de velocidade até teste do usuário.

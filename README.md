@@ -1,4 +1,51 @@
-# Auren Minecraft — v0.6.0-alpha (Minecraft 1.21.1 / NeoForge)
+# Auren Minecraft — v0.6.1-alpha (Minecraft 1.21.1 / NeoForge)
+
+## v0.6.1 — directly ported IceAndFire CE flight engine (not a homegrown flight controller)
+
+The user confirmed v0.6.0 actually flies, **but flies too slowly**. The old
+v0.6.0 homegrown steering/velocity code has now been replaced by the original
+IceAndFire Community Edition 1.21.1 algorithms, **adapted to AurenDragon**:
+
+- `AurenIafDragonFlightManager.FlightMoveHelper`: CE's yaw turning,
+  `approachDegrees`, `approach` acceleration, pitch and air movement.
+- `AurenIafDragonFlightManager.update` plus `getBlockInViewEscort`:
+  the CE escort target chooser, adapted for a player-owned Auren and smaller
+  baby size. It samples candidate airborne destinations and checks that they
+  are collision-free, line-of-sight reachable and already in loaded chunks.
+- `AurenDragon.useIceAndFireFlightNavigation`: switches to the **same
+  Uranus AdvancedPathNavigate MovementType.FLYING** used by the original CE;
+  restores the original ground navigator/controller on landing. The Uranus
+  dependency was already included in v0.5, so **NO new dependency**.
+- The previous AurenFlightController is now **only a lifecycle adapter**:
+  checking headroom, takeoff, landing, gravity, owner/disconnection and
+  stuck timeout. **It no longer invents custom air acceleration and turns.**
+- Minimal documented robustness changes from the upstream CE code: handle
+  vertical division-by-zero, clamp horizontal sign and acceleration symmetrically,
+  and avoid compounding slow-down into persistent speed every tick during
+  close-up owner-follow (the CE was tuned for distant escort waypoints).
+- Existing owner-follow thresholds remain **adult 15/8, baby 4.5/1.7**.
+  The tested **50+ block safe teleport**, temporary chunk ticket and original
+  CE Tabula flight models/secondary animation remain intact.
+- PR #15's experimental shoulder pose remains **separate**; no shoulder,
+  adult-size, combat, ritual or mounting changes are included.
+
+### Verify in Zalith
+
+1. Replace the previous JAR; summon and tame Auren.
+2. Move **16–30 blocks** from the adult on flat ground. Observe flight speed,
+   turning rate, altitude and landing compared with v0.6.0.
+3. Test the baby beyond 4.5 blocks, both in open air and under low ceilings.
+4. Try a wall/trees, then 55–65 blocks (50-block emergency teleport).
+5. Test save/reload midflight, sitting midflight and shoulder toggle.
+6. Send a short video or observations: this port compiles, but **the source
+   CE algorithms need playtesting when adapted to Auren's smaller hitbox,
+   following distances and different entity base**.
+
+**Important scope:** the port does not automatically provide IceAndFire
+riding, dragon combat, fire/lightning breath, inventory, full stage growth or
+every AI goal. Those have separate dependencies and integration requirements.
+The original CE flight movement and owner-escort target selection are now
+real source-derived code rather than a brand-new imitation.
 
 ## v0.6.0 — flight foundation: autonomous follow, takeoff and landing
 
