@@ -52,6 +52,9 @@ for required in (
     "else this.setFlightMode(AurenFlightController.TAKING_OFF)",
     "this.getRideHorizontalBase()",
     "this.getRideHeightBase()",
+    "public void move(MoverType type, Vec3 motion)",
+    "this.getDeltaMovement().multiply(0.6D, 1.0D, 0.6D)",
+    "this.setNoGravity(this.getFlightMode() == AurenFlightController.TAKING_OFF",
     "this.updateRiderPitch(this.yOld - this.getY())",
 ):
     assert required in dragon, f"Original CE rider flight mechanic missing: {required}"
