@@ -1,4 +1,37 @@
-# Auren Minecraft — v0.5.1-alpha (Minecraft 1.21.1 / NeoForge)
+# Auren Minecraft — v0.5.2-alpha (Minecraft 1.21.1 / NeoForge)
+
+## Correction v0.5.2 — keep the adult's current chunk loaded while following
+
+The previous goal could not teleport once Minecraft **stopped ticking the
+unloaded Auren entity**. The adult now acquires a small **temporary NeoForge
+entity-ticking region ticket** centered on its current chunk when its tamed
+owner is online in the same dimension. The ticket is renewed every 20 ticks,
+has a 100-tick automatic expiry, and is removed on death, removal, sitting,
+form change, logout or dimension change. As Auren moves, the ticket moves with
+him; it does not leave permanent `/forceload` chunks behind.
+
+This lets the adult keep evaluating the 50-block emergency teleport rule
+instead of becoming frozen when simulation distance is low. The small Auren
+and neck mechanic remain unchanged. This still does not implement flight.
+
+**One-time caveat for existing saves:** if the adult's chunk was already
+unloaded *before installing v0.5.2*, you need to approach his last known
+location once to load him and start the first ticket. A durable unloaded
+entity index is not part of this focused update.
+
+### How to test in Zalith
+
+1. Replace the previous JAR, then return to the adult Auren if he was left
+   in an unloaded chunk before updating.
+2. With the adult tamed, walk **16 blocks** away: he starts following;
+   from within **8 blocks**, he stops.
+3. Run/walk at least **60 blocks** away and wait a moment. He should now
+   teleport to a safe location roughly 8–12 blocks away, even with short
+   simulation distance. Terrain/collision can block emergency teleport if
+   there is no safe destination.
+4. Repeat as the small Auren to confirm no regression.
+5. Turn the adult small or leave the world. The adult's temporary ticket
+   should stop being maintained.
 
 ## Correction v0.5.1 — Adult following distance
 
@@ -39,7 +72,7 @@ entity states, which are not present in Auren; it is not copied wholesale.
 
 ## Playing and testing
 
-1. Remove earlier Auren JARs from `mods` and install the one for v0.5.1.
+1. Remove earlier Auren JARs from `mods` and install the one for v0.5.2.
 2. Minecraft Java **1.21.1**, NeoForge **21.1.248+**.
 3. Summon with `/summon aurenminecraft:auren`; empty-hand interact to tame.
 4. Observe the big dragon walking: the feet/body should now use the original

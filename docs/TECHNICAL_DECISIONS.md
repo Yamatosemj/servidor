@@ -76,3 +76,14 @@ Nova regra:
 - Distância de início de seguimento adulto **15 blocos** e teleporte emergencial apenas a partir de **50 blocos**.
 - O usuário quer filhote e adulto voando para seguir. **Este patch NÃO implementa voo mecânico**; o filhote mantém a meta vanilla provisoriamente (e seu teleporte) até substituí-la por uma IA aérea funcional.
 - O Ice and Fire CE permite montaria desde estágio 3, mas o Auren ainda precisa de programação própria de montaria, posição/controle do passageiro e teste no Android.
+
+
+## V0.5.2 — ticket temporário para manter o Auren adulto em funcionamento
+
+**Problema real encontrado no Zalith:** com distância de simulação baixa, a entidade adulta saía da área de chunks em execução antes de atingir/avaliar o limite de teleporte de 50 blocos. A meta de seguir não processa nem teleporta se o chunk do dragão descarregou.
+
+Solução focada: `AurenAdultChunkLoader` usa uma `TicketType<UUID>` temporária com `addRegionTicket(..., distance=2, ..., forceTicks=true)` em **um chunk central** para continuar executando o Auren enquanto seu dono está online e na mesma dimensão. Renova removendo e readicionando a cada 20 ticks (timeout 100). Libera a ticket ao mudar de chunk, de forma (adulto→filhote), sentar, perder o dono online, mudar dimensão ou morrer/remover entidade. Não usa `/forceload` persistente; nenhuma alteração no modo pequeno ou nas animações.
+
+**Limitação importante:** se o chunk do Auren já tinha sido descarregado **antes** da instalação desta versão, o servidor não sabe onde reativar sua entidade. O usuário deve aproximar-se da localização antiga uma vez para que o ticket seja ativado. Persistir índice global e recuperar entidade fria após reinício não está no escopo desta atualização.
+
+Validação: build/compilação e teste estrutural de emissão/renovação/remoção. **Teste efetivo de unload + teleporte exigirá Zalith**. Se falhar por ausência de pouso seguro, melhorar a busca sem permitir teleporte para dentro de blocos.
