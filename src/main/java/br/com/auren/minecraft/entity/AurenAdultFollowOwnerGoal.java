@@ -30,11 +30,19 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
     private static final double WALK_SPEED = 1.05D;
     private static final int REPATH_INTERVAL_TICKS = 10;
     private static final int MAX_TELEPORT_ATTEMPTS = 20;
+    // Match CE's separation of terrestrial and aerial navigation.
+    private static final int GROUND_WALK_BEFORE_FLIGHT_TICKS = 40;
+    private static final int GROUND_STALL_TICKS = 30;
+    private static final double ADULT_LONG_CHASE_DISTANCE = 32.0D;
+    private static final double BABY_LONG_CHASE_DISTANCE = 14.0D;
 
     private final AurenDragon dragon;
     private final boolean baby;
     private LivingEntity owner;
     private int repathCooldown;
+    private int groundPursuitTicks;
+    private int stalledGroundTicks;
+    private double previousOwnerDistance;
 
     public AurenAdultFollowOwnerGoal(AurenDragon dragon) {
         this(dragon, false);
@@ -91,6 +99,9 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
     @Override
     public void start() {
         this.repathCooldown = 0;
+        this.groundPursuitTicks = 0;
+        this.stalledGroundTicks = 0;
+        this.previousOwnerDistance = this.dragon.distanceTo(this.owner);
     }
 
     @Override
@@ -105,23 +116,51 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
         if (this.owner == null) return;
 
         this.dragon.getLookControl().setLookAt(this.owner, 10.0F, 10.0F);
-        // The controller receives a moving air target EVERY tick. Keeping
-        // the target fresh lets the dragon turn naturally around the owner.
-        boolean airborne = this.dragon.getFlightController().follow(this.owner);
-        if (airborne) this.dragon.getNavigation().stop();
+        int flightMode = this.dragon.getFlightMode();
 
-        // Full pathfinder recalculation every tick is costly on Zalith.
-        // Only the lightweight aerial steering needs a target each tick.
+        // In the air, refresh CE's moving escort destination each tick.
+        // Calling follow() on the ground initiates takeoff, so don't do that.
+        if (flightMode == AurenFlightController.TAKING_OFF
+                || flightMode == AurenFlightController.FLYING) {
+            if (this.dragon.getFlightController().follow(this.owner)) {
+                this.dragon.getNavigation().stop();
+            }
+        }
+
+        // Ground pathfinding every tick is costly on Zalith.
         if (--this.repathCooldown > 0) return;
         this.repathCooldown = REPATH_INTERVAL_TICKS;
-        if (!airborne) {
-            // Low roof, cramped enclosure or water: ordinary path navigation.
-            this.dragon.getNavigation().moveTo(this.owner, WALK_SPEED);
-        }
+
         double distanceSq = this.dragon.distanceToSqr(this.owner);
         if (distanceSq >= EMERGENCY_TELEPORT_DISTANCE * EMERGENCY_TELEPORT_DISTANCE
-                && this.teleportNearOwner()) {
-            return;
+                && this.teleportNearOwner()) return;
+
+        // The CE navigator switches back to ground only after touchdown.
+        if (flightMode != AurenFlightController.GROUNDED) return;
+
+        // Walk FIRST. Air travel is a fallback, not the default follow action.
+        boolean hasGroundRoute = this.dragon.getNavigation().moveTo(this.owner, WALK_SPEED);
+        double distance = Math.sqrt(distanceSq);
+        if (hasGroundRoute && this.previousOwnerDistance - distance > 0.3D) {
+            this.stalledGroundTicks = 0;
+        } else {
+            this.stalledGroundTicks += REPATH_INTERVAL_TICKS;
+        }
+        this.previousOwnerDistance = distance;
+        this.groundPursuitTicks += REPATH_INTERVAL_TICKS;
+
+        boolean blocked = this.stalledGroundTicks >= GROUND_STALL_TICKS;
+        double longChase = this.baby ? BABY_LONG_CHASE_DISTANCE
+                : ADULT_LONG_CHASE_DISTANCE;
+        boolean longPursuit = this.groundPursuitTicks >= GROUND_WALK_BEFORE_FLIGHT_TICKS
+                && distanceSq >= longChase * longChase;
+
+        if (blocked || longPursuit) {
+            // Same CE mover/escort used in v0.6.1, but only when necessary.
+            // If the ceiling blocks takeoff, keep the active ground route.
+            if (this.dragon.getFlightController().follow(this.owner)) {
+                this.dragon.getNavigation().stop();
+            }
         }
     }
 
