@@ -58,6 +58,7 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
     private boolean adultMayFollow(LivingEntity player) {
         return this.dragon.isSmallForm() == this.baby
                 && !this.dragon.isOnShoulder()
+                && !this.dragon.isVehicle()
                 && this.dragon.isTame()
                 && !this.dragon.isOrderedToSit()
                 && player != null
