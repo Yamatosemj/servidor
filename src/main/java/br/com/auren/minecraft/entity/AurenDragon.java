@@ -216,7 +216,8 @@ public final class AurenDragon extends TamableAnimal {
             this.setXRot(passenger.getXRot());
         }
         Vec3 pos = this.getRiderPosition();
-        callback.accept(passenger, pos.x, pos.y, pos.z);
+        // CE DragonBaseEntity.positionRider positions feet above riderPos.
+        callback.accept(passenger, pos.x, pos.y + passenger.getBbHeight(), pos.z);
     }
 
     /** From CE DragonBaseEntity.updatePitch (rider motion feedback). */
@@ -582,6 +583,9 @@ public final class AurenDragon extends TamableAnimal {
                 this.riderControlState = 0;
                 this.riderTakeoffTicks = 0;
                 this.riderAirTicks = 0;
+                this.glidingSpeedBonus = 0.0F;
+                this.riderWalkingExtraY = 0.0F;
+                this.dragonPitch = 0.0F;
                 this.flightController.land();
             }
         }
@@ -642,6 +646,9 @@ public final class AurenDragon extends TamableAnimal {
         this.riderControlState = 0;
         this.riderTakeoffTicks = 0;
         this.riderAirTicks = 0;
+        this.glidingSpeedBonus = 0.0F;
+        this.riderWalkingExtraY = 0.0F;
+        this.dragonPitch = 0.0F;
         this.setSmallForm(tag.getBoolean("SmallForm"));
         this.setOnShoulder(tag.getBoolean("OnShoulder"));
     }
