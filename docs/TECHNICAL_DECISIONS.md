@@ -304,3 +304,34 @@ no código original.
 Testes automatizados verificam o código e o build, **não comprovam**
 qualidade visual nem ausência de oscillação física no jogo. O teste em
 Zalith continua obrigatório antes do merge.
+
+
+## v0.6.3-alpha — montaria CE sem substituir voo autônomo
+
+**Base**: commit `33452de50db3f4345c805df630fe1b1109cbe2b9` da
+v0.6.2 aprovada em teste visual. Branch isolada, sem atualizar a `main`.
+
+**Fontes portadas (LGPL-3.0-or-later, CE 1.21.1 no commit imutável
+`aa2f11a6b79acb48a1094765d610cdaca79e3d18`):**
+`DragonBaseEntity.mobInteract`, `getControllingPassenger`, `canAddPassenger`,
+`positionRider`, `travel`, `updateRider`; `ClientEvents`,
+`IafKeyMappings`, `DragonControlC2SPayload`, `NetworkManager`,
+`ServerNetworkHandlers`.
+
+**Integração:** Auren é `TamableAnimal`, não `DragonBaseEntity`, e usa
+colisão menor que o modelo stage 3, portanto reaproveita os algoritmos
+terrestre e de voo controlado por `moveRelative`/`MoverType.SELF` da CE,
+com escala reduzida e assento sobre o dorso; não implementa o sistema
+original de stamina/inventário/combate/todos estágios. A decolagem montada
+possui estado separado do waypoint do piloto automático; `FlightController`
+não deve chamar `update(owner)` durante a montaria. Voo manual usa
+`noGravity` e arrasto isotrópico 0.9 da CE. Mapeamento compatível
+teclado/controles vanilla: espaço segura/subida, X descida, Shift sai.
+
+**Validação servidor:** payload C2S identifica a entidade mas não envia
+coordenadas; só dono efetivamente montado pode controlar; máscara bit 0/1.
+Não altera o teleporte emergencial original de 50 blocos ou tickets.
+
+**Regressões a testar manualmente em Zalith**: render do assento, rotação,
+movimento cliente/servidor, sustentação no ar, altura de voo, colisão,
+desmontagem e gravidade, câmera terceira pessoa e controles virtuais.
