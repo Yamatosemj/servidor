@@ -1,4 +1,38 @@
-# Auren Minecraft — v0.6.2-alpha (Minecraft 1.21.1 / NeoForge)
+# Auren Minecraft — v0.6.3-alpha (Minecraft 1.21.1 / NeoForge)
+## v0.6.3 — pilotar o Auren adulto com o sistema original da CE
+
+**Base testada pelo jogador:** v0.6.2 (caminhada prioritária, voo estável).
+Esta branch parte da versão testada; **não** substitui `main` nem inclui o PR
+separado de pose de ombro.
+
+Usamos as partes relevantes do **IceAndFire Community Edition 1.21.1**:
+- `DragonBaseEntity.mobInteract` (montagem pelo dono), `getControllingPassenger`,
+  `positionRider`, `updateRider` (carregar o espaço para decolar) e
+  `travel` (caminhada e voo controlado)
+- `DragonControlC2SPayload` e `ClientEvents.onLivingUpdate` (bits originais
+  de subir/descer), `NetworkManager` e `ServerNetworkHandlers`
+- Teclas e direção da CE: **WASD** caminha/voa, **segurar espaço por ~1 s**
+  decola, **espaço** sobe, **X** desce, **Shift** desmonta. Sprint durante
+  voo permite pilotar a inclinação com a câmera.
+- O joystick do Zalith deve alimentar os controles vanilla de movimento. Para
+  descer, mapear a tecla X no painel de controles do Zalith, se necessário.
+
+**Limites/salvaguardas:** apenas dono + forma adulta; um passageiro; servidor
+valida jogador/montaria antes de aceitar subida/descida; pacote não recebe
+posição do cliente. A IA de seguir e vaguear é pausada quando montado. Voo
+autônomo v0.6.2, pouso/gravidade após desmontar, teleporte seguro a 50 blocos,
+sistema de ombro e tickets continuam independentes.
+
+**TESTE MANUAL OBRIGATÓRIO:** após instalar o JAR experimental, domar o
+adulto com mão vazia e interagir de novo para montar. Em solo testar WASD,
+câmera, colisão e desmontagem; decolar segurando espaço, subir/descer,
+pousar sobre chão sólido e desmontar em voo (testar em ambiente seguro);
+validar retorno ao seguimento, tamanho filhote e modo ombro. Build CI e
+testes estruturais **não comprovam que o joystick touch e a câmera 3ª
+pessoa funcionam dentro do Zalith**. Seguir observações/vídeo para ajuste
+preciso de posição de assento e controle.
+
+
 
 ## v0.6.2 — ground-first follow and smoother CE flight (test build)
 
