@@ -113,3 +113,24 @@ tickets de chunk, nas poses CE de caminhada/voo e na escala 0,42/3,25.
 não para dar a volta no pescoço como cachecol. Não prometer esse resultado
 sem testar o posicionamento no Zalith; se ele ficar alinhado mas ainda
 parecer empoleirado, é uma decisão visual separada.
+
+
+## V0.5.4 — animação original em repouso aplicada à pose original de ombro
+
+O teste no Zalith confirmou que o Auren v0.5.3 ficava rígido no ombro. O motivo:
+o arquivo original `lightningdragon_sitting_shoulder.tbl` é uma **pose estática**,
+enquanto o `DragonTabulaModelAnimator` do IceAndFire-CE continua aplicando
+movimentos de repouso (`chainSwing`, `chainWave`, `walk`, `bob`) sobre os
+ossos do modelo a cada frame. Nosso renderizador retornava imediatamente após
+aplicar a pose, sem animá-la.
+
+**Correção somente de animação do ombro:** porta as instruções originais da
+Community Edition para o repouso acordado (original `speed_idle=0.05F`,
+`degree_idle=0.5F`, amplitudes e offsets originais) em
+`AurenOriginalShoulderIdle.apply`: movimento sutil da cauda/pescoço e
+respiração/oscilações de tronco/patas/asas. A amplitude usa somente o blend
+existente de entrada/saída de ombro de 20 ticks. Não cria novas poses próprias.
+
+Preserva anchor, escala 0,42/3,25, animações originais de caminhar/voar,
+acompanhamento das formas, limite de teleporte adulto 50 blocos, chunk tickets.
+A aprovação visual exige teste pelo jogador no Zalith.
