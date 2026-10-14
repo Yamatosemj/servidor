@@ -47,8 +47,8 @@ def verify():
     assert "AurenPoseTransition.apply(model, originalPose, shoulderBlend);" in renderer
     assert "this.model = groundModel;" in renderer
     assert "float shoulderBlend = dragon.getShoulderBlend(partialTick);" in renderer
-    assert "dragon.isSmallForm() && dragon.isOnShoulder()" in renderer
-    assert "entity.isSmallForm() && entity.isOnShoulder()" in renderer
+    assert "shoulderBlend > 0.0F && dragon.isSmallForm()" in renderer
+    assert "entity.isSmallForm() && blend > 0.0F" in renderer
     assert "Axis.YP.rotationDegrees(90.0F * blend)" in renderer
     assert "float factor = entity.isSmallForm() ? 0.42F : 5.8F;" in renderer
     assert "double backward = 0.18D;" in entity
