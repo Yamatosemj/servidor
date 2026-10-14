@@ -335,3 +335,27 @@ Não altera o teleporte emergencial original de 50 blocos ou tickets.
 **Regressões a testar manualmente em Zalith**: render do assento, rotação,
 movimento cliente/servidor, sustentação no ar, altura de voo, colisão,
 desmontagem e gravidade, câmera terceira pessoa e controles virtuais.
+
+## Revisão de fidelidade da montaria v0.6.3 após teste do jogador
+
+O usuário confirmou que a primeira build 0.6.3 tinha voo radicalmente diferente
+da CE, apesar de estar compilando. O método `travel` inicialmente alterava
+múltiplos coeficientes, não tinha `glidingSpeedBonus`, deixava sempre FLYING
+depois de 12 ticks e usava assento constante.
+
+A implementação foi novamente confrontada com CE 1.21.1 no commit
+`aa2f11a6b79acb48a1094765d610cdaca79e3d18`.
+Referências: `DragonBaseEntity.travel`, `updateRider`, `updatePitch`,
+`getRideHeightBase`, `getRideHorizontalBase`, `getRiderPosition`,
+`IafDragonLogic.updateDragonServer`, `LightningDragonEntity` (min speed
+0.15, max speed 0.4). Agora incluem coeficientes, planagem, gliding bonus,
+decolagem, estados hovering/flying e matemática da posição do piloto.
+O `riderAirTicks >=12 -> FLYING` simplificado foi removido.
+
+**Diferenças que permanecem**: não há `DragonBaseEntity` completo e
+`DragonTabulaModelAnimator` usa buffers de pitch/roll/cauda próprios,
+que ainda não foram portados integralmente. Os controles continuam C2S
+apenas up/down; dados de direção do passageiro via interface vanilla.
+A compatibilidade touch, a altura do assento e a suavidade visual ainda
+dependem de teste dentro do jogo, não apenas GitHub Actions.
+
