@@ -1,4 +1,29 @@
-# Auren Minecraft — v0.5.4-alpha (Minecraft 1.21.1 / NeoForge)
+# Auren Minecraft — v0.5.5-alpha (Minecraft 1.21.1 / NeoForge)
+
+## v0.5.5 — curled baby resting on the shoulder, not standing behind the head
+
+Based on the user's Zalith front-facing screenshot, the baby was visibly
+**upright like a dragon standing on the ground**, with outstretched wings
+behind the player's head. This was NOT an idle animation problem.
+Inspection of the actual CE Tabula files revealed the original
+`lightningdragon_sitting_shoulder.tbl` pose is largely upright (body changes
+only ~23 degrees from ground). The original CE `lightningdragon_sleeping.tbl`
+contains a more pronounced neck curl, folded wings and lowered torso.
+
+- **No invented animation/keyframes.** Switch the shoulder's reference pose
+  to the original `sleeping.tbl` from the same pinned IceAndFire CE commit.
+  Retain the 20-tick bone interpolation and the original CE idle motion
+  already added in v0.5.4.
+- Correct the shoulder anchor based on screenshot: horizontal lateral offset
+  **0.36 blocks**, slightly back **0.10 blocks**, and lower it to **1.16
+  blocks** above player's feet (previously 0.5/0.04/1.4).
+- Keep the original model size 0.42. No scale adjustments, no handmade
+  torso/neck/wing/tail rotations, no animation changes while walking or flying.
+- **Known limitation:** this uses the CE's sleeping pose as a curled *rest
+  posture*; it may resemble a sleeping dragon. We still need a Zalith photo
+  to verify the actual orientation and possible clipping into the player.
+  If visually wrong, restore v0.5.4 and refine the anchor rather than adding
+  more improvised skeletal angles.
 
 ## v0.5.4 — original IceAndFire CE shoulder idle animation
 
@@ -56,7 +81,7 @@ instead of becoming frozen when simulation distance is low. The small Auren
 and neck mechanic remain unchanged. This still does not implement flight.
 
 **One-time caveat for existing saves:** if the adult's chunk was already
-unloaded *before installing v0.5.4*, you need to approach his last known
+unloaded *before installing v0.5.5*, you need to approach his last known
 location once to load him and start the first ticket. A durable unloaded
 entity index is not part of this focused update.
 
@@ -113,7 +138,7 @@ entity states, which are not present in Auren; it is not copied wholesale.
 
 ## Playing and testing
 
-1. Remove earlier Auren JARs from `mods` and install the one for v0.5.4.
+1. Remove earlier Auren JARs from `mods` and install the one for v0.5.5.
 2. Minecraft Java **1.21.1**, NeoForge **21.1.248+**.
 3. Summon with `/summon aurenminecraft:auren`; empty-hand interact to tame.
 4. Observe the big dragon walking: the feet/body should now use the original

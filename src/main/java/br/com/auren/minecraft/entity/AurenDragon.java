@@ -204,16 +204,15 @@ public final class AurenDragon extends TamableAnimal {
                 this.setOnShoulder(false);
                 return;
             }
-            // Reproduce CE's first passenger shoulder anchor:
-            // body-yaw-relative +0.5 lateral and +1.4 above player's feet.
-            // At yaw 0 (+Z forward), left is +X.
-            // A small backward correction keeps the feet off the collar.
+            // Rest over the shoulder rather than standing behind the head.
+            // Only the WORLD anchor changes; all bone rotations come from
+            // the source CE Tabula pose. Left is +X when player yaw = 0.
             double angle = Math.toRadians(player.yBodyRot);
-            double lateral = 0.5D;
-            double backward = 0.04D;
+            double lateral = 0.36D;
+            double backward = 0.10D;
             double x = player.getX() + Math.cos(angle) * lateral + Math.sin(angle) * backward;
             double z = player.getZ() + Math.sin(angle) * lateral - Math.cos(angle) * backward;
-            double y = player.getY() + 1.4D;
+            double y = player.getY() + 1.16D;
             this.getNavigation().stop();
             this.setDeltaMovement(Vec3.ZERO);
             this.noPhysics = true;

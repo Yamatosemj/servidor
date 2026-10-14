@@ -1,4 +1,4 @@
-"""Verify Auren uses the original CE lightningdragon sitting_shoulder pose.
+"""Verify Auren uses the original CE sleeping pose used to rest on shoulder.
 
 This tests SOURCE INTEGRITY and eliminates a known distortion from v0.5.2:
 a custom neck-wrap additive pose and global 90-degree root rotation.
@@ -18,7 +18,7 @@ RENDERER = ROOT / "src/main/java/br/com/auren/minecraft/client/AurenDragonRender
 ENTITY = ROOT / "src/main/java/br/com/auren/minecraft/entity/AurenDragon.java"
 TRANSITION = ROOT / "src/main/java/br/com/auren/minecraft/client/AurenPoseTransition.java"
 PROPS = ROOT / "gradle.properties"
-TABULA = "assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_sitting_shoulder.tbl"
+TABULA = "assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_sleeping.tbl"
 
 
 def bones(cubes):
@@ -42,8 +42,10 @@ def verify():
     properties = PROPS.read_text(encoding="utf-8")
 
     # Correct: CE sitting_shoulder, blend 0 -> 20 ticks, and CE torso offset.
-    assert 'lightningdragon/lightningdragon_sitting_shoulder' in renderer
-    assert 'AurenPoseTransition.apply(model, originalPose, shoulderBlend);' in renderer
+    assert 'lightningdragon/lightningdragon_sleeping' in renderer
+    assert 'SHOULDER_REST_POSE' in renderer
+    assert 'SHOULDER_POSE' not in renderer
+    assert 'AurenPoseTransition.apply(model, originalRest, shoulderBlend);' in renderer
     assert 'torso.offsetZ += (-12.0F - torso.offsetZ) * shoulderBlend;' in renderer
     assert 'AurenOriginalShoulderIdle.apply(model, age, shoulderBlend);' in renderer
     idle = (ROOT / "src/main/java/br/com/auren/minecraft/client/AurenOriginalShoulderIdle.java").read_text(encoding="utf-8")
@@ -67,18 +69,18 @@ def verify():
     assert not (ROOT / "src/main/java/br/com/auren/minecraft/client/AurenNeckPose.java").exists()
 
     # CE shoulder positioning, body yaw only; no effect on follow AI.
-    assert 'double lateral = 0.5D;' in entity
-    assert 'double backward = 0.04D;' in entity
-    assert 'double y = player.getY() + 1.4D;' in entity
+    assert 'double lateral = 0.36D;' in entity
+    assert 'double backward = 0.10D;' in entity
+    assert 'double y = player.getY() + 1.16D;' in entity
     assert 'this.yHeadRot = player.yBodyRot;' in entity
     assert 'float factor = entity.isSmallForm() ? 0.42F : 3.25F;' in renderer
-    assert 'mod_version=0.5.4-alpha' in properties
+    assert 'mod_version=0.5.5-alpha' in properties
 
     for property_name in ("rotateAngleX", "rotateAngleY", "rotateAngleZ",
                           "rotationPointX", "rotationPointY", "rotationPointZ"):
         assert f"from.{property_name}" in transition
     assert "Math.atan2" in transition
-    print("PASS: original CE sitting_shoulder pose and torso offset, "
+    print("PASS: original CE curled sleeping pose and torso offset, "
           "CE idle animation now running, proper shoulder anchor, scale unchanged")
 
 

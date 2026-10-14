@@ -18,17 +18,22 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
     private static final ResourceLocation BABY_TEXTURE =
             ResourceLocation.fromNamespaceAndPath(AurenMinecraft.MOD_ID, "textures/entity/auren_black_1.png");
 
-    private static final ResourceLocation SHOULDER_POSE =
+    // The original CE sitting_shoulder keyframe is unexpectedly upright:
+    // its torso/wing angles barely differ from GROUND and give the impression
+    // of a standing adult placed on the player's head. The *original* CE
+    // sleeping pose naturally curls the neck and wings around the body.
+    // This is NOT a hand-authored pose or new skeletal animation.
+    private static final ResourceLocation SHOULDER_REST_POSE =
             ResourceLocation.fromNamespaceAndPath(AurenMinecraft.MOD_ID,
-                    "lightningdragon/lightningdragon_sitting_shoulder");
+                    "lightningdragon/lightningdragon_sleeping");
 
     private final TabulaModel<AurenDragon> groundModel;
 
     public AurenDragonRenderer(EntityRendererProvider.Context context) {
         super(context, load("lightningdragon/lightningdragon_ground"), 1.5F);
         this.groundModel = this.model;
-        // Load the original CE shoulder pose once as a reference, not a swapped renderer.
-        TabulaModelHandlerHelper.getModel(SHOULDER_POSE);
+        // Cache the original CE curled resting pose before entering shoulder mode.
+        TabulaModelHandlerHelper.getModel(SHOULDER_REST_POSE);
     }
 
     private static TabulaModel<AurenDragon> load(String modelName) {
@@ -43,10 +48,10 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
     }
 
     /**
-     * CE original Lightning Dragon Tabula walk/flight keyframes and shoulder
-     * pose. The CE shoulder pose needs its original torso offset in addition
-     * to bone interpolation; CE also runs continuous idle animations on the
-     * posed bones. No extra hand-crafted neck/wing/tail twisting.
+     * CE original Lightning Dragon Tabula walk/flight keyframes and resting
+     * pose. The original sleeping pose keeps the baby low and naturally
+     * curled, unlike sitting_shoulder, which looks like standing upright.
+     * The original CE idle movements continue on the posed bones.
      */
     private static void animate(TabulaModel<AurenDragon> model, AurenDragon dragon,
                                 float limbSwing, float limbSwingAmount,
@@ -55,21 +60,22 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
         float partialTick = Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false);
         float shoulderBlend = dragon.getShoulderBlend(partialTick);
 
-        // As in IceAndFire CE: animate the SAME Tabula skeleton and blend every
-        // bone from its normal pose toward the original SIT_ON_PLAYER_POSE.
+        // Blend the SAME skeleton to an actual original CE CURLED rest pose,
+        // not the almost-upright sitting_shoulder pose visible in screenshots.
         if (shoulderBlend > 0.0F && dragon.isSmallForm()) {
-            TabulaModel<AurenDragon> originalPose = TabulaModelHandlerHelper.getModel(SHOULDER_POSE);
-            AurenPoseTransition.apply(model, originalPose, shoulderBlend);
-            // CE DragonTabulaModelAnimator applies a special BodyUpper offsetZ
-            // while on the player's shoulder. This is part of the ORIGINAL
-            // shoulder animation; the Tabula keyframe alone is insufficient.
+            TabulaModel<AurenDragon> originalRest =
+                    TabulaModelHandlerHelper.getModel(SHOULDER_REST_POSE);
+            AurenPoseTransition.apply(model, originalRest, shoulderBlend);
+
+            // Retain the original CE torso correction that places the model
+            // closer to the avatar; this is a global offset, not a custom
+            // skeletal pose. Only applied while perched.
             AdvancedModelBox torso = model.getCube("BodyUpper");
             if (torso != null) {
                 torso.offsetZ += (-12.0F - torso.offsetZ) * shoulderBlend;
             }
-            // In CE, sitting_shoulder is not a full animation: the same
-            // animating dragon also runs CE's continuous idle bone motions.
-            // V0.5.3 returned BEFORE those motions and froze him in place.
+            // CE's already ported idle routines animate resting neck, tail,
+            // body and wings; unlike a static pose, the baby remains alive.
             AurenOriginalShoulderIdle.apply(model, age, shoulderBlend);
             return;
         }
@@ -90,8 +96,8 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
 
     @Override
     protected void scale(AurenDragon entity, PoseStack pose, float partialTick) {
-        // The original CE sitting_shoulder pose already orients all bones.
-        // Do not rotate the entire dragon 90 degrees: that twists the pose.
+        // The original curled CE pose already orients the bones. Never add
+        // global model rotations or procedural limb twists.
         // Keep the original baby size; adult now approximates a CE stage-3 dragon.
         float factor = entity.isSmallForm() ? 0.42F : 3.25F;
         pose.scale(factor, factor, factor);

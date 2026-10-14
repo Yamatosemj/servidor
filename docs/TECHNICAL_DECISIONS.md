@@ -134,3 +134,24 @@ existente de entrada/saída de ombro de 20 ticks. Não cria novas poses própria
 Preserva anchor, escala 0,42/3,25, animações originais de caminhar/voar,
 acompanhamento das formas, limite de teleporte adulto 50 blocos, chunk tickets.
 A aprovação visual exige teste pelo jogador no Zalith.
+
+
+## V0.5.5 — imagem do usuário comprovou postura em pé no ombro; troca para pose CE de repouso curvado
+
+Captura do Zalith (14/10/2026) mostra filhote aparentemente de pé **atrás da
+cabeça do jogador**, com asas abertas e patas penduradas, embora a oscilação
+de idle funcione. A comparação objetiva dos `.tbl` da IceAndFire-CE 1.21.1
+mostrou que `sitting_shoulder` é pouco diferente de `ground` no corpo, enquanto
+`sleeping` abaixa torso, curva pescoço e recolhe asas. Importamos `sitting`
+e `sleeping` do MESMO commit imutável, com checagem SHA Git no Gradle.
+
+Apenas na forma pequena sobre o ombro, a meta da transição de ossos de 20
+ticks muda para a pose `lightningdragon_sleeping` ORIGINAL da CE. Preserva
+offset do torso, idle da CE, o tamanho 0.42 e a orientação pelo yaw do
+jogador. O anchor físico foi abaixado de 1.4 para 1.16 bloco e deslocado
+lateralmente 0.36 bloco + 0.10 para trás, em vez de 0.5 + 0.04.
+Não cria nova pose nem toca IA, chunk ticket ou teleporte (confirmado
+funcionando no relato anterior).
+
+O nome sleeping indica que a nova pose pode parecer um dragão dormindo,
+ao invés de um filhote somente sentado. Visual final aguarda teste no Zalith.

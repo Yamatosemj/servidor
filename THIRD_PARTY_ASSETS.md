@@ -32,3 +32,12 @@ The SHA-1 Git blob IDs for each file appear in `build.gradle` and are verified
 before packaging. All source-model attribution and license conditions remain as
 stated above. `AurenOriginalAnimations.java` adapts the original pose
 interpolation technique, not the complete original animator class.
+
+
+## Poses de repouso originais (v0.5.5)
+
+Do mesmo commit travado da IceAndFire CE 1.21.1, acrescentamos os modelos
+originais e sem modificação `lightningdragon_sitting.tbl` e
+`lightningdragon_sleeping.tbl`. Seus IDs SHA-1 de blob são conferidos no
+`build.gradle` durante a compilação. O segundo é utilizado no ombro como
+postura baixa e curvada, preservando a animação idle original da CE.

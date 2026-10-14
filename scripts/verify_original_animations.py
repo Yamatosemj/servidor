@@ -13,7 +13,7 @@ from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = "assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_"
-NAMES = ["ground", "sitting_shoulder", "flying", "hovering", "diving"] + [
+NAMES = ["ground", "sitting_shoulder", "sitting", "sleeping", "flying", "hovering", "diving"] + [
     f"walk{i}" for i in range(1, 5)
 ] + [f"flight{i}" for i in range(1, 7)]
 
@@ -55,13 +55,13 @@ def check():
     for name in ("flying", "hovering", "diving"):
         assert f'load("{name}")' in source
     assert "AurenOriginalAnimations.instance().apply" in renderer
-    assert "AurenPoseTransition.apply(model, originalPose, shoulderBlend);" in renderer
+    assert "AurenPoseTransition.apply(model, originalRest, shoulderBlend);" in renderer
     assert 'torso.offsetZ += (-12.0F - torso.offsetZ) * shoulderBlend;' in renderer
     assert "AurenOriginalShoulderIdle.apply(model, age, shoulderBlend);" in renderer
     assert "AurenNeckPose.apply" not in renderer
-    assert "mod_version=0.5.4-alpha" in version
+    assert "mod_version=0.5.5-alpha" in version
     print(f"PASS: {len(NAMES)} compatible original Lightning Dragon "
-          f"Tabula models are bundled and referenced; original shoulder pose integrated")
+          f"Tabula models are bundled and referenced; original resting pose integrated")
 
 
 if __name__ == "__main__":
