@@ -261,3 +261,17 @@ o Auren voar devagar apesar de o IceAndFire ter movimento testado.
 **Limite de validação:** CI Gradle + testes estruturais confirmam que o código
 compila e invoca o manager, mas **não medem velocidade real no Zalith**.
 Sem declarar sucesso de velocidade até teste do usuário.
+
+
+### Revisão antes do CI final — altitude e aceleração de escolta
+
+Após o primeiro build aprovado, a auditoria de regras mostrou que aplicar
+literalmente os destinos em altura de 8–24 blocos da CE impediria Auren
+de pousar quando atingisse seu raio próprio (filhote 2, adulto 8).
+O método original `getBlockInViewEscort` foi mantido, mas parametrizado
+em altura `2..3` filhote e `4..6` adulto. A atualização de alvos
+também deixa de oscilar a cada 3 blocos de movimento do dono; só muda
+alvo ao se afastar ~8 blocos, atingir alvo, obstruí-lo ou após 60 ticks.
+A base do movimento original (aproximação, yaw 4 graus, pitch e impulso)
+permanece a mesma. Esses dois ajustes são adaptações deliberadas ao
+tamanho/dinâmica do Auren, não código idêntico à CE.

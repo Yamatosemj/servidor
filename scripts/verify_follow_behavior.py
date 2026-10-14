@@ -40,6 +40,10 @@ def verify():
         "getBlockInViewEscort(LivingEntity owner)",
         "Heightmap.Types.MOTION_BLOCKING_NO_LEAVES",
         "this.target.y >= dragon.getY()",
+        "WAYPOINT_REEVALUATE_TICKS = 60",
+        "this.lastOwnerPos.distanceToSqr(owner.position()) > 64.0D",
+        "int baseHeight = dragon.isSmallForm() ? 2 : 4;",
+        "int heightRange = dragon.isSmallForm() ? 2 : 3;",
     ):
         assert expected in ce, f"Missing original CE flight mechanic: {expected}"
 

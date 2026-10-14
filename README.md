@@ -16,6 +16,11 @@ IceAndFire Community Edition 1.21.1 algorithms, **adapted to AurenDragon**:
   Uranus AdvancedPathNavigate MovementType.FLYING** used by the original CE;
   restores the original ground navigator/controller on landing. The Uranus
   dependency was already included in v0.5, so **NO new dependency**.
+- CE waypoint heights are scaled to **2–3 blocks (baby)** and
+  **4–6 blocks (adult)**, rather than the original large-dragon 8–24:
+  this matches Auren's existing landing thresholds and prevents endless
+  hovering. Waypoints refresh only after substantial owner movement or
+  blockage so CE's smooth 4° turn/acceleration can build speed.
 - The previous AurenFlightController is now **only a lifecycle adapter**:
   checking headroom, takeoff, landing, gravity, owner/disconnection and
   stuck timeout. **It no longer invents custom air acceleration and turns.**
