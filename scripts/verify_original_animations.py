@@ -55,10 +55,12 @@ def check():
     for name in ("flying", "hovering", "diving"):
         assert f'load("{name}")' in source
     assert "AurenOriginalAnimations.instance().apply" in renderer
-    assert "AurenNeckPose.apply" in renderer
+    assert "AurenPoseTransition.apply(model, originalPose, shoulderBlend);" in renderer
+    assert 'torso.offsetZ += (-12.0F - torso.offsetZ) * shoulderBlend;' in renderer
+    assert "AurenNeckPose.apply" not in renderer
     assert "mod_version=0.5.3-alpha" in version
     print(f"PASS: {len(NAMES)} compatible original Lightning Dragon "
-          f"Tabula models are bundled and referenced; neck pose retained")
+          f"Tabula models are bundled and referenced; original shoulder pose integrated")
 
 
 if __name__ == "__main__":
