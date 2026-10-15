@@ -107,14 +107,22 @@ def plan_repairs() -> tuple[dict[str, bytes], dict[str, str], list[dict]]:
         detail = ""
         if not p.suffix:
             new_name = relative + ".txt"
-            assert not (RESOURCES / new_name).exists(), f"Name conflict: {new_name}"
             kind = "extension"
-            detail = "Added required .txt extension expected by BestiaryScreen"
-            try:
-                original.decode("utf-8")
-                fixed = original
-            except UnicodeDecodeError:
-                fixed = original.decode("cp1252").encode("utf-8")
+            existing = RESOURCES / new_name
+            if existing.exists():
+                # Some original files coexist with a correctly named version.
+                # Never overwrite a working translation with a duplicate.
+                fixed = existing.read_bytes()
+                fixed.decode("utf-8")
+                detail = "Removed redundant extensionless file; original .txt exists"
+            else:
+                detail = "Added required .txt extension expected by BestiaryScreen"
+                try:
+                    original.decode("utf-8")
+                    fixed = original
+                except UnicodeDecodeError:
+                    fixed = original.decode("cp1252").encode("utf-8")
+                    detail += " and converted text from cp1252 to UTF-8"
                 detail += " and converted text from cp1252 to UTF-8"
         else:
             assert p.suffix == ".txt", f"Unknown bestiary resource extension: {relative}"
@@ -130,7 +138,10 @@ def plan_repairs() -> tuple[dict[str, bytes], dict[str, str], list[dict]]:
             assert new_name is not None
             assert new_name not in overrides
             fixed.decode("utf-8")
-            overrides[new_name] = fixed
+            # Existing .txt is already in CE output: remove the duplicate
+            # extensionless resource but do not add/replace a valid .txt.
+            if not (kind == "extension" and (RESOURCES / new_name).exists()):
+                overrides[new_name] = fixed
             if kind == "extension":
                 renames[relative] = new_name
             records.append({
@@ -205,6 +216,10 @@ def patch_jar(source_jar: Path, destination: Path, overrides: dict[str, bytes],
             out.writestr(info, data)
 
         for old, new in sorted(renames.items()):
+            if new in source_names:
+                # Already has a valid original .txt. Keep it unchanged.
+                continue
+            assert new in overrides, f"Missing new .txt entry for {old}"
             source_info = inp.getinfo(old)
             fixed_info = zipfile.ZipInfo(new, date_time=source_info.date_time)
             fixed_info.compress_type = source_info.compress_type
@@ -221,8 +236,10 @@ def patch_jar(source_jar: Path, destination: Path, overrides: dict[str, bytes],
             assert sha256(out.read(name)) == checksum, f"Original Java bytecode changed: {name}"
         for path, data in overrides.items():
             assert out.read(path) == data, f"Runtime resource mismatch: {path}"
-        for old in renames:
+        for old, new in renames.items():
             assert old not in final_names, f"Broken extensionless resource remains: {old}"
+            assert new in final_names, f"Resolved bestiary page absent: {new}"
+            out.read(new).decode("utf-8")
         for name in final_names:
             if name.endswith(".png") and (
                 "dragon_seeker.png" in name or "seeker" in name
