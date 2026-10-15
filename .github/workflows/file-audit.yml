@@ -1,0 +1,38 @@
+name: Auren + IceAndFire — Individual File Audit
+on:
+  push:
+    branches:
+      - audit/file-by-file-v070
+  workflow_dispatch:
+
+jobs:
+  audit-every-file:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.2.1'
+      - name: Audit each tracked Auren and original CE file
+        run: python3 scripts/audit_each_file.py --fail-on-error
+      - name: Compile Auren to verify its Java source
+        run: gradle build --no-daemon --stacktrace
+      - name: Compile entire original CE to verify its Java source
+        working-directory: vendor/iceandfire-ce
+        run: gradle build --no-daemon --stacktrace
+      - name: Upload one-record-per-file audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auren-ce-every-file-audit-v070
+          path: build/reports/file_audit/
+          if-no-files-found: error
