@@ -43,6 +43,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: auren-071-ONLY-ONE-DRAGON-NO-ICEANDFIRE-MOD
+          name: auren-072-CE-GROUND-MOVE-ONE-DRAGON
           path: build/libs/*.jar
           if-no-files-found: error
