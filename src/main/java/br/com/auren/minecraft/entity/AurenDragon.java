@@ -93,6 +93,10 @@ public final class AurenDragon extends TamableAnimal {
 
     public AurenDragon(EntityType<? extends TamableAnimal> type, Level level) {
         super(type, level);
+        // IceAndFire CE GroundMoveHelper replaces vanilla Mob's walker.
+        // The flight navigator temporarily replaces this controller and
+        // restores the exact same instance upon landing or teleport.
+        this.moveControl = new AurenCeGroundMoveControl(this);
         this.setPersistenceRequired();
     }
 
