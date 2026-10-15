@@ -50,6 +50,14 @@ dependencies {
 def upstreamCommit = 'aa2f11a6b79acb48a1094765d610cdaca79e3d18'
 def upstreamRoot = 'src/main/resources/assets/iceandfire/'
 def assets = [
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_attack_stream_charge1.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_attack_stream_charge1.tbl', '7865c66437438b74307df427d2febcac474426f9'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_attack_stream_charge2.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_attack_stream_charge2.tbl', '3fc377bdc32bc6f7c66ebdad2e258be855ca8f6'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_attack_stream_charge3.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_attack_stream_charge3.tbl', '40988fd55cb0954ba72d8ae2ba99e24ab316d591'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_attack_stream_breath.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_attack_stream_breath.tbl', 'f5183e5bcc089caac704d3c6a7937725dcbc5d62'],
     'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_ground.tbl':
         ['models/tabula/lightningdragon/lightningdragon_ground.tbl', 'b6fb4bf7a465b5cfe48889ce7dafcff0ea9d2576'],
     'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_sitting.tbl':

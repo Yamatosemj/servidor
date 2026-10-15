@@ -35,13 +35,14 @@ for expr in (
     "BlockHitResult mouthBlock = level.clip(new ClipContext(",
     "if (blockHit != null && blockHit.getType() == HitResult.Type.BLOCK",
     "getHeadPosition()",
-    "ParticleTypes.FLAME",
+    "ParticleTypes.SOUL_FIRE_FLAME",
+    "ParticleTypes.SMOKE",
     "level.sendParticles(",
     "level.getEntitiesOfClass(LivingEntity.class, bounds)",
     "level.damageSources().indirectMagic(dragon, rider)",
     "target.igniteForSeconds(CE_IGNITE_SECONDS)",
     "GameRules.RULE_MOBGRIEFING",
-    "Blocks.FIRE.defaultBlockState().canSurvive(level, firePos)",
+    "Blocks.SOUL_FIRE.defaultBlockState().canSurvive(level, firePos)",
 ):
     assert expr in fire, f"Missing FireDragon CE breath element: {expr}"
 
@@ -67,7 +68,7 @@ assert "dragon.isAlliedTo(target)" in fire
 assert "dragon.hasLineOfSight(target)" in fire
 assert "level.hasChunkAt(BlockPos.containing(burnTarget))" in fire
 assert "if (this.burnProgress == CE_BURN_PROGRESS_MAX && dragon.tickCount % 5 == 0)" in fire
-assert "mod_version=0.7.4-lightning-breath-alpha" in version
+assert "mod_version=0.7.5-blue-fire-animation-alpha" in version
 
 # Never expose a client-selectable target vector nor copy mod-specific block
 # destruction, random explosive charge or sound registries into the port.

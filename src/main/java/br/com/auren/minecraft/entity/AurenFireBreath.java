@@ -10,7 +10,7 @@
  *
  * Auren is not a DragonBaseEntity, so CE dragon-forge, charred blocks,
  * fire-charge entity and custom particles/sounds are not imported. Vanilla
- * flame particles, a sound and fire blocks substitute only those assets.
+ * blue soul-fire particles and compatible soul-fire blocks substitute those assets.
  */
 package br.com.auren.minecraft.entity;
 
@@ -52,6 +52,11 @@ public final class AurenFireBreath {
 
     public AurenFireBreath(AurenDragon dragon) {
         this.dragon = dragon;
+    }
+
+    /** Source CE attack progress drives the separate original Tabula pose. */
+    int getAttackTicks() {
+        return this.fireBreathTicks;
     }
 
     public void reset() {
@@ -118,11 +123,28 @@ public final class AurenFireBreath {
         this.burnProgress = Math.min(CE_BURN_PROGRESS_MAX, this.burnProgress + 2);
         double progress = this.burnProgress / (double) CE_BURN_PROGRESS_MAX;
         Vec3 streamEnd = head.lerp(burnTarget, progress);
-        for (int i = 1; i <= 12; i++) {
-            Vec3 particlePos = head.lerp(streamEnd, i / 12.0D);
-            if (!level.hasChunkAt(BlockPos.containing(particlePos))) break;
-            level.sendParticles(ParticleTypes.FLAME, particlePos.x, particlePos.y,
-                    particlePos.z, 1, 0.13D, 0.1D, 0.13D, 0.015D);
+        // Real volumetric BLUE soul-fire: a widening, turbulent cone rather
+        // than twelve points with the same 0.13-block spread (laser effect).
+        // The DAMAGE / sight ray stays unchanged, only the visual plume changes.
+        double plumeLength = head.distanceTo(streamEnd);
+        int segments = Math.max(4, Math.min(12, (int) Math.ceil(plumeLength / 2.5D)));
+        for (int i = 1; i <= segments; i++) {
+            // Stagger the plume samples slightly each tick to avoid a solid line.
+            double t = (i - 0.35D + dragon.getRandom().nextDouble() * 0.35D) / segments;
+            Vec3 center = head.lerp(streamEnd, Mth.clamp(t, 0.0D, 1.0D));
+            if (!level.hasChunkAt(BlockPos.containing(center))) break;
+            double width = Math.min(1.6D, 0.13D + plumeLength * t * 0.07D);
+            // sendParticles' positive count scatters each blue flame inside the
+            // widening cross-section, creating a moving plume, not a ray.
+            level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,
+                    center.x, center.y, center.z, 5,
+                    width, width * 0.75D, width, 0.035D);
+            // Light wisps emphasize heat and motion without orange fire.
+            if (i % 3 == 0) {
+                level.sendParticles(ParticleTypes.SMOKE,
+                        center.x, center.y, center.z, 1,
+                        width * 0.35D, width * 0.35D, width * 0.35D, 0.012D);
+            }
         }
 
         // CE destruction manager applies a stage-scaled area breath at the
@@ -187,15 +209,17 @@ public final class AurenFireBreath {
             }
         }
 
-        // CE breath ignites terrain only where mobGriefing permits. Do not
-        // transplant the mod-specific ash/charred blocks or destroy terrain.
+        // Blue SOUL_FIRE persists only where vanilla soul fire can survive.
+        // Do not place ordinary red fire or bypass block survival. On other
+        // blocks, blue particles + entity burn still work as before.
+        // No CE-specific ash/charred blocks or terrain destruction.
         if (blockHit != null && blockHit.getType() == HitResult.Type.BLOCK
                 && level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)
                 && dragon.getRandom().nextBoolean()) {
             BlockPos firePos = blockHit.getBlockPos().relative(blockHit.getDirection());
             if (level.hasChunkAt(firePos) && level.isEmptyBlock(firePos)
-                    && Blocks.FIRE.defaultBlockState().canSurvive(level, firePos)) {
-                level.setBlockAndUpdate(firePos, Blocks.FIRE.defaultBlockState());
+                    && Blocks.SOUL_FIRE.defaultBlockState().canSurvive(level, firePos)) {
+                level.setBlockAndUpdate(firePos, Blocks.SOUL_FIRE.defaultBlockState());
             }
         }
     }

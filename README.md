@@ -1,3 +1,47 @@
+# Auren Minecraft 0.7.5 — Fogo azul volumétrico e animação original de ataque
+
+## O que mudou
+
+- **R = fogo azul**: efeito usa as partículas originais do Minecraft
+  `SOUL_FIRE_FLAME` em um jato largo, animado e turbulento que cresce ao
+  longo da trajetória, em vez de uma fileira estreita de pontos (laser).
+- **Abertura da boca/ataque**: acrescentadas quatro poses 3D *originais do
+  IceAndFire CE Lightning Dragon*:
+  `attack_stream_charge1`, `charge2`, `charge3` e `attack_stream_breath`.
+  As poses vêm dos arquivos Tabula originais SHA-validados; a animação é
+  sincronizada no servidor e aplicada à cabeça, pescoço e torso, preservando
+  as asas e o cavaleiro.
+- **G = raios** continua funcionando, sem alterar danos e efeito elétrico.
+  Enquanto o Auren prepara e solta raios, a mesma animação abre a boca.
+- **Dano, alcance, tempo de preparo, proteção do dono e colisão do sopro
+  de fogo estão preservados** do 0.7.4. O novo cone é VISUAL; não inventa
+  uma área de dano maior que o raio já validado.
+- Quando o `mobGriefing` permite, só coloca **soul fire azul** em
+  superfícies onde o Minecraft aceita esse bloco (soul soil/soul sand).
+  Em terra comum o jato continua azul, mas não deixa uma chama vermelha
+  persistente. Alvos vivos continuam sofrendo o efeito vanilla de queimar.
+- Mantém **um único Auren** e Uranus incluído no JAR. Não instala IceAndFire
+  CE, Jupiter, itens, monstros nem projéteis adicionais.
+
+## Validação manual em Minecraft 1.21.1
+
+1. Em mundo de teste, substitua somente o JAR antigo pelo
+   `aurenminecraft-0.7.5-blue-fire-animation-alpha.jar`.
+2. Monte no Auren, segure **R** por 3 segundos e olhe-o de lado em
+   terceira pessoa. Verifique se mandíbula/pescoço realmente animam.
+3. Veja se as chamas ficam **azuis e largas**, sem parecer um laser.
+4. Segure **G**: o raio anterior deve continuar funcionando com a
+   animação de ataque. Solte as teclas: o dragão deve fechar a boca.
+5. Confirme fogo/dano em um zumbi, proteção do dono, montaria,
+   voo, pouso e transformação em filhote. Teste com backup.
+
+**Limite:** testes automatizados validam assets, código e compilação, mas
+não provam que o encaixe visual em todos os ângulos esteja perfeito.
+As poses são originais da CE; a seleção/sincronização foi adaptada ao
+único Auren porque ele não herda `DragonBaseEntity`.
+
+## Histórico anterior
+
 # Auren Minecraft 0.7.4 — Lightning Dragon CE, ataque controlado
 
 ## Novo: raios montado, tecla G
@@ -24,7 +68,7 @@
 
 ### Teste desta etapa
 
-Em um mundo de backup com somente `aurenminecraft-0.7.4-lightning-breath-alpha.jar`:
+Em um mundo de backup com somente `aurenminecraft-0.7.5-blue-fire-animation-alpha.jar`:
 domestique e monte, segure G para eletricidade contra um zumbi, solte G
 e verifique parada imediata. Teste a direção do olhar, bloco no caminho,
 animal domesticado ao lado, uso de R antes/depois de G, voo autônomo após
@@ -104,7 +148,7 @@ e abas do IceAndFire, contrariando o objetivo.
 
 ## Este build contém SOMENTE o Auren
 
-- **Um mod JAR para instalar: `aurenminecraft-0.7.4-lightning-breath-alpha.jar`.**
+- **Um mod JAR para instalar: `aurenminecraft-0.7.5-blue-fire-animation-alpha.jar`.**
 - Registra **exatamente um tipo de criatura**, `aurenminecraft:auren`.
 - **Nenhum mod IceAndFire**, nenhuma aba/receita/item/criatura extra do CE.
 - **Uranus 3.0-beta.1** incluído dentro do JAR como dependência da

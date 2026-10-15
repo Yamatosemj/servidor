@@ -15,7 +15,10 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE = "assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_"
 NAMES = ["ground", "sitting_shoulder", "sitting", "sleeping", "flying", "hovering", "diving"] + [
     f"walk{i}" for i in range(1, 5)
-] + [f"flight{i}" for i in range(1, 7)]
+] + [f"flight{i}" for i in range(1, 7)] + [
+    "attack_stream_charge1", "attack_stream_charge2",
+    "attack_stream_charge3", "attack_stream_breath",
+]
 
 
 def names(cubes):
@@ -52,6 +55,10 @@ def check():
     version = (ROOT / "gradle.properties").read_text(encoding="utf-8")
     assert 'loadSeries("walk", 4)' in source
     assert 'loadSeries("flight", 6)' in source
+    assert 'loadSeries("attack_stream_charge", 3)' in source
+    assert 'load("attack_stream_breath")' in source
+    assert "applyBreathPose(" in source
+    assert "AurenOriginalAnimations.instance().applyBreathPose(model, dragon, partialTick);" in renderer
     for name in ("flying", "hovering", "diving"):
         assert f'load("{name}")' in source
     assert "AurenOriginalAnimations.instance().apply" in renderer

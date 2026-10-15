@@ -55,6 +55,11 @@ public final class AurenLightningBreath {
         this.dragon = dragon;
     }
 
+    /** Original CE warmup/active ticks feed the shared breath animation. */
+    int getAttackTicks() {
+        return this.fireBreathTicks;
+    }
+
     public void reset() {
         this.fireBreathTicks = 0;
         this.burnProgress = 0;
