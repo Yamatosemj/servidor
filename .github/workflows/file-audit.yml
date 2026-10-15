@@ -4,6 +4,7 @@ on:
     branches:
       - audit/file-by-file-v070
       - fix/ce-resource-integrity-v070
+      - fix/bundle-jupiter-in-auren-v070
   pull_request:
   workflow_dispatch:
 
@@ -28,6 +29,8 @@ jobs:
         run: python3 scripts/audit_each_file.py
       - name: Compile Auren Java
         run: gradle build --no-daemon --stacktrace
+      - name: Verify Jupiter and Uranus are nested mods inside Auren
+        run: python3 scripts/verify_bundle.py
       - name: Compile full original CE Java
         working-directory: vendor/iceandfire-ce
         run: gradle build --no-daemon --stacktrace

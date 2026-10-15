@@ -11,7 +11,9 @@ animações, inventário, crescimento, registradores e dependências internas.
 **Como testamos:** o workflow `native-engine.yml` compila o mod original
 inteiro, em seu próprio projeto, e fornece um artefato com dois JARs:
 `iceandfire` original e nosso `aurenminecraft`, mais instruções.
-Jupiter 2.3+ ainda é exigido pelo original; Uranus vem dentro do Auren.
+Jupiter 2.3.7 e Uranus 3.0-beta.1 já vêm embutidos dentro do JAR do Auren via
+NeoForge Jar-in-Jar. Portanto, **só instalar os dois JARs do pacote:
+Auren + IceAndFire CE**, sem Jupiter ou Uranus separados.
 
 **Por que não copiamos tudo para `src/main/java` do Auren?** Isso
 duplicaria registries, eventos, classes e identificadores do mod e arriscaria
@@ -45,8 +47,7 @@ The existing `aurenminecraft:auren` is unchanged; `/auren ombro` still
 applies ONLY to that legacy entity.
 
 **Installation changes:** requires original **IceAndFire Community Edition
-2.1.4 for NeoForge 1.21.1**, plus its dependencies (notably Jupiter;
-Uranus remains embedded by Auren). Do not install multiple Auren JARs.
+2.1.4 for NeoForge 1.21.1**, with Jupiter 2.3.7 and Uranus 3.0-beta.1 **both embedded inside Auren**. Do not install multiple Auren JARs.
 Use a backed-up test world. Run OP-only commands on broad flat terrain
 with no ceiling.
 

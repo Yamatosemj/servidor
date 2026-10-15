@@ -46,6 +46,15 @@ dependencies {
             prefer '8682870'
         }
     }
+    // Native CE depends on the complete Jupiter NeoForge MOD (not just its API).
+    // Nest Jupiter 2.3.7 for Minecraft 1.21.1 inside the Auren JAR as-is.
+    // NeoForge discovers nested modId jupiter via Jar-in-Jar metadata.
+    jarJar(implementation('curse.maven:jupiter-1072905:7738312')) {
+        version {
+            strictly '[7738312]'
+            prefer '7738312'
+        }
+    }
 }
 
 // Git SHA-1 of the upstream CE branch, plus each original Git blob ID.

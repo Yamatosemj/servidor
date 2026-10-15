@@ -36,6 +36,10 @@ assert len(matches) == 1, f"Expected exactly one original compiled CE JAR: {matc
 
 auren_jars = sorted((ROOT / "build/libs").glob("aurenminecraft-*.jar"))
 assert len(auren_jars) == 1, f"Expected exactly one companion Auren mod: {auren_jars}"
+# The distribution must contain Auren with BOTH embedded NeoForge mods.
+from verify_bundle import verify as verify_nested_uranus_and_jupiter
+verify_nested_uranus_and_jupiter()
+
 dist = ROOT / "build/ce-native-dist"
 dist.mkdir(parents=True, exist_ok=True)
 
@@ -59,8 +63,9 @@ shutil.copy2(ROOT / "vendor/iceandfire-ce/LICENSE", dist / "ICEANDFIRE_CE_LICENS
 (dist / "README_INSTALL.txt").write_text(
     "Auren 0.7 — CE original native dragon engine, repaired RESOURCE-only JAR\n"
     "NeoForge 1.21.1 only. EXPERIMENTAL — back up worlds.\n"
-    "Copy BOTH JARs in this folder to mods/; install required Jupiter 2.3+.\n"
-    "Do not install a second CE or Auren JAR. Uranus is nested in Auren.\n"
+    "Copy BOTH JARs in this folder to mods/.\n"
+    "Jupiter 2.3.7 and Uranus 3.0-beta.1 are already inside Auren.\n"
+    "No other copies of CE, Auren, Jupiter or Uranus in mods/.\n"
     "36? NO: EXACTLY 37 inherited original CE resource defects are repaired:\n"
     "18 bestiary names, 11 pt-BR encodings, and 8 PNG CRC checksums.\n"
     "All original CE Java .class files are preserved byte-identical.\n"

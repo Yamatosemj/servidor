@@ -12,6 +12,7 @@ from pathlib import Path
 from zipfile import ZipFile
 
 EXPECTED_VERSION = "3.0-beta.1"
+EXPECTED_JUPITER_VERSION = "2.3.7"
 EXPECTED_RESOURCES = (
     "assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_ground.tbl",
     "assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_sitting_shoulder.tbl",
@@ -19,6 +20,7 @@ EXPECTED_RESOURCES = (
     "assets/aurenminecraft/textures/entity/auren_black_5.png",
     "META-INF/licenses/LGPL-3.0.txt",
     "META-INF/licenses/NOTICE.txt",
+    "META-INF/licenses/JUPITER_NOTICE.txt",
 )
 
 def verify() -> None:
@@ -34,31 +36,55 @@ def verify() -> None:
         metadata_path = "META-INF/jarjar/metadata.json"
         assert metadata_path in names, "Missing NeoForge Jar-in-Jar metadata"
         metadata = json.loads(auren.read(metadata_path))
-        assert len(metadata.get("jars", [])) == 1, "Unexpected nested JAR count"
-        embedded = metadata["jars"][0]
-        assert embedded["identifier"] == {
-            "group": "curse.maven", "artifact": "uranus-1010827"
-        }, f"Wrong dependency: {embedded['identifier']}"
-        assert embedded["version"]["artifactVersion"] == "8682870"
-        nested_path = embedded["path"]
-        assert nested_path in names and nested_path.endswith(".jar")
+        embedded = metadata.get("jars", [])
+        assert len(embedded) == 2, f"Expected Uranus and Jupiter, got {len(embedded)}"
+        expected = {
+            ("curse.maven", "uranus-1010827"): ("8682870", "uranus", EXPECTED_VERSION),
+            ("curse.maven", "jupiter-1072905"): ("7738312", "jupiter", EXPECTED_JUPITER_VERSION),
+        }
         top_mods = tomllib.loads(auren.read("META-INF/neoforge.mods.toml").decode())
         deps = top_mods["dependencies"]["aurenminecraft"]
         assert any(dep["modId"] == "uranus" and dep["type"] == "required"
                    for dep in deps), "Auren no longer declares Uranus"
-        with ZipFile(io.BytesIO(auren.read(nested_path))) as uranus:
-            modfile = "META-INF/neoforge.mods.toml"
-            assert modfile in uranus.namelist(), "Nested Uranus is not a NeoForge mod"
-            inner = tomllib.loads(uranus.read(modfile).decode())
-            assert inner["mods"][0]["modId"] == "uranus", "Wrong nested mod ID"
-            assert inner["mods"][0]["version"] == EXPECTED_VERSION, (
-                f"Wrong Uranus version: {inner['mods'][0]['version']}"
+        assert any(dep["modId"] == "iceandfire" and dep["type"] == "required"
+                   for dep in deps), "Auren no longer declares IceAndFire CE"
+        found = set()
+        paths = set()
+        for item in embedded:
+            key = (item["identifier"]["group"], item["identifier"]["artifact"])
+            assert key in expected, f"Unexpected nested dependency: {key}"
+            assert key not in found, f"Duplicate nested dependency: {key}"
+            found.add(key)
+            artifact, mod_id, version = expected[key]
+            assert item["version"]["artifactVersion"] == artifact, (
+                f"Wrong embedded artifact for {mod_id}"
             )
-            assert "uranus.mixins.json" in uranus.namelist(), (
-                "Uranus Mixin configuration is missing"
+            path = item["path"]
+            assert path not in paths and path in names and path.endswith(".jar"), (
+                f"Missing/duplicate nested .jar: {path}"
             )
+            paths.add(path)
+            with ZipFile(io.BytesIO(auren.read(path))) as inner_jar:
+                assert inner_jar.testzip() is None, f"Corrupted embedded {mod_id} JAR"
+                modfile = "META-INF/neoforge.mods.toml"
+                assert modfile in inner_jar.namelist(), (
+                    f"Nested {mod_id} is not an independent NeoForge mod"
+                )
+                inner = tomllib.loads(inner_jar.read(modfile).decode())
+                assert inner["mods"][0]["modId"] == mod_id, (
+                    f"Wrong embedded mod ID: {inner['mods'][0]['modId']}"
+                )
+                assert inner["mods"][0]["version"] == version, (
+                    f"Wrong embedded {mod_id} version: {inner['mods'][0]['version']}"
+                )
+                if mod_id == "uranus":
+                    assert "uranus.mixins.json" in inner_jar.namelist(), (
+                        "Uranus Mixin configuration is missing"
+                    )
+        assert found == set(expected), f"Missing bundled libraries: {set(expected)-found}"
     print(f"PASS: {jars[0]} ({jars[0].stat().st_size} bytes): Uranus "
-          f"{EXPECTED_VERSION} embedded, original NeoForge mod metadata preserved")
+          f"{EXPECTED_VERSION} and Jupiter {EXPECTED_JUPITER_VERSION} nested, "
+          f"with original NeoForge mod metadata preserved")
 
 if __name__ == "__main__":
     try:
