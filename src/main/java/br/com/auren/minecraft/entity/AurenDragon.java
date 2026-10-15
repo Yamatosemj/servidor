@@ -48,6 +48,9 @@ public final class AurenDragon extends TamableAnimal {
             SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Integer> FLIGHT_MODE =
             SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT);
+    // CE riding torso pitch has to be identical for all clients.
+    private static final EntityDataAccessor<Float> RIDER_BODY_PITCH =
+            SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.FLOAT);
 
     // Client-side animation progress, mirroring CE ridingProgress 0..20 ticks.
     // The desired state is synced by SHOULDER, never by sending every frame.
@@ -113,6 +116,7 @@ public final class AurenDragon extends TamableAnimal {
         builder.define(SMALL, false);
         builder.define(SHOULDER, false);
         builder.define(FLIGHT_MODE, AurenFlightController.GROUNDED);
+        builder.define(RIDER_BODY_PITCH, 0.0F);
     }
 
     public boolean isSmallForm() {
@@ -257,6 +261,10 @@ public final class AurenDragon extends TamableAnimal {
             if (Math.abs(this.dragonPitch) < 1.0F) this.dragonPitch = 0.0F;
             else this.dragonPitch /= 1.5F;
         }
+        if (!this.level().isClientSide()
+                && Math.abs(this.entityData.get(RIDER_BODY_PITCH) - this.dragonPitch) > 0.35F) {
+            this.entityData.set(RIDER_BODY_PITCH, this.dragonPitch);
+        }
     }
 
     /** CE isOverAirLogic() uses empty block immediately beneath the body. */
@@ -341,8 +349,10 @@ public final class AurenDragon extends TamableAnimal {
         this.setXRot(rider.getXRot());
         if (this.getFlightMode() == AurenFlightController.TAKING_OFF
                 || this.getFlightMode() == AurenFlightController.FLYING) {
-            double forward = rider.zza;
-            double strafing = rider.xxa;
+            // W moves forward, S brakes. A/D cannot strafe a flying dragon.
+            // Rider yaw/pitch (camera) steers; CE acceleration is unchanged.
+            double forward = Math.max(0.0F, rider.zza);
+            double strafing = 0.0D;
             double vertical = 0;
             float speed = (float) this.getAttributeValue(Attributes.MOVEMENT_SPEED);
             float airSpeedModifier = (float) (5.2F + Mth.map(speed,
@@ -351,19 +361,20 @@ public final class AurenDragon extends TamableAnimal {
             boolean gliding = rider.isSprinting();
             if (!gliding) {
                 speed += this.glidingSpeedBonus;
-                forward *= rider.zza > 0 ? 1.0F : 0.5F;
-                strafing *= 0.4F;
+                // No reverse thrust nor lateral slippage.
                 if (riderGoingUp() && !riderGoingDown()) vertical = 1.0F;
                 else if (riderGoingDown() && !riderGoingUp()) vertical = -1.0F;
                 else this.isControlledByLocalInstance();
             } else {
                 speed *= 1.5F;
-                strafing *= 0.1F;
+                // Gliding also follows rider yaw rather than strafing.
                 this.glidingSpeedBonus = (float) Mth.clamp(
                         this.glidingSpeedBonus + this.getDeltaMovement().y * -0.05D,
                         -0.8D, 1.5D);
                 speed += this.glidingSpeedBonus;
-                forward = Mth.abs(Mth.cos(this.getXRot() * ((float) Math.PI / 180F)));
+                forward = rider.zza > 0.0F
+                        ? Mth.abs(Mth.cos(this.getXRot() * ((float) Math.PI / 180F)))
+                        : 0.0D;
                 vertical = Mth.abs(Mth.sin(this.getXRot() * ((float) Math.PI / 180F)));
                 if (riderGoingUp() && !riderGoingDown()) vertical = Math.max(vertical, 0.5D);
                 else if (riderGoingDown() && !riderGoingUp()) vertical = Math.min(vertical, -0.5D);
@@ -389,8 +400,8 @@ public final class AurenDragon extends TamableAnimal {
             this.tryCheckInsideBlocks();
             this.updateRiderPitch(this.yOld - this.getY());
         } else if (this.isInWater() || this.isInLava()) {
-            double forward = rider.zza;
-            double strafing = rider.xxa;
+            double forward = Math.max(0.0F, rider.zza);
+            double strafing = 0.0D;
             double vertical = 0;
             float speed = (float) this.getAttributeValue(Attributes.MOVEMENT_SPEED);
             if (riderGoingUp() && !riderGoingDown()) vertical = 0.5F;
@@ -399,8 +410,8 @@ public final class AurenDragon extends TamableAnimal {
             this.setZza((float) forward);
             super.travel(pTravelVector.add(strafing, vertical, forward));
         } else {
-            double forward = rider.zza;
-            double strafing = rider.xxa * 0.5F;
+            double forward = Math.max(0.0F, rider.zza);
+            double strafing = 0.0D;
             double vertical = pTravelVector.y;
             float speed = (float) this.getAttributeValue(Attributes.MOVEMENT_SPEED);
             speed *= 1.8F; // CE getFlightSpeedModifier defaults to 1.
@@ -521,9 +532,12 @@ public final class AurenDragon extends TamableAnimal {
 
     @Override
     protected EntityDimensions getDefaultDimensions(Pose pose) {
+        // Original CE dragon: base .78 x 1.2, multiplied by rendering
+        // scale. Prior 1.05 x 1.3 box was much smaller than our 3.25x model.
+        // This matches the torso, not the wing span.
         return isSmallForm()
-                ? EntityDimensions.scalable(0.5F, 0.7F)
-                : EntityDimensions.scalable(1.05F, 1.3F);
+                ? EntityDimensions.scalable(0.50F, 0.70F)
+                : EntityDimensions.scalable(0.78F * 3.25F, 1.20F * 3.25F);
     }
 
     @Override
@@ -605,6 +619,9 @@ public final class AurenDragon extends TamableAnimal {
         }
         // Source CE DragonBaseEntity prevDragonPitch, used by renderer.scale.
         this.previousDragonPitch = this.dragonPitch;
+        if (this.level().isClientSide()) {
+            this.dragonPitch = this.entityData.get(RIDER_BODY_PITCH);
+        }
         // Update synchronized CE-style interpolation for actual flight modes.
         this.previousFlightProgress = this.flightProgress;
         float flightDestination = this.getFlightMode() == AurenFlightController.GROUNDED
@@ -637,6 +654,7 @@ public final class AurenDragon extends TamableAnimal {
                 this.riderWalkingExtraY = 0.0F;
                 this.dragonPitch = 0.0F;
                 this.previousDragonPitch = 0.0F;
+                this.entityData.set(RIDER_BODY_PITCH, 0.0F);
                 this.flightController.land();
             }
         }
@@ -706,6 +724,7 @@ public final class AurenDragon extends TamableAnimal {
         this.riderWalkingExtraY = 0.0F;
         this.dragonPitch = 0.0F;
         this.previousDragonPitch = 0.0F;
+        this.entityData.set(RIDER_BODY_PITCH, 0.0F);
         this.setSmallForm(tag.getBoolean("SmallForm"));
         this.setOnShoulder(tag.getBoolean("OnShoulder"));
     }

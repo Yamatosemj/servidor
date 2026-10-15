@@ -14,6 +14,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.RenderPlayerEvent;
 
 @EventBusSubscriber(modid = AurenMinecraft.MOD_ID, value = Dist.CLIENT)
 public final class ClientEvents {
@@ -60,6 +61,15 @@ public final class ClientEvents {
                     dragon.getId(), controls));
             lastPilotId = dragon.getId();
             lastPilotControls = controls;
+        }
+    }
+
+    /** Suppress only the duplicate default player renderer while riding Auren. */
+    @SubscribeEvent
+    public static void cancelUnattachedMountedPlayer(RenderPlayerEvent.Pre event) {
+        if (event.getEntity().getVehicle() instanceof AurenDragon
+                && !AurenRiderFeatureRenderer.RENDERING_RIDERS.contains(event.getEntity())) {
+            event.setCanceled(true);
         }
     }
 

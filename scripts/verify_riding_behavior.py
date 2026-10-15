@@ -50,8 +50,8 @@ for required in (
     "this.glidingSpeedBonus + this.getDeltaMovement().y * -0.05D",
     "this.glidingSpeedBonus * 0.01D",
     "speed *= 1.5F",
-    "strafing *= 0.1F",
-    "forward = Mth.abs(Mth.cos(this.getXRot()",
+    "double strafing = 0.0D;",
+    "forward = rider.zza > 0.0F",
     "vertical = Mth.abs(Mth.sin(this.getXRot()",
     "new Vec3(0.9D, 0.9D, 0.9D)",
     "this.riderTakeoffTicks += 2",
@@ -76,6 +76,22 @@ assert "getDeltaMovement().scale(0.9D)" not in dragon
 
 assert "this.previousDragonPitch = this.dragonPitch" in dragon
 assert "getRiderVisualPitch(float partialTick)" in dragon
+assert "RIDER_BODY_PITCH" in dragon
+assert "0.78F * 3.25F, 1.20F * 3.25F" in dragon
+assert "double forward = Math.max(0.0F, rider.zza)" in dragon
+assert "forward = rider.zza > 0.0F" in dragon
+assert "strafing *= 0.4F" not in dragon
+assert "strafing *= 0.1F" not in dragon
+layer = (JAVA / "client/AurenRiderFeatureRenderer.java").read_text(encoding="utf-8")
+assert "DragonRiderFeatureRenderer" in layer
+assert 'getCube("BodyUpper")' in layer
+assert 'getCube("Neck1")' in layer
+assert "RENDERING_RIDERS.add(player)" in layer
+assert "RENDERING_RIDERS.remove(player)" in layer
+assert "new AurenRiderFeatureRenderer(this)" in renderer
+assert "RenderPlayerEvent.Pre" in client
+assert "AurenRiderFeatureRenderer.RENDERING_RIDERS.contains" in client
+
 assert "pose.mulPose(Axis.XP.rotationDegrees(entity.getRiderVisualPitch(partialTick)))" in renderer
 assert "&& !this.dragon.isVehicle()" in follow
 assert "dragon.getControllingPassenger() != null" in flight
@@ -90,7 +106,7 @@ assert "DRAGON_DOWN.isDown()" in client
 assert "GLFW.GLFW_KEY_X" in client
 assert "event.register(DRAGON_DOWN)" in client
 assert "record AurenDragonControlPayload(int dragonId, byte controlState)" in packet
-assert "mod_version=0.7.2-ce-ground-movement-alpha" in version
+assert "mod_version=0.7.3-rider-pose-alpha" in version
 assert "EMERGENCY_TELEPORT_DISTANCE = 50.0D" in follow
 assert "GROUND_WALK_BEFORE_FLIGHT_TICKS = 40" in follow
 assert "WAYPOINT_REEVALUATE_TICKS = 60" in (
