@@ -75,7 +75,7 @@ assert "mod_version=0.7.5-blue-fire-animation-alpha" in version
 
 original = {
     "attack_stream_charge1": "7865c66437438b74307df427d2febcac474426f9",
-    "attack_stream_charge2": "3fc377bdc32bc6f7c66ebdad2e258be855ca8f6",
+    "attack_stream_charge2": "3fc377bdc32bc6f7c66ebdad2e258be855ca8f6d",
     "attack_stream_charge3": "40988fd55cb0954ba72d8ae2ba99e24ab316d591",
     "attack_stream_breath": "f5183e5bcc089caac704d3c6a7937725dcbc5d62",
 }
