@@ -1,8 +1,0 @@
-Jupiter 2.3.7 for Minecraft 1.21.1 NeoForge
-Original author: IAFEnvoy
-Original project: https://github.com/IAFEnvoy/Jupiter
-CurseForge file: https://www.curseforge.com/minecraft/mc-mods/jupiter/files/7738312
-License: LGPL-3.0, license text included under META-INF/licenses/LGPL-3.0.txt
-
-Jupiter is distributed unmodified as a nested complete NeoForge mod JAR
-inside Auren. Original mod ID, metadata and packages are preserved.
