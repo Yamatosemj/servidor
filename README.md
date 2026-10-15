@@ -1,4 +1,31 @@
-# Auren Minecraft — v0.6.4-alpha (Minecraft 1.21.1 / NeoForge)
+# Auren Minecraft — v0.6.5-native-probe (Minecraft 1.21.1 / NeoForge)
+
+## Experimental native CE parity baseline (v0.6.5-native-probe)
+
+**NOT A MIGRATION AND NOT YET A REPLACEMENT FOR AUREN.**
+This experimental branch adds two privileged side-by-side test commands:
+`/auren original` (black native CE lightning dragon) and
+`/auren original_fogo` (red native CE fire dragon).
+These spawn actual original `iceandfire` entities, owned by the caller,
+age 50 (stage 3), following CE's own original movement, navigation,
+mounted controls, full native combat, animations and renderers.
+The existing `aurenminecraft:auren` is unchanged; `/auren ombro` still
+applies ONLY to that legacy entity.
+
+**Installation changes:** requires original **IceAndFire Community Edition
+2.1.4 for NeoForge 1.21.1**, plus its dependencies (notably Jupiter;
+Uranus remains embedded by Auren). Do not install multiple Auren JARs.
+Use a backed-up test world. Run OP-only commands on broad flat terrain
+with no ceiling.
+
+The native dragons use the original Ice and Fire texture/behavior:
+the lightning one shoots **lightning**, and the fire one shoots **fire**.
+They do not yet implement Auren's unique-per-world rule, shoulder form,
+ritual, custom AI personality or automatic migration of old Auren saves.
+Those are intentionally left OUT of this baseline to avoid claiming
+identity from a partial imitation. Full engineering audit:
+`docs/CE_NATIVE_PARITY_AUDIT.md`.
+
 
 ## v0.6.4-alpha — sopro de fogo do Fire Dragon original (montado)
 

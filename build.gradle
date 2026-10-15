@@ -33,6 +33,9 @@ neoForge {
 }
 
 dependencies {
+    // Exact original CE engine used only for the native parity baseline.
+    // Not bundled: install Ice and Fire CE 2.1.4 separately at runtime.
+    compileOnly 'curse.maven:iceandfire-ce-1040076:9128508'
     // Embeds the Uranus mod as a nested JAR so users install only Auren Minecraft.
     // Do not shade/merge mod classes: NeoForge Jar-in-Jar reads its original metadata.
     // CurseMaven version 8682870 corresponds to Uranus 3.0-beta.1 on NeoForge 1.21.1.
