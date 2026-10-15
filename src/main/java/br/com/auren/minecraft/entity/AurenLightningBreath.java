@@ -78,7 +78,7 @@ public final class AurenLightningBreath {
             return;
         }
         if (this.fireBreathTicks % 7 == 0) {
-            level.playSound(null, dragon.blockPosition(), SoundEvents.TRIDENT_THUNDER,
+            level.playSound(null, dragon.blockPosition(), SoundEvents.TRIDENT_THUNDER.value(),
                     dragon.getSoundSource(), 0.8F, 1.5F);
         }
 
