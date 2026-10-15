@@ -1,4 +1,36 @@
-# Auren Minecraft — 0.7.2 CE ground movement (Minecraft 1.21.1 / NeoForge)
+# Auren Minecraft — 0.7.3 montaria alinhada ao corpo e controles de dragão
+
+## Correções baseadas no teste real da 0.7.2
+
+1. **Cavaleiro acompanha a ANIMAÇÃO do corpo.** Portamos exclusivamente o
+   `DragonRiderFeatureRenderer` original do IceAndFire CE, ancorando o
+   jogador aos ossos `BodyUpper` e `Neck1` do próprio Auren. O render do
+   jogador solto é cancelado enquanto montado, evitando um avatar rígido
+   duplicado. A câmera de primeira pessoa fica independente.
+2. **Montaria sem ré ou voo lateral.** Enquanto montado, W avança,
+   S interrompe a propulsão para trás e A/D não produzem deslizamento.
+   A orientação continua controlada pela direção do olhar. Pular/X/R
+   mantêm subida, descida e ataque de fogo.
+3. **Colisão adulta proporcional à escala visual.** A referência original
+   registra 0.78 largura, 1.2 altura e escala conforme o crescimento.
+   O Auren adulto usa 3.25x no renderer: 2.535 blocos de largura e
+   3.90 de altura. A forma filhote permanece 0.5x0.7. A hitbox cobre
+   o corpo central, NÃO as pontas das asas.
+4. **Inclinação sincronizada.** Ao montar, o ângulo de pitch corporal é
+   transmitido aos clientes para que modelo e cavaleiro não divirjam
+   quando o dragão sobe ou desce.
+
+Tudo isso continua em **um único mod Auren**; sem itens, entidades,
+Jupiter nem mod IceAndFire original instalável. Somente Uranus aninhado.
+
+**CI não demonstra visualmente o encaixe.** Antes de mesclar, testar a
+terceira pessoa olhando pela lateral, de cima e enquanto voa; primeira
+pessoa e câmera; W/S/A/D; forma pequena e ombro; locais estreitos;
+decolagem e pouso; mundo de backup.
+
+## Histórico
+
+# Etapa 0.7.2 — movimento CE no chão
 
 ## Etapa 1A — caminhada original do IceAndFire CE portada para o único Auren
 
@@ -37,7 +69,7 @@ e abas do IceAndFire, contrariando o objetivo.
 
 ## Este build contém SOMENTE o Auren
 
-- **Um mod JAR para instalar: `aurenminecraft-0.7.2-ce-ground-movement-alpha.jar`.**
+- **Um mod JAR para instalar: `aurenminecraft-0.7.3-rider-pose-alpha.jar`.**
 - Registra **exatamente um tipo de criatura**, `aurenminecraft:auren`.
 - **Nenhum mod IceAndFire**, nenhuma aba/receita/item/criatura extra do CE.
 - **Uranus 3.0-beta.1** incluído dentro do JAR como dependência da

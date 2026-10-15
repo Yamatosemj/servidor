@@ -32,6 +32,9 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
     public AurenDragonRenderer(EntityRendererProvider.Context context) {
         super(context, load("lightningdragon/lightningdragon_ground"), 1.5F);
         this.groundModel = this.model;
+        // Original CE draws the rider in the animated dragon model's bone
+        // hierarchy, not as an independently positioned vanilla passenger.
+        this.addLayer(new AurenRiderFeatureRenderer(this));
         // Cache two immutable source poses; no invented wing animation.
         TabulaModelHandlerHelper.getModel(SHOULDER_AWAKE_POSE);
         TabulaModelHandlerHelper.getModel(FOLDED_WINGS_POSE);
