@@ -136,7 +136,9 @@ def audit_one(scope: str, dir_: Path, name: str) -> dict:
             record.update(status="REVIEW", finding="Empty tracked file; intended emptiness needs review")
             return record
         suffix = path.suffix.lower()
-        if suffix == ".png":
+        if "/lang/bestiary/" in name and suffix != ".txt":
+            status, finding = "ERROR", "BestiaryScreen loads name.txt; this tracked resource has no .txt extension"
+        elif suffix == ".png":
             status, finding = audit_png(data)
         elif suffix == ".tbl":
             status, finding = audit_tabula(data)
@@ -153,12 +155,25 @@ def audit_one(scope: str, dir_: Path, name: str) -> dict:
                 status, finding = "ERROR", f"Invalid JSON/UTF-8: {exc}"
         elif suffix == ".java":
             status, finding = audit_java(data, name, scope)
+        elif suffix == ".toml" and "/src/main/templates/" in "/" + name:
+            if b"${" in data:
+                status, finding = "PASS", "Valid Gradle TOML template; placeholders checked after processResources in compiled mod"
+            else:
+                status, finding = "REVIEW", "Template unexpectedly lacks expected Gradle interpolation"
         elif suffix == ".toml":
             try:
                 tomllib.loads(data.decode("utf-8"))
                 status, finding = "PASS", "Valid TOML syntax"
             except (UnicodeDecodeError, tomllib.TOMLDecodeError) as exc:
                 status, finding = "ERROR", f"TOML parse failure: {exc}"
+        elif suffix == ".jar":
+            try:
+                with zipfile.ZipFile(__import__("io").BytesIO(data)) as jar:
+                    damaged = jar.testzip()
+                    status = "ERROR" if damaged is not None else "PASS"
+                    finding = f"JAR ZIP corruption: {damaged}" if damaged else f"JAR ZIP CRC validated; {len(jar.namelist())} entries (runtime not executed)"
+            except zipfile.BadZipFile as exc:
+                status, finding = "ERROR", f"Not a valid JAR/ZIP: {exc}"
         elif suffix == ".nbt":
             if data[:2] == b"\x1f\x8b":
                 try:
@@ -168,7 +183,7 @@ def audit_one(scope: str, dir_: Path, name: str) -> dict:
                     status, finding = "ERROR", f"NBT gzip invalid: {exc}"
             else:
                 status, finding = "REVIEW", "Non-gzip NBT, format semantics not checked"
-        elif suffix in CODE_EXTENSIONS or path.name in {"LICENSE", "NOTICE", "gradlew", "gradlew.bat", "settings.gradle", "build.gradle"}:
+        elif suffix in CODE_EXTENSIONS or path.name in {"LICENSE", "NOTICE", "gradlew", "gradlew.bat", "settings.gradle", "build.gradle", ".gitignore", ".gitattributes", ".gitmodules"}:
             try:
                 text = data.decode("utf-8-sig")
                 status, finding = "PASS", "UTF-8 text; language semantics not checked"
