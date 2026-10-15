@@ -11,6 +11,9 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -18,6 +21,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.2.1'
+      - name: Verify complete native CE source and immutable upstream SHA
+        run: python3 scripts/verify_ce_native_source.py
       - name: Compile and package mod (fetches verified CE assets)
         run: gradle build --no-daemon --stacktrace
       - name: Verify Auren JAR embeds an intact Uranus mod

@@ -19,5 +19,5 @@ assert 'if (!level.noCollision(dragon, dragon.getBoundingBox()))' in commands
 assert 'compileOnly \'curse.maven:iceandfire-ce-1040076:9128508\'' in gradle
 assert 'modId="iceandfire"' in meta
 assert 'type="required"' in meta
-assert 'mod_version=0.6.5-native-probe' in version
+assert 'mod_version=0.7.0-engine-bootstrap' in version
 print("PASS: native CE parity baseline uses original registered dragon entities (not copied movement)")
