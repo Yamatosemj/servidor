@@ -15,7 +15,10 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE = "assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_"
 NAMES = ["ground", "sitting_shoulder", "sitting", "sleeping", "flying", "hovering", "diving"] + [
     f"walk{i}" for i in range(1, 5)
-] + [f"flight{i}" for i in range(1, 7)]
+] + [f"flight{i}" for i in range(1, 7)] + [
+    "attack_stream_charge1", "attack_stream_charge2",
+    "attack_stream_charge3", "attack_stream_breath",
+]
 
 
 def names(cubes):
@@ -52,6 +55,10 @@ def check():
     version = (ROOT / "gradle.properties").read_text(encoding="utf-8")
     assert 'loadSeries("walk", 4)' in source
     assert 'loadSeries("flight", 6)' in source
+    assert 'loadSeries("attack_stream_charge", 3)' in source
+    assert 'load("attack_stream_breath")' in source
+    assert "applyBreathPose(" in source
+    assert "AurenOriginalAnimations.instance().applyBreathPose(model, dragon, partialTick);" in renderer
     for name in ("flying", "hovering", "diving"):
         assert f'load("{name}")' in source
     assert "AurenOriginalAnimations.instance().apply" in renderer
@@ -78,7 +85,7 @@ def check():
     assert "if (entity.isVehicle())" in renderer
     assert "pose.mulPose(Axis.XP.rotationDegrees(entity.getRiderVisualPitch(partialTick)))" in renderer
     assert "Axis.YP.rotationDegrees(90" not in renderer
-    assert "mod_version=0.7.4-lightning-breath-alpha" in version
+    assert "mod_version=0.7.5-blue-fire-animation-alpha" in version
     print(f"PASS: {len(NAMES)} compatible original Lightning Dragon "
           f"Tabula models are bundled and referenced; original CE folded wings and illustrated awake neck wrap integrated")
 

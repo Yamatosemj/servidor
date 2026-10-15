@@ -61,6 +61,10 @@ public final class AurenDragon extends TamableAnimal {
             SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> LIGHTNING_TARGET_Z =
             SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.FLOAT);
+    // Attack animation uses CE stream charge/breath Tabula poses. Only a
+    // compact tick counter is synchronized, never client-supplied controls.
+    private static final EntityDataAccessor<Integer> BREATH_ATTACK_TICKS =
+            SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT);
 
     // Client-side animation progress, mirroring CE ridingProgress 0..20 ticks.
     // The desired state is synced by SHOULDER, never by sending every frame.
@@ -72,6 +76,9 @@ public final class AurenDragon extends TamableAnimal {
     private static final float FLIGHT_ANIMATION_TICKS = 10.0F;
     private float previousFlightProgress;
     private float flightProgress;
+    private float previousBreathProgress;
+    private float breathProgress;
+    private static final float BREATH_POSE_BLEND_TICKS = 10.0F;
     private final AurenFlightController flightController = new AurenFlightController(this);
     // Separate CE FireDragon.riderShootFire port; never affects auto-escort.
     private final AurenFireBreath fireBreath = new AurenFireBreath(this);
@@ -132,6 +139,7 @@ public final class AurenDragon extends TamableAnimal {
         builder.define(LIGHTNING_TARGET_X, 0.0F);
         builder.define(LIGHTNING_TARGET_Y, 0.0F);
         builder.define(LIGHTNING_TARGET_Z, 0.0F);
+        builder.define(BREATH_ATTACK_TICKS, 0);
     }
 
     public boolean isSmallForm() {
@@ -187,6 +195,17 @@ public final class AurenDragon extends TamableAnimal {
 
     public boolean isRiderLightning() {
         return (this.riderControlState & 4) != 0;
+    }
+
+    /** Server-authored CE charging/stream state shared by R and G attacks. */
+    public int getBreathAttackTicks() {
+        return this.entityData.get(BREATH_ATTACK_TICKS);
+    }
+
+    /** Smooth model transition (0-1), without changing the wing flight state. */
+    public float getBreathPoseBlend(float partialTick) {
+        return Mth.clamp(Mth.lerp(partialTick, this.previousBreathProgress,
+                this.breathProgress) / BREATH_POSE_BLEND_TICKS, 0.0F, 1.0F);
     }
 
     public Vec3 getFireBreathHeadPosition() {
@@ -671,6 +690,12 @@ public final class AurenDragon extends TamableAnimal {
             this.dragonPitch = this.entityData.get(RIDER_BODY_PITCH);
         }
         // Update synchronized CE-style interpolation for actual flight modes.
+        this.previousBreathProgress = this.breathProgress;
+        float wantedBreath = getBreathAttackTicks() > 0 ? BREATH_POSE_BLEND_TICKS : 0.0F;
+        this.breathProgress = Mth.clamp(this.breathProgress
+                        + (wantedBreath > this.breathProgress ? 1.5F
+                        : wantedBreath < this.breathProgress ? -1.5F : 0.0F),
+                0.0F, BREATH_POSE_BLEND_TICKS);
         this.previousFlightProgress = this.flightProgress;
         float flightDestination = this.getFlightMode() == AurenFlightController.GROUNDED
                 ? 0.0F : FLIGHT_ANIMATION_TICKS;
@@ -697,6 +722,7 @@ public final class AurenDragon extends TamableAnimal {
                 this.riderControlState = 0;
                 this.fireBreath.reset();
                 this.lightningBreath.reset();
+                this.entityData.set(BREATH_ATTACK_TICKS, 0);
                 this.riderTakeoffTicks = 0;
                 this.riderAirTicks = 0;
                 this.glidingSpeedBonus = 0.0F;
@@ -712,6 +738,13 @@ public final class AurenDragon extends TamableAnimal {
             this.flightController.tick();
             this.fireBreath.tick();
             this.lightningBreath.tick();
+            // Keep attack poses synchronized to all clients. Do not touch
+            // existing owner-follow, mounted movement or flight controller.
+            int attackTicks = Math.min(40, Math.max(this.fireBreath.getAttackTicks(),
+                    this.lightningBreath.getAttackTicks()));
+            if (this.entityData.get(BREATH_ATTACK_TICKS) != attackTicks) {
+                this.entityData.set(BREATH_ATTACK_TICKS, attackTicks);
+            }
         }
         if (!this.isOnShoulder()) return;
         if (this.getOwner() instanceof Player player && player.isAlive() && player.level() == this.level()) {
@@ -770,6 +803,9 @@ public final class AurenDragon extends TamableAnimal {
         this.riderControlState = 0;
         this.fireBreath.reset();
         this.lightningBreath.reset();
+        this.entityData.set(BREATH_ATTACK_TICKS, 0);
+        this.breathProgress = 0.0F;
+        this.previousBreathProgress = 0.0F;
         this.riderTakeoffTicks = 0;
         this.riderAirTicks = 0;
         this.glidingSpeedBonus = 0.0F;

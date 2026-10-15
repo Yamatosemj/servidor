@@ -92,6 +92,9 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
         // The original CE Tabula walk and flight frames, not hand-crafted
         // joint swings, are the source of animation outside shoulder mode.
         AurenOriginalAnimations.instance().apply(model, dragon, limbSwing, limbSwingAmount, age);
+        // Overlay the CE's ORIGINAL charge/open-mouth breath pose on top of
+        // walking/flying. Does not change the body flight keyframes or wings.
+        AurenOriginalAnimations.instance().applyBreathPose(model, dragon, partialTick);
     }
 
     @Override

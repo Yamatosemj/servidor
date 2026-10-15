@@ -32,6 +32,10 @@ public final class AurenOriginalAnimations {
     private final TabulaModel<AurenDragon> flying;
     private final TabulaModel<AurenDragon> hovering;
     private final TabulaModel<AurenDragon> diving;
+    // Original CE Lightning Dragon attack-stream Tabula poses; four original
+    // upstream .tbl archives are copied/sha-verified by Gradle.
+    private final List<TabulaModel<AurenDragon>> streamCharge;
+    private final TabulaModel<AurenDragon> streamBreath;
 
     private AurenOriginalAnimations() {
         this.walk = loadSeries("walk", 4);
@@ -39,6 +43,8 @@ public final class AurenOriginalAnimations {
         this.flying = load("flying");
         this.hovering = load("hovering");
         this.diving = load("diving");
+        this.streamCharge = loadSeries("attack_stream_charge", 3);
+        this.streamBreath = load("attack_stream_breath");
     }
 
     private static class Holder {
@@ -103,6 +109,35 @@ public final class AurenOriginalAnimations {
         if (strength > 0.02F) {
             blendCycle(model, this.walk, limbSwing * 0.22F, strength);
         }
+    }
+
+    /**
+     * Original CE's STREAM charge/breath keyframes. Use ONLY the neck, head,
+     * jaw and shoulders (CE itself excludes wing/finger bones during breath).
+     * This preserves flight flaps, ground locomotion and the rider attachment.
+     * Auren's TamableAnimal cannot run CE's full AnimationHandler unchanged,
+     * so its synced warmup ticks select the exact upstream Tabula poses.
+     */
+    public void applyBreathPose(TabulaModel<AurenDragon> model, AurenDragon dragon,
+                                float partialTick) {
+        float blend = dragon.getBreathPoseBlend(partialTick);
+        if (blend <= 0.01F || dragon.isSmallForm() || dragon.isOnShoulder()) return;
+
+        int ticks = dragon.getBreathAttackTicks();
+        TabulaModel<AurenDragon> pose;
+        if (ticks == 0 || ticks > 20) {
+            pose = this.streamBreath;
+        } else if (ticks <= 7) {
+            pose = this.streamCharge.get(0);
+        } else if (ticks <= 14) {
+            pose = this.streamCharge.get(1);
+        } else {
+            pose = this.streamCharge.get(2);
+        }
+        // Original CE bone naming, and original poses: jaw opens + head
+        // rises as the attack charges. Never overwrite flapping wing bones.
+        AurenPoseTransition.applyBones(model, pose, blend,
+                "BodyUpper", "Neck1", "Neck2", "Neck3", "Head", "Jaw");
     }
 
     /** Interpolate source keyframes by bone name, incl. pivots and wrapped angles. */
