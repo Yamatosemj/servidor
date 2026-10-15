@@ -51,7 +51,7 @@ for required in (
     "this.glidingSpeedBonus * 0.01D",
     "speed *= 1.5F",
     "double strafing = 0.0D;",
-    "forward = Mth.abs(Mth.cos(this.getXRot()",
+    "forward = rider.zza > 0.0F",
     "vertical = Mth.abs(Mth.sin(this.getXRot()",
     "new Vec3(0.9D, 0.9D, 0.9D)",
     "this.riderTakeoffTicks += 2",
