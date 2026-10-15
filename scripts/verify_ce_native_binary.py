@@ -1,8 +1,13 @@
-"""Inspect native compiled CE JAR instead of trusting a 'build success' label."""
+"""Package the complete original CE engine with only inherited resource errors fixed."""
+from collections import Counter
+import json
 from pathlib import Path
-from zipfile import ZipFile
 import shutil
 import tomllib
+from zipfile import ZipFile
+
+from repair_ce_resources import plan_repairs, patch_jar
+
 ROOT = Path(__file__).resolve().parents[1]
 LIBS = ROOT / "vendor/iceandfire-ce/build/libs"
 REQUIRED = {
@@ -17,34 +22,56 @@ REQUIRED = {
     "com/iafenvoy/iceandfire/render/model/animator/LightningTabulaDragonAnimator.class",
     "com/iafenvoy/iceandfire/network/payload/DragonControlC2SPayload.class",
 }
-match = []
+matches = []
 for jar in sorted(LIBS.glob("*.jar")):
-    if jar.name.endswith(("-sources.jar","-javadoc.jar","-plain.jar")):
+    if jar.name.endswith(("-sources.jar", "-javadoc.jar", "-plain.jar")):
         continue
-    with ZipFile(jar) as z:
-        if not REQUIRED.issubset(set(z.namelist())):
+    with ZipFile(jar) as archive:
+        if not REQUIRED.issubset(set(archive.namelist())):
             continue
-        mods = tomllib.loads(z.read("META-INF/neoforge.mods.toml").decode())["mods"]
+        mods = tomllib.loads(archive.read("META-INF/neoforge.mods.toml").decode())["mods"]
         if len(mods) == 1 and mods[0]["modId"] == "iceandfire":
-            match.append(jar)
-assert len(match) == 1, f"Need one complete original CE JAR, found {match}"
-auren = list((ROOT/"build/libs").glob("aurenminecraft-*.jar"))
-assert len(auren) == 1, f"Need Auren bridge JAR, found {auren}"
-dist = ROOT/"build/ce-native-dist"
+            matches.append(jar)
+assert len(matches) == 1, f"Expected exactly one original compiled CE JAR: {matches}"
+
+auren_jars = sorted((ROOT / "build/libs").glob("aurenminecraft-*.jar"))
+assert len(auren_jars) == 1, f"Expected exactly one companion Auren mod: {auren_jars}"
+dist = ROOT / "build/ce-native-dist"
 dist.mkdir(parents=True, exist_ok=True)
-for path in (match[0], auren[0]):
-    shutil.copy2(path, dist/path.name)
-shutil.copy2(ROOT/"vendor/iceandfire-ce/LICENSE", dist/"ICEANDFIRE_CE_LICENSE.txt")
-(dist/"README_INSTALL.txt").write_text(
-    "Auren 0.7 — unmodified original IceAndFire CE 2.1.4 engine (EXPERIMENTAL)\n"
-    "NeoForge 1.21.1. Backup worlds. Copy BOTH mod JARs to mods/.\n"
-    "Install Jupiter 2.3+ as required by original CE.\n"
-    "Do NOT install an additional IceAndFire CE or Auren JAR.\n"
-    "Uranus 3.0-beta.1 is already bundled inside Auren.\n"
-    "With OP: /auren original (black lightning CE dragon),\n"
-    "         /auren original_fogo (red fire CE dragon).\n"
-    "Legacy Auren keeps right-click size & shoulder controls.\n"
-    "Complete original CE source (LGPL-3.0-or-later):\n"
-    "https://github.com/IAFEnvoy/IceAndFire-CE/tree/aa2f11a6b79acb48a1094765d610cdaca79e3d18\n"
+
+overrides, renames, records = plan_repairs()
+assert dict(Counter(row["kind"] for row in records)) == {
+    "extension": 18, "encoding": 11, "png_crc": 8
+}, "Unexpected inherited resource-fix inventory"
+fixed = dist / (matches[0].stem + "-auren-resources-fixed.jar")
+metadata = patch_jar(matches[0], fixed, overrides, renames)
+metadata.update({
+    "upstream_source_commit": "aa2f11a6b79acb48a1094765d610cdaca79e3d18",
+    "counts": dict(Counter(row["kind"] for row in records)),
+    "status": "REPAIRED_DISTRIBUTION_ONLY",
+    "records": records
+})
+(dist / "ce-resource-patch-manifest.json").write_text(
+    json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
 )
-print(f"PASS: packaged original CE binary ({match[0].name}) and Auren ({auren[0].name})")
+shutil.copy2(auren_jars[0], dist / auren_jars[0].name)
+shutil.copy2(ROOT / "vendor/iceandfire-ce/LICENSE", dist / "ICEANDFIRE_CE_LICENSE.txt")
+(dist / "README_INSTALL.txt").write_text(
+    "Auren 0.7 — CE original native dragon engine, repaired RESOURCE-only JAR\n"
+    "NeoForge 1.21.1 only. EXPERIMENTAL — back up worlds.\n"
+    "Copy BOTH JARs in this folder to mods/; install required Jupiter 2.3+.\n"
+    "Do not install a second CE or Auren JAR. Uranus is nested in Auren.\n"
+    "36? NO: EXACTLY 37 inherited original CE resource defects are repaired:\n"
+    "18 bestiary names, 11 pt-BR encodings, and 8 PNG CRC checksums.\n"
+    "All original CE Java .class files are preserved byte-identical.\n"
+    "CE remains a separate runtime mod; Auren unique dragon behavior not merged.\n"
+    "OP test: /auren original (black lightning), /auren original_fogo (fire).\n"
+    "Legacy Auren keeps right-click size changing and shoulder mode.\n"
+    "See ce-resource-patch-manifest.json for per-file provenance.\n"
+    "LGPL-3.0-or-later CE: https://github.com/IAFEnvoy/IceAndFire-CE\n",
+    encoding="utf-8",
+)
+assert len(list(dist.glob("*resources-fixed.jar"))) == 1
+assert len(list(dist.glob("aurenminecraft-*.jar"))) == 1
+print("PASS: original native CE class parity retained:",
+      metadata["preserved_classes"], "classes; repaired", len(records), "runtime assets")
