@@ -6,6 +6,9 @@ import com.iafenvoy.uranus.client.model.TabulaModel;
 import com.iafenvoy.uranus.client.model.util.TabulaModelHandlerHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import br.com.auren.minecraft.client.lightning.LightningRenderer;
+import br.com.auren.minecraft.client.lightning.LightningBoltData;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -28,6 +31,9 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
                     "lightningdragon/lightningdragon_sleeping");
 
     private final TabulaModel<AurenDragon> groundModel;
+    // Original IceAndFire CE LightningDragonEntityRenderer uses this SAME
+    // source code to draw the continuous bolt, not a placeholder particle.
+    private final LightningRenderer lightningRenderer = new LightningRenderer();
 
     public AurenDragonRenderer(EntityRendererProvider.Context context) {
         super(context, load("lightningdragon/lightningdragon_ground"), 1.5F);
@@ -95,6 +101,28 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
         this.model = groundModel;
         this.shadowRadius = entity.isOnShoulder() ? 0.0F : entity.isSmallForm() ? 0.2F : 1.7F;
         super.render(entity, yaw, partialTick, pose, buffer, packedLight);
+        if (entity.hasLightningTarget()) {
+            // Faithful CE rendering: BoltRenderInfo.ELECTRICITY, 15 segments,
+            // 4-tick lifespan, NO_DELAY, RenderType.lightning().
+            Vec3 mouth = entity.getFireBreathHeadPosition();
+            Vec3 target = entity.getLightningTarget();
+            float energyScale = 0.4F * 3.25F;
+            float boundedScale = 0.5F + energyScale * (2.0F - 0.5F);
+            LightningBoltData bolt = new LightningBoltData(
+                    LightningBoltData.BoltRenderInfo.ELECTRICITY,
+                    mouth, target, 15)
+                    .size(0.05F * boundedScale)
+                    .lifespan(4)
+                    .spawn(LightningBoltData.SpawnFunction.NO_DELAY);
+            this.lightningRenderer.update(null, bolt, partialTick);
+            pose.pushPose();
+            try {
+                pose.translate(-entity.getX(), -entity.getY(), -entity.getZ());
+                this.lightningRenderer.render(partialTick, pose, buffer);
+            } finally {
+                pose.popPose();
+            }
+        }
     }
 
     @Override

@@ -26,6 +26,10 @@ public final class ClientEvents {
     // CE IafKeyMappings.DRAGON_BREATH default is R.
     private static final KeyMapping DRAGON_BREATH = new KeyMapping(
             "key.aurenminecraft.dragon_breath", GLFW.GLFW_KEY_R, "key.categories.gameplay");
+    // Additional mounted action. R remains fire; G launches CE lightning.
+    private static final KeyMapping DRAGON_LIGHTNING = new KeyMapping(
+            "key.aurenminecraft.dragon_lightning", GLFW.GLFW_KEY_G,
+            "key.categories.gameplay");
     private static int lastPilotId = -1;
     private static byte lastPilotControls = -1;
 
@@ -33,6 +37,7 @@ public final class ClientEvents {
     public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(DRAGON_DOWN);
         event.register(DRAGON_BREATH);
+        event.register(DRAGON_LIGHTNING);
     }
 
     /** Port of CE ClientEvents.onLivingUpdate rider input, once per client tick. */
@@ -54,7 +59,8 @@ public final class ClientEvents {
 
         byte controls = (byte) ((mc.options.keyJump.isDown() ? 1 : 0)
                 | (DRAGON_DOWN.isDown() ? 2 : 0)
-                | (DRAGON_BREATH.isDown() ? 8 : 0));
+                | (DRAGON_BREATH.isDown() ? 8 : 0)
+                | (DRAGON_LIGHTNING.isDown() ? 4 : 0));
         dragon.setRiderControlState(controls);
         if (dragon.getId() != lastPilotId || controls != lastPilotControls) {
             PacketDistributor.sendToServer(new AurenDragonControlPayload(

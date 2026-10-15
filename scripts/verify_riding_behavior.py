@@ -98,7 +98,7 @@ assert "dragon.getControllingPassenger() != null" in flight
 assert "modBus.addListener(AurenRiderNetwork::registerPayloads)" in mod
 assert "registrar.playToServer(AurenDragonControlPayload.ID" in network
 assert "player.getVehicle() == dragon && dragon.isOwnedBy(player)" in network
-assert "payload.controlState() & 11" in network
+assert "payload.controlState() & 15" in network
 assert "dragon.setRiderControlState(controls)" in client
 assert "PacketDistributor.sendToServer(new AurenDragonControlPayload(" in client
 assert "mc.options.keyJump.isDown()" in client
@@ -106,7 +106,7 @@ assert "DRAGON_DOWN.isDown()" in client
 assert "GLFW.GLFW_KEY_X" in client
 assert "event.register(DRAGON_DOWN)" in client
 assert "record AurenDragonControlPayload(int dragonId, byte controlState)" in packet
-assert "mod_version=0.7.3-rider-pose-alpha" in version
+assert "mod_version=0.7.4-lightning-breath-alpha" in version
 assert "EMERGENCY_TELEPORT_DISTANCE = 50.0D" in follow
 assert "GROUND_WALK_BEFORE_FLIGHT_TICKS = 40" in follow
 assert "WAYPOINT_REEVALUATE_TICKS = 60" in (

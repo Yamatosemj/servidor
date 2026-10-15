@@ -62,7 +62,7 @@ public final class AurenFireBreath {
     public void tick() {
         if (!(dragon.level() instanceof ServerLevel level)
                 || !dragon.isAlive() || dragon.isSmallForm() || dragon.isOnShoulder()
-                || !dragon.isRiderFiring()
+                || !dragon.isRiderFiring() || dragon.isRiderLightning()
                 || !(dragon.getControllingPassenger() instanceof Player rider)
                 || !dragon.isOwnedBy(rider)) {
             reset();
@@ -137,7 +137,7 @@ public final class AurenFireBreath {
      * and Auren's synced flight blend (no custom mouth-part entity exists).
      * The muzzle can be calibrated against the animated head in playtests.
      */
-    private Vec3 getHeadPosition() {
+    Vec3 getHeadPosition() {
         float flyProg = dragon.getFlightBlend(1.0F) * 0.1F;
         float hoverProg = dragon.getFlightMode() == AurenFlightController.TAKING_OFF
                 ? dragon.getFlightBlend(1.0F) * 0.03F : 0.0F;
