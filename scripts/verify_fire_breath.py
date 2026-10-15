@@ -48,17 +48,18 @@ for expr in (
 # No client-controlled position; only the owner mounted on adult can breathe.
 assert "public boolean isRiderFiring()" in dragon
 assert "(this.riderControlState & 8) != 0" in dragon
-assert "this.riderControlState = (byte) (state & 11);" in dragon
+assert "this.riderControlState = (byte) (state & 15);" in dragon
 assert "this.fireBreath.tick();" in dragon
 assert "this.fireBreath.reset();" in dragon
 assert "DRAGON_BREATH.isDown() ? 8 : 0" in client
 assert "GLFW.GLFW_KEY_R" in client
 assert "event.register(DRAGON_BREATH)" in client
 assert "player.getVehicle() == dragon && dragon.isOwnedBy(player)" in network
-assert "payload.controlState() & 11" in network
+assert "payload.controlState() & 15" in network
 assert "byte controlState" in packet
 assert "dragon.isOwnedBy(rider)" in fire
 assert "dragon.isSmallForm()" in fire
+assert "dragon.isRiderLightning()" in fire
 assert "dragon.getControllingPassenger() instanceof Player rider" in fire
 assert "target == dragon || target == rider" in fire
 assert "tame.getOwnerUUID().equals(dragon.getOwnerUUID())" in fire
@@ -66,7 +67,7 @@ assert "dragon.isAlliedTo(target)" in fire
 assert "dragon.hasLineOfSight(target)" in fire
 assert "level.hasChunkAt(BlockPos.containing(burnTarget))" in fire
 assert "if (this.burnProgress == CE_BURN_PROGRESS_MAX && dragon.tickCount % 5 == 0)" in fire
-assert "mod_version=0.7.3-rider-pose-alpha" in version
+assert "mod_version=0.7.4-lightning-breath-alpha" in version
 
 # Never expose a client-selectable target vector nor copy mod-specific block
 # destruction, random explosive charge or sound registries into the port.

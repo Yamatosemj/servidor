@@ -30,7 +30,7 @@ public final class AurenRiderNetwork {
             if (entity instanceof AurenDragon dragon
                     && !dragon.isSmallForm() && !dragon.isOnShoulder()
                     && player.getVehicle() == dragon && dragon.isOwnedBy(player)) {
-                dragon.setRiderControlState((byte) (payload.controlState() & 11));
+                dragon.setRiderControlState((byte) (payload.controlState() & 15));
             }
         });
     }

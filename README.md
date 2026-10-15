@@ -1,3 +1,38 @@
+# Auren Minecraft 0.7.4 — Lightning Dragon CE, ataque controlado
+
+## Novo: raios montado, tecla G
+
+- **R:** sopro de fogo existente (preservado).
+- **G:** mantenha pressionado para carregar por 20 ticks (~1 s) e lançar
+  o feixe de raios contínuo do Lightning Dragon CE. É necessário estar
+  montado na forma adulta domesticada.
+- O feixe vai do focinho na direção em que o piloto olha (até 30 blocos).
+- Dano original de estágio 3, usando a configuração padrão CE para raio
+  (3 x 3.5 = 10.5), área de 3.5 blocos, empurrão original de 0.3.
+  O impacto é limitado a uma aplicação a cada 5 ticks para não saturar.
+- O visual usa **os próprios LightningBoltData e LightningRenderer
+  originais** do IceAndFire CE (LGPL-3.0-or-later, atribuição a
+  IAFEnvoy e aidancbrady). Não usa uma linha artificial de partículas.
+- O ataque funciona só no servidor do dono montado, sem coordenadas
+  enviadas pelo cliente, não acerta o piloto nem seus animais domesticados
+  e para diante de blocos/chunks não carregados.
+- **Se R e G forem pressionados juntos, G tem prioridade.**
+- O feixe contínuo original foi portado; a variante aleatória de
+  **projétil elétrico** do CE NÃO foi incluída porque exigiria registrar
+  uma segunda entidade. Não importamos itens, mobs, blocos, estruturas,
+  Jupiter nem o mod IceAndFire inteiro.
+
+### Teste desta etapa
+
+Em um mundo de backup com somente `aurenminecraft-0.7.4-lightning-breath-alpha.jar`:
+domestique e monte, segure G para eletricidade contra um zumbi, solte G
+e verifique parada imediata. Teste a direção do olhar, bloco no caminho,
+animal domesticado ao lado, uso de R antes/depois de G, voo autônomo após
+desmontar e câmera de terceira pessoa. Também configure G no Zalith, se
+for usar Android. **O CI valida código e compilação, não visual no jogo.**
+
+## Histórico anterior
+
 # Auren Minecraft — 0.7.3 montaria alinhada ao corpo e controles de dragão
 
 ## Correções baseadas no teste real da 0.7.2
@@ -69,7 +104,7 @@ e abas do IceAndFire, contrariando o objetivo.
 
 ## Este build contém SOMENTE o Auren
 
-- **Um mod JAR para instalar: `aurenminecraft-0.7.3-rider-pose-alpha.jar`.**
+- **Um mod JAR para instalar: `aurenminecraft-0.7.4-lightning-breath-alpha.jar`.**
 - Registra **exatamente um tipo de criatura**, `aurenminecraft:auren`.
 - **Nenhum mod IceAndFire**, nenhuma aba/receita/item/criatura extra do CE.
 - **Uranus 3.0-beta.1** incluído dentro do JAR como dependência da
