@@ -1,0 +1,3 @@
+[submodule "vendor/iceandfire-ce"]
+	path = vendor/iceandfire-ce
+	url = https://github.com/IAFEnvoy/IceAndFire-CE.git

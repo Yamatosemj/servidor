@@ -1,4 +1,36 @@
-# Auren Minecraft — v0.6.5-native-probe (Minecraft 1.21.1 / NeoForge)
+# Auren Minecraft — v0.7.0-engine-bootstrap (Minecraft 1.21.1 / NeoForge)
+
+## 0.7.0 — começar com TODO o código original do Ice and Fire CE
+
+**Código completo, sem podas:** `vendor/iceandfire-ce` é um submódulo Git
+fixado no commit `aa2f11a6b79acb48a1094765d610cdaca79e3d18` do IceAndFire
+Community Edition 2.1.4. Contém o código-fonte e os recursos originais,
+incluindo TODOS os dragões, IA, física, voos, montaria, ataques, renderizadores,
+animações, inventário, crescimento, registradores e dependências internas.
+
+**Como testamos:** o workflow `native-engine.yml` compila o mod original
+inteiro, em seu próprio projeto, e fornece um artefato com dois JARs:
+`iceandfire` original e nosso `aurenminecraft`, mais instruções.
+Jupiter 2.3+ ainda é exigido pelo original; Uranus vem dentro do Auren.
+
+**Por que não copiamos tudo para `src/main/java` do Auren?** Isso
+duplicaria registries, eventos, classes e identificadores do mod e arriscaria
+corromper saves. O código completo continua intocado até termos validação e
+um plano para convertê-lo numa única implementação independente.
+
+**Estado:** temos o código original completo disponível e um build separado
+para todas as funcionalidades, mas a nossa entidade antiga ainda NÃO foi
+migrada para ele. Seus comandos de transformação por botão direito, ombro
+e montaria continuam no Auren legado. A entidade nativa do CE pode ser
+invocada por `/auren original` (raio) ou `/auren original_fogo`.
+Nenhuma remoção de funcionalidade foi feita.
+
+Clone completo: `git clone --recurse-submodules
+https://github.com/Yamatosemj/servidor.git`, depois mude para esta branch.
+Ou na cópia existente: `git submodule update --init --recursive`.
+
+Documentação técnica: `docs/CE_FULL_SOURCE_MIGRATION.md`.
+
 
 ## Experimental native CE parity baseline (v0.6.5-native-probe)
 
