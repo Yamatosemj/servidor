@@ -4,6 +4,7 @@ on:
     branches:
       - feat/auren-ce-complete-source-v070
       - fix/ce-resource-integrity-v070
+      - fix/bundle-jupiter-in-auren-v070
   pull_request:
     paths:
       - ".gitmodules"
@@ -36,6 +37,8 @@ jobs:
         run: python3 scripts/verify_ce_native_source.py
       - name: Build Auren companion mod
         run: gradle build --no-daemon --stacktrace
+      - name: Confirm bundled Uranus and Jupiter are native NeoForge mods
+        run: python3 scripts/verify_bundle.py
       - name: Build all unmodified IceAndFire CE source
         working-directory: vendor/iceandfire-ce
         run: gradle build --no-daemon --stacktrace

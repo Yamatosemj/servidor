@@ -36,6 +36,10 @@ assert len(matches) == 1, f"Expected exactly one original compiled CE JAR: {matc
 
 auren_jars = sorted((ROOT / "build/libs").glob("aurenminecraft-*.jar"))
 assert len(auren_jars) == 1, f"Expected exactly one companion Auren mod: {auren_jars}"
+# The distribution must contain Auren with BOTH embedded NeoForge mods.
+from verify_bundle import verify as verify_nested_uranus_and_jupiter
+verify_nested_uranus_and_jupiter()
+
 dist = ROOT / "build/ce-native-dist"
 dist.mkdir(parents=True, exist_ok=True)
 
