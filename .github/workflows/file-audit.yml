@@ -23,12 +23,26 @@ jobs:
         with:
           gradle-version: '9.2.1'
       - name: Audit each tracked Auren and original CE file
-        run: python3 scripts/audit_each_file.py --fail-on-error
+        run: python3 scripts/audit_each_file.py
       - name: Compile Auren to verify its Java source
         run: gradle build --no-daemon --stacktrace
       - name: Compile entire original CE to verify its Java source
         working-directory: vendor/iceandfire-ce
         run: gradle build --no-daemon --stacktrace
+      - name: Gate audit on structural errors after compiling both mods
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("build/reports/file_audit/stats.json")
+          if not path.is_file():
+              raise SystemExit("Audit report missing")
+          stats = json.loads(path.read_text())
+          print("Audit statuses:", stats["statuses"])
+          if stats["statuses"].get("ERROR", 0):
+              raise SystemExit("Structural errors detected; inspect per-file artifact before merge")
+          PY
       - name: Upload one-record-per-file audit evidence
         if: always()
         uses: actions/upload-artifact@v4
