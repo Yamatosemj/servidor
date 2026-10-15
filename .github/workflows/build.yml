@@ -26,6 +26,8 @@ jobs:
         run: python3 scripts/verify_bundle.py
       - name: Verify exactly one custom dragon, zero IceAndFire gameplay registries or items
         run: python3 scripts/verify_single_dragon.py
+      - name: Verify ORIGINAL CE grounded movement logic and restore after flying
+        run: python3 scripts/verify_ce_ground_move.py
       - name: Verify Tabula neck pose
         run: python3 scripts/verify_neck_pose.py
       - name: Verify original Tabula animations
@@ -41,6 +43,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: auren-071-ONLY-ONE-DRAGON-NO-ICEANDFIRE-MOD
+          name: auren-072-CE-GROUND-MOVE-ONE-DRAGON
           path: build/libs/*.jar
           if-no-files-found: error

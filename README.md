@@ -1,3 +1,33 @@
+# Auren Minecraft — 0.7.2 CE ground movement (Minecraft 1.21.1 / NeoForge)
+
+## Etapa 1A — caminhada original do IceAndFire CE portada para o único Auren
+
+Novo `AurenCeGroundMoveControl` a partir do `IafDragonFlightManager.GroundMoveHelper`
+original CE 2.1.4 (commit `aa2f11a6b79acb48a1094765d610cdaca79e3d18`).
+Mantém os ramos de aceleração/strafe, curvas pelo alvo, consulta do
+caminho, pulo, estado JUMPING e espera do controlador original.
+
+Única adaptação de porte: o CE calcula curvas mais lentas para dragões
+crescidos (no original por idade e hitbox); Auren usa forma adulta
+fixa equivalente a 50 dias (11 graus/tick), enquanto a forma pequena
+usa o limite de 70 graus/tick original para criaturas pequenas.
+É uma escolha explícita e verificável, não uma alegação de física idêntica.
+
+Integração: constrói o controlador na entidade atual, preserva sua
+instância durante voo e restaura após pouso. Não interfere em montaria,
+ombro, IDs de save, nem introduz qualquer mod/item extra do CE.
+Testes de compilação e checagens de fonte/bytes garantem o escopo.
+**É a primeira parte da migração CE, NÃO uma migração integral de voo, IA
+e combate**; só a caminhada foi portada nesta etapa.
+
+### Teste manual necessário
+
+Em mundo de backup: adulto seguindo com curvas nas ruas, bebê seguindo
+em terreno plano, caminho com degraus, monte e desmonte, decolagem
+autônoma e pouso, passagem ombro/solto e reload do mundo. Verifique se
+o controlador do solo é restaurado após aterrissar.
+
+---
 # Auren Minecraft — 0.7.1 SINGLE-DRAGON EXPERIMENT (Minecraft 1.21.1 / NeoForge)
 
 **A versão experimental 0.7.0 anterior tinha um erro de escopo**:
@@ -7,7 +37,7 @@ e abas do IceAndFire, contrariando o objetivo.
 
 ## Este build contém SOMENTE o Auren
 
-- **Um mod JAR para instalar: `aurenminecraft-0.7.1-single-auren-alpha.jar`.**
+- **Um mod JAR para instalar: `aurenminecraft-0.7.2-ce-ground-movement-alpha.jar`.**
 - Registra **exatamente um tipo de criatura**, `aurenminecraft:auren`.
 - **Nenhum mod IceAndFire**, nenhuma aba/receita/item/criatura extra do CE.
 - **Uranus 3.0-beta.1** incluído dentro do JAR como dependência da
