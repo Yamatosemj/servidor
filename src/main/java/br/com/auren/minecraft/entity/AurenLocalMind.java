@@ -26,6 +26,8 @@ public final class AurenLocalMind {
     // last path failures; saved preferences are already preserved separately.
     private int idleStarts;
     private int failedIdlePaths;
+    private int stalledIdleRoutes;
+    private String lastRouteResult = "nenhum";
     private String idleStatus = "aguardando oportunidade";
     private String lastBlocked = "nenhum";
     private String lastCompleted = "nenhuma";
@@ -81,6 +83,18 @@ public final class AurenLocalMind {
         failedIdlePaths = Math.min(99999, failedIdlePaths + 1);
     }
 
+    /** Distinguish A* accepted from actual ground movement. */
+    public void idleRouteEnded(String route, double progressBlocks) {
+        boolean advanced = Double.isFinite(progressBlocks) && progressBlocks >= 0.75D;
+        if (!advanced) stalledIdleRoutes = Math.min(99999, stalledIdleRoutes + 1);
+        lastRouteResult = route + (advanced ? " avancou " : " sem avancar ") 
+                + (Double.isFinite(progressBlocks)
+                    ? Math.round(progressBlocks * 10.0D) / 10.0D : 0.0D)
+                + " blocos";
+        // The Goal remains active to observe, but is no longer navigating.
+        idleStatus = "executando: observando (rota encerrada)";
+    }
+
     public void idleFinished(String summary) {
         lastCompleted = summary == null ? "finalizada" : summary;
         idleStatus = "aguardando oportunidade";
@@ -116,6 +130,8 @@ public final class AurenLocalMind {
                 + " | rotina: " + idleStatus
                 + " | iniciadas: " + idleStarts
                 + ", caminhos inviaveis: " + failedIdlePaths
+                + ", rotas sem avanco: " + stalledIdleRoutes
+                + " | ultimo trajeto: " + lastRouteResult
                 + " | ultima interrupcao: " + lastCompleted
                 + " | limite: " + lastBlocked
                 + " | IA externa: nao necessaria";
