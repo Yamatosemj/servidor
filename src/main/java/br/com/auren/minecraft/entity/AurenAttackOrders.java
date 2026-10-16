@@ -11,6 +11,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.TamableAnimal;
@@ -183,14 +184,28 @@ public final class AurenAttackOrders {
         return hoverPoint(level, enemy);
     }
 
+    /**
+     * Choose the original CE attack TYPES by tactical opportunity.
+     * This is still our TamableAnimal adapter, not DragonBaseEntity AI.
+     */
     private void chooseTactic(LivingEntity enemy) {
         AirAttack previous = tactic;
-        AirAttack[] choices = AirAttack.values();
-        // CE randomizeAttacks() chooses from these same three air attacks.
-        // Avoid repeating a maneuver back-to-back for more varied combat.
-        tactic = choices[dragon.getRandom().nextInt(choices.length)];
-        if (tactic == previous) tactic = choices[(tactic.ordinal() + 1) % choices.length];
-        nextTacticTick = combatTicks + 140 + dragon.getRandom().nextInt(100);
+        double distanceSq = dragon.distanceToSqr(enemy);
+        if (!dragon.hasLineOfSight(enemy)) {
+            tactic = AirAttack.HOVER_BLAST; // Seek a new clear vantage.
+        } else if (distanceSq > 25.0D * 25.0D) {
+            tactic = AirAttack.TACKLE; // Close in when target is far away.
+        } else if (distanceSq < 7.0D * 7.0D) {
+            tactic = previous == AirAttack.TACKLE
+                    ? AirAttack.HOVER_BLAST : AirAttack.TACKLE;
+        } else if (distanceSq < 13.0D * 13.0D) {
+            tactic = dragon.getRandom().nextInt(3) == 0
+                    ? AirAttack.TACKLE : AirAttack.HOVER_BLAST;
+        } else {
+            tactic = dragon.getRandom().nextBoolean()
+                    ? AirAttack.SCORCH_STREAM : AirAttack.HOVER_BLAST;
+        }
+        nextTacticTick = combatTicks + 75 + dragon.getRandom().nextInt(75);
         nextWaypointTick = 0;
         waypoint = null;
         streamDirection = null;
@@ -241,7 +256,7 @@ public final class AurenAttackOrders {
                     nextWaypointTick = combatTicks + 45 + dragon.getRandom().nextInt(30);
                 }
                 next = waypoint;
-                fireAim = center;
+                fireAim = dragon.hasLineOfSight(enemy) ? center : null;
             }
             case SCORCH_STREAM -> {
                 // CE reverses its streaming pass near the opposite side.
@@ -252,7 +267,7 @@ public final class AurenAttackOrders {
                     nextWaypointTick = combatTicks + 110;
                 }
                 next = waypoint;
-                fireAim = center;
+                fireAim = dragon.hasLineOfSight(enemy) ? center : null;
             }
             default -> { return; }
         }
@@ -334,15 +349,44 @@ public final class AurenAttackOrders {
             return;
         }
 
-        // Distinct fire impacts stay inside the marked circle; the dragon
-        // may pass through the interior but does not target outside it.
+        // Target rooflines and ground AHEAD of the muzzle. A random point
+        // behind Auren would force the breath to bend in mid-air.
         if (fireAim == null || combatTicks >= nextSweepTick) {
-            double angle = dragon.getRandom().nextDouble() * 2.0D * Math.PI;
-            double distance = radius * 0.80D * Math.sqrt(dragon.getRandom().nextDouble());
-            fireAim = center.add(Math.cos(angle) * distance, 0,
-                    Math.sin(angle) * distance);
-            nextSweepTick = combatTicks + 35 + dragon.getRandom().nextInt(35);
+            fireAim = findForwardAreaImpact(level, center);
+            nextSweepTick = combatTicks + (fireAim == null ? 8
+                    : 18 + dragon.getRandom().nextInt(12));
         }
+    }
+
+    /**
+     * Ray targets are selected server-side on the surface of roofs, trees,
+     * or terrain. Heightmap avoids blindly choosing the flat marker Y when
+     * bombing tall buildings. No unloaded chunks are touched.
+     */
+    private Vec3 findForwardAreaImpact(ServerLevel level, Vec3 markedCenter) {
+        Vec3 muzzle = dragon.getFireBreathHeadPosition();
+        double yaw = Math.toRadians(dragon.getYRot());
+        double forwardX = -Math.sin(yaw);
+        double forwardZ = Math.cos(yaw);
+        for (int i = 0; i < 14; ++i) {
+            double distance = 3.0D + dragon.getRandom().nextDouble()
+                    * Math.min(20.0D, 5.0D + radius * 0.8D);
+            double lateral = (dragon.getRandom().nextDouble() - 0.5D)
+                    * Math.min(8.0D, radius * 0.7D);
+            double x = muzzle.x + forwardX * distance - forwardZ * lateral;
+            double z = muzzle.z + forwardZ * distance + forwardX * lateral;
+            double dx = x - markedCenter.x;
+            double dz = z - markedCenter.z;
+            if (dx * dx + dz * dz > radius * radius) continue;
+            BlockPos sample = BlockPos.containing(x, muzzle.y, z);
+            if (!level.hasChunkAt(sample)) continue;
+            BlockPos surface = level.getHeightmapPos(
+                    Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, sample);
+            if (surface.getY() >= muzzle.y - 1.0D) continue;
+            Vec3 aim = new Vec3(x, surface.getY() - 0.25D, z);
+            if (muzzle.distanceToSqr(aim) <= 28.0D * 28.0D) return aim;
+        }
+        return null;
     }
 
     public void tick() {
