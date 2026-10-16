@@ -82,7 +82,7 @@ for check in (
 ):
     assert check in sensor,check
 assert "latest.fireNearby() || latest.lavaNearby()" not in sensor
-assert 'mod_version=0.7.22-organic-area-bombing-alpha' in (ROOT/"gradle.properties").read_text()
+assert 'mod_version=0.7.23-ground-hunt-electric-alpha' in (ROOT/"gradle.properties").read_text()
 jars=list((ROOT/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars
 with ZipFile(jars[0]) as jar:
