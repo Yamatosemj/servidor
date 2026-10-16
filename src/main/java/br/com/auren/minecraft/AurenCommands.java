@@ -149,6 +149,55 @@ public final class AurenCommands {
         return Command.SINGLE_SUCCESS;
     }
 
+
+    /**
+     * Keybind entry point. Target selection is repeated on the SERVER from the
+     * player's actual gaze. Never trust client-provided coordinates or entity IDs.
+     */
+    public static void handleMarkKey(ServerPlayer player, int radius, boolean clear) {
+        AurenDragon dragon = ownedDragon(player);
+        if (dragon == null) {
+            player.displayClientMessage(Component.literal("Auren não encontrado perto de você."), true);
+            return;
+        }
+        if (clear) {
+            dragon.getAttackOrders().clear();
+            player.displayClientMessage(Component.literal("Auren: ataque cancelado."), true);
+            return;
+        }
+        if (radius < 5 || radius > 30 || radius % 5 != 0) return;
+        if (dragon.isVehicle() || dragon.isSmallForm() || dragon.isOnShoulder()) {
+            player.displayClientMessage(Component.literal("Use a forma adulta e desmonte para marcar."), true);
+            return;
+        }
+        Vec3 eye = player.getEyePosition(1.0F);
+        Vec3 end = eye.add(player.getViewVector(1.0F).scale(AIM_REACH));
+        BlockHitResult block = player.level().clip(new ClipContext(
+                eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        if (block.getType() == HitResult.Type.BLOCK) end = block.getLocation();
+        EntityHitResult entity = ProjectileUtil.getEntityHitResult(
+                player.level(), player, eye, end, new AABB(eye, end).inflate(1.0D),
+                candidate -> candidate instanceof LivingEntity living
+                        && living.isAlive() && candidate != player && candidate != dragon);
+        if (entity != null) {
+            if (entity.getEntity() instanceof LivingEntity mob && mob instanceof Enemy
+                    && !dragon.isAlliedTo(mob) && dragon.getAttackOrders().markEnemy(mob)) {
+                player.displayClientMessage(Component.literal("Auren: inimigo marcado!"), true);
+            } else {
+                player.displayClientMessage(Component.literal("Este alvo não é um inimigo hostil."), true);
+            }
+            return;
+        }
+        if (block.getType() == HitResult.Type.BLOCK
+                && dragon.getAttackOrders().markArea(block.getBlockPos(), radius)) {
+            player.displayClientMessage(Component.literal(
+                    "Auren: bombardeio marcado, raio " + radius + " blocos."), true);
+        } else {
+            player.displayClientMessage(Component.literal(
+                    "Mire em um inimigo ou bloco a até 48 blocos."), true);
+        }
+    }
+
     public static void register(RegisterCommandsEvent event) {
         var areas = Commands.literal("area");
         for (int radius = 5; radius <= 30; radius += 5) {

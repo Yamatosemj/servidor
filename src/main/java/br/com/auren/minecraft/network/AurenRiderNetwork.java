@@ -6,6 +6,8 @@
 package br.com.auren.minecraft.network;
 
 import br.com.auren.minecraft.entity.AurenDragon;
+import br.com.auren.minecraft.AurenCommands;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -19,6 +21,16 @@ public final class AurenRiderNetwork {
         PayloadRegistrar registrar = event.registrar("1");
         registrar.playToServer(AurenDragonControlPayload.ID,
                 AurenDragonControlPayload.CODEC, AurenRiderNetwork::handleControl);
+        registrar.playToServer(AurenMarkPayload.ID,
+                AurenMarkPayload.CODEC, AurenRiderNetwork::handleMark);
+    }
+
+    private static void handleMark(AurenMarkPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (context.player() instanceof ServerPlayer player) {
+                AurenCommands.handleMarkKey(player, payload.radius(), payload.clear());
+            }
+        });
     }
 
     private static void handleControl(AurenDragonControlPayload payload, IPayloadContext context) {

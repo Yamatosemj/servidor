@@ -2,5 +2,6 @@
   "entity.aurenminecraft.auren": "Auren",
   "key.aurenminecraft.dragon_breath": "Auren Fire Breath",
   "key.aurenminecraft.dragon_down": "Descend on Auren",
-  "key.aurenminecraft.dragon_lightning": "Auren Lightning Breath (hold G)"
+  "key.aurenminecraft.dragon_lightning": "Auren Lightning Breath (hold G)",
+  "key.aurenminecraft.mark_target": "Auren: Mark Target / Shift: Cancel or Change Radius"
 }

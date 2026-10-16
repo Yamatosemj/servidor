@@ -1,8 +1,10 @@
 package br.com.auren.minecraft.client;
 
 import br.com.auren.minecraft.AurenMinecraft;
+import com.mojang.blaze3d.platform.InputConstants;
 import br.com.auren.minecraft.entity.AurenDragon;
 import br.com.auren.minecraft.network.AurenDragonControlPayload;
+import br.com.auren.minecraft.network.AurenMarkPayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.world.entity.Entity;
@@ -15,8 +17,11 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RenderPlayerEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
 
-@EventBusSubscriber(modid = AurenMinecraft.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = AurenMinecraft.MOD_ID, value = Dist.CLIENT,
+        bus = EventBusSubscriber.Bus.GAME)
 public final class ClientEvents {
     private ClientEvents() {}
 
@@ -30,14 +35,18 @@ public final class ClientEvents {
     private static final KeyMapping DRAGON_LIGHTNING = new KeyMapping(
             "key.aurenminecraft.dragon_lightning", GLFW.GLFW_KEY_G,
             "key.categories.gameplay");
+    // One remappable key: plain V marks, Shift+V cancels or cycles radius.
+    private static final KeyMapping MARK_TARGET = new KeyMapping(
+            "key.aurenminecraft.mark_target", GLFW.GLFW_KEY_V, "key.categories.gameplay");
     private static int lastPilotId = -1;
     private static byte lastPilotControls = -1;
 
-    @SubscribeEvent
+    // Called from ClientModEvents on the MOD bus.
     public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(DRAGON_DOWN);
         event.register(DRAGON_BREATH);
         event.register(DRAGON_LIGHTNING);
+        event.register(MARK_TARGET);
     }
 
     /** Port of CE ClientEvents.onLivingUpdate rider input, once per client tick. */
@@ -48,6 +57,27 @@ public final class ClientEvents {
             lastPilotId = -1;
             lastPilotControls = -1;
             return;
+        }
+        // Input is edge-triggered and ignored while typing in menus/chat.
+        if (mc.screen == null && mc.player.isAlive()) {
+            while (MARK_TARGET.consumeClick()) {
+                AurenDragon owned = AurenAttackOverlay.nearbyOwnedDragon(mc);
+                if (owned == null) continue;
+                // Physical Shift, independent of the player's remapped Sneak key.
+                long window = mc.getWindow().getWindow();
+                boolean shiftHeld = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_LEFT_SHIFT)
+                        || InputConstants.isKeyDown(window, GLFW.GLFW_KEY_RIGHT_SHIFT);
+                if (shiftHeld) {
+                    if (owned.getSyncedMarkMode() != 0) {
+                        PacketDistributor.sendToServer(new AurenMarkPayload(0, true));
+                    } else {
+                        AurenAttackOverlay.nextRadius();
+                    }
+                } else {
+                    PacketDistributor.sendToServer(
+                            new AurenMarkPayload(AurenAttackOverlay.selectedRadius(), false));
+                }
+            }
         }
         Entity mount = mc.player.getVehicle();
         if (!(mount instanceof AurenDragon dragon)
@@ -70,6 +100,16 @@ public final class ClientEvents {
         }
     }
 
+    @SubscribeEvent
+    public static void renderAttackMarkers(RenderLevelStageEvent event) {
+        AurenAttackOverlay.renderWorld(event);
+    }
+
+    @SubscribeEvent
+    public static void renderAttackHud(RenderGuiEvent.Post event) {
+        AurenAttackOverlay.renderHud(event);
+    }
+
     /** Suppress only the duplicate default player renderer while riding Auren. */
     @SubscribeEvent
     public static void cancelUnattachedMountedPlayer(RenderPlayerEvent.Pre event) {
@@ -79,7 +119,7 @@ public final class ClientEvents {
         }
     }
 
-    @SubscribeEvent
+    // Called from ClientModEvents on the MOD bus.
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(AurenMinecraft.AUREN.get(), AurenDragonRenderer::new);
     }

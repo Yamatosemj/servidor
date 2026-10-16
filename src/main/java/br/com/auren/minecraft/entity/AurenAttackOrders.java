@@ -46,6 +46,17 @@ public final class AurenAttackOrders {
         return this.mode != NONE;
     }
 
+    /** Server state, copied into tracked entity data for the owner's preview. */
+    public int getMode() {
+        return mode;
+    }
+
+    public int getMarkedEnemyEntityId() {
+        if (mode != ENEMY || recentlyResolvedEnemy == null
+                || !recentlyResolvedEnemy.isAlive() || recentlyResolvedEnemy.isRemoved()) return -1;
+        return recentlyResolvedEnemy.getId();
+    }
+
     public boolean isAreaOrder() {
         return this.mode == AREA;
     }

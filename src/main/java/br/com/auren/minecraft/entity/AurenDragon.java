@@ -70,6 +70,19 @@ public final class AurenDragon extends TamableAnimal {
             SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> BITE_ATTACK_TICKS =
             SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT);
+    // Compact synced order display; server still owns all aiming and decisions.
+    private static final EntityDataAccessor<Integer> MARK_MODE =
+            SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> MARK_X =
+            SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> MARK_Y =
+            SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> MARK_Z =
+            SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> MARK_RADIUS =
+            SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> MARK_ENEMY_ID =
+            SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT);
 
     // Client-side animation progress, mirroring CE ridingProgress 0..20 ticks.
     // The desired state is synced by SHOULDER, never by sending every frame.
@@ -148,6 +161,12 @@ public final class AurenDragon extends TamableAnimal {
         builder.define(LIGHTNING_TARGET_Z, 0.0F);
         builder.define(BREATH_ATTACK_TICKS, 0);
         builder.define(BITE_ATTACK_TICKS, 0);
+        builder.define(MARK_MODE, 0);
+        builder.define(MARK_X, 0);
+        builder.define(MARK_Y, 0);
+        builder.define(MARK_Z, 0);
+        builder.define(MARK_RADIUS, 0);
+        builder.define(MARK_ENEMY_ID, -1);
     }
 
     public boolean isSmallForm() {
@@ -173,6 +192,41 @@ public final class AurenDragon extends TamableAnimal {
 
     public AurenAttackOrders getAttackOrders() {
         return this.attackOrders;
+    }
+
+    public int getSyncedMarkMode() {
+        return this.entityData.get(MARK_MODE);
+    }
+
+    public BlockPos getSyncedMarkCenter() {
+        return new BlockPos(this.entityData.get(MARK_X), this.entityData.get(MARK_Y),
+                this.entityData.get(MARK_Z));
+    }
+
+    public int getSyncedMarkRadius() {
+        return this.entityData.get(MARK_RADIUS);
+    }
+
+    public int getSyncedMarkedEnemyId() {
+        return this.entityData.get(MARK_ENEMY_ID);
+    }
+
+    private void syncAttackMark() {
+        if (this.level().isClientSide()) return;
+        int mode = this.attackOrders.getMode();
+        BlockPos center = mode == 2 ? this.attackOrders.getAreaCenter() : null;
+        int x = center != null ? center.getX() : 0;
+        int y = center != null ? center.getY() : 0;
+        int z = center != null ? center.getZ() : 0;
+        int radius = mode == 2 ? this.attackOrders.getRadius() : 0;
+        int enemyId = mode == 1 ? this.attackOrders.getMarkedEnemyEntityId() : -1;
+        if (this.entityData.get(MARK_MODE) != mode) this.entityData.set(MARK_MODE, mode);
+        if (this.entityData.get(MARK_X) != x) this.entityData.set(MARK_X, x);
+        if (this.entityData.get(MARK_Y) != y) this.entityData.set(MARK_Y, y);
+        if (this.entityData.get(MARK_Z) != z) this.entityData.set(MARK_Z, z);
+        if (this.entityData.get(MARK_RADIUS) != radius) this.entityData.set(MARK_RADIUS, radius);
+        if (this.entityData.get(MARK_ENEMY_ID) != enemyId)
+            this.entityData.set(MARK_ENEMY_ID, enemyId);
     }
 
     /** Port of CE DragonBaseEntity.getControllingPassenger: only the owner pilots. */
@@ -796,6 +850,7 @@ public final class AurenDragon extends TamableAnimal {
         super.tick();
         if (!this.level().isClientSide()) {
             this.attackOrders.tick();
+            this.syncAttackMark();
             this.flightController.tick();
             this.fireBreath.tick();
             this.lightningBreath.tick();

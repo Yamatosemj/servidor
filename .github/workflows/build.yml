@@ -32,6 +32,8 @@ jobs:
         run: python3 scripts/verify_defend_scorch.py
       - name: Verify marked enemy and orbital area attack controls
         run: python3 scripts/verify_marked_assault.py
+      - name: Verify key target preview and HUD
+        run: python3 scripts/verify_marked_preview.py
       - name: Verify blue soul-fire volume and original CE attack-stream poses
         run: python3 scripts/verify_blue_fire_pose.py
       - name: Verify CE lightning and keep fire + ONE Auren
@@ -51,6 +53,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: auren-077-MARKED-ORBITAL-ASSAULT
+          name: auren-078-KEY-AND-TARGET-PREVIEW
           path: build/libs/*.jar
           if-no-files-found: error

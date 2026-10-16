@@ -1,3 +1,28 @@
+# Auren Minecraft 0.7.8 — Controle por V e alvo visual
+
+- **V**: marque o inimigo hostil na mira ou o bloco como centro de ataque; substitui marca anterior.
+- **Shift+V** enquanto há ordem ativa: cancela o ataque e remove o alvo.
+- **Shift+V** sem ordem ativa: alterna raio 5 → 10 → 15 → 20 → 25 → 30 → 5.
+- V pode ser remapeado em Controles do Minecraft.
+
+**Preview (PC):** inimigo recebe contorno azul; região recebe círculo horizontal
+no raio escolhido, cruz central e segundo círculo ~9 blocos acima mostrando a
+órbita prevista. Marcação confirmada é sincronizada pelo servidor e persiste
+ao desviar o olhar; HUD mostra raio e ação atual.
+
+Marcação de alvo/raycast é **validada pelo servidor**, sem coordenadas ou IDs
+de entidades enviados pelo cliente. Reaproveita voo/ataques 0.7.7, mantém
+comandos antigos como fallback (ex.: mobile), não cria entidades extras.
+A ordem sobrevive a recarregar o mundo, mas o raio local volta a 5 ao
+reiniciar o cliente. A prévia desenha uma geometria ideal: obstáculos podem
+mudar a rota real do dragão.
+
+**Antes de testar**, faça backup do mundo; teste os seis raios, Shift+V,
+inimigo, obstáculos e reload. O voo e efeito do fogo requerem playtest.
+Com mobGriefing true, solo de construções pode ficar carbonizado.
+
+---
+
 # Auren Minecraft 0.7.7 — marcação de alvos e bombardeio autônomo
 
 ## Marcar o que atacar (sem montar)
