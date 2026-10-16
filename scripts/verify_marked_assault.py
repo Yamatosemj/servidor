@@ -70,6 +70,11 @@ for phrase in ("boolean autonomousFire =", "boolean riddenFire =",
                "AurenScorchTerrain.scorch(level, scorchCenter, dragon,",
                "dragon.isAlliedTo(target)", "GameRules.RULE_MOBGRIEFING"):
     assert phrase in fire, phrase
+# Both the ray-hit face and the adjacent soul-fire placement must stay inside
+# the ordered circle; a boundary hit can otherwise create fire one block out.
+assert "withinArea(blockHit.getLocation())" in fire
+assert "withinArea(Vec3.atCenterOf(firePos))" in fire
+assert 4.5**2 <= 5**2 and not (5.5**2 <= 5**2)
 assert "BlockPos markedCenter, int radius" in terrain
 assert "dx * dx + dz * dz > radius * radius" in terrain
 assert "mod_version=0.7.7-marked-assault-alpha" in version
