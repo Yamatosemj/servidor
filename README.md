@@ -1,3 +1,27 @@
+# Auren Minecraft 0.7.23 — Caça terrestre, raio pequeno e terreno aquecido
+
+Pedido: o Auren adulto deve poder **caminhar para alcançar o inimigo e usar o sopro azul no chão**, em vez de decolar automaticamente; o pequeno pode atacar uma presa **marcada** com raios elétricos nas cavernas; o alcance da queimadura deve corresponder melhor à extensão do fogo; terra sem grama deve aquecer e sumir após exposição continuada.
+
+## Melhorias
+- **Caça no chão:** no modo inimigo V, o adulto prioriza caminho A* real até a presa quando está a até 35 blocos. Replaneja em intervalos de 35 ticks e não interrompe curvas continuamente. A até 24 blocos com linha de visão, lança seu jato azul normalmente mesmo parado/andando; a até 10 blocos pode parar de caminhar para disparar. Se a presa se esconde, aguarda oportunidade de navegação na caverna antes de escolher o voo; a caça aérea CE continua como alternativa.
+- **Entrada primeiro:** o caçador reconhece a entrada da caverna e, quando possível, caminha em tamanho adulto até uma zona externa segura próxima à boca antes de se transformar. O sistema continua sem pathfinding 3D perfeito e requer teste real.
+- **Raio na forma pequena:** durante a perseguição de uma criatura **marcada**, o dragão pequeno com visão direta (até 17 blocos) usa uma rajada elétrica curta, com warmup original, até 5 de dano por acerto e raio próximo ao impacto de 1,35 bloco, afetando SOMENTE aquela presa. Não usa comandos arbitrários do cliente, não ataca aliados, não destrói blocos e não substitui R/G do jogador montado. Fora do combate marcado, permanece com a mordida e as interações anteriores.
+- **Marca mais extensa:** a área de calor/queima no chão cresceu de aprox. 5–7 para 8–11 blocos irregulares, com densidade decrescente nas bordas; mais chamas reais quando as regras do Minecraft permitem. A lateral de parede também foi ampliada para acompanhar o sopro.
+- **Terra aquecida até desaparecer:** dirt, coarse dirt, rooted dirt, dirt path e suas versões carbonizadas acumulam calor e podem sumir após 165 pontos de exposição. Primeiro escurecem, sem explosão instantânea, com limites de segurança e `mobGriefing`; grama e rocha conservam suas progressões térmicas.
+- **Mantido:** voo CE, trajetórias orgânicas do bombardeio 0.7.22, animações, montaria, controles V/Shift+V/B/R/G e HUD H.
+
+## QA no jogo
+1. Marque zumbi em terreno aberto e observe se o adulto se aproxima **andando** e solta fogo sem decolar.
+2. Marque creeper após uma curva numa caverna acessível. Ele deve tentar caminhar para a entrada antes de voar. Se encolher, observar se o raio pequeno aparece e acerta o alvo sem acertar aliados.
+3. Deixe o alvo sem linha de visão: não deve lançar raios através das paredes.
+4. Queime terra sem grama por vários segundos; ela escurece e só então deve desaparecer.
+5. Compare a marca no solo com a largura da chama azul, sem criar quadrados perfeitos.
+6. Confirme bombardeio 0.7.22, raio de 5–30 blocos, modo montado e defesa espontânea sem regressão.
+
+**Build/CI atestam integração e verificações estruturais; a IA, dano e o efeito visual precisam de testes no Minecraft.**
+
+---
+
 # Auren Minecraft 0.7.22 — Bombardeio orgânico e cobertura variada
 
 Correção do modo área observada em jogo na 0.7.21: passadas muito retas, simétricas e concentradas nos mesmos blocos.

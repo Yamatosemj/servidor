@@ -46,8 +46,8 @@ assert "applyBitePose(model, dragon)" in renderer
 for token in (
     "IafDragonDestructionManager.transformBlockFire",
     "GameRules.RULE_MOBGRIEFING",
-    "for (int dx = -3; dx <= 3; ++dx)",
-    "for (int dz = -3; dz <= 3; ++dz)",
+    "for (int dx = -5; dx <= 5; ++dx)",
+    "for (int dz = -5; dz <= 5; ++dz)",
     "applyHeat(level, pos, tracker, time, gain)",
     "level.getBlockEntity(pos) != null",
     "level.hasChunkAt(pos)",
@@ -74,7 +74,7 @@ assert "AurenScorchedBlocks.register(modBus)" in main
 assert "ENTITIES.register(\"auren\"" in main
 assert "DeferredRegister.Items" not in main and "DeferredRegister.Items" not in registry
 assert "BlockItem(" not in registry and "BlockItem(" not in main
-assert "0.7.22-organic-area-bombing-alpha" in version
+assert "0.7.23-ground-hunt-electric-alpha" in version
 
 names=["chared_grass","chared_dirt","chared_gravel",
        "chared_cobblestone","chared_stone","chared_dirt_path"]

@@ -49,8 +49,11 @@ for fragment in (
 # Attack is server-only, user cannot select victim coordinates, friendly
 # fire is protected and no invisible CE projectiles/items are registered.
 assert "dragon.level() instanceof ServerLevel level" in lightning
-assert "dragon.getControllingPassenger() instanceof Player rider" in lightning
-assert "dragon.isOwnedBy(rider)" in lightning
+assert "dragon.getControllingPassenger() instanceof Player pilot" in lightning
+assert "dragon.getAttackOrders().getCompactLightningAim()" in lightning
+assert "if (compact && !dragon.getAttackOrders().isMarkedEnemy(target))" in lightning
+assert "double area = compact ? 1.35D : CE_DAMAGE_RADIUS" in lightning
+assert "dragon.isOwnedBy(pilot)" in lightning
 assert "tame.getOwnerUUID().equals(dragon.getOwnerUUID())" in lightning
 assert "addFreshEntity(" not in lightning
 assert "spawnLightningBolt(" not in lightning
@@ -87,7 +90,7 @@ assert "new LightningBoltData(" in renderer
 assert ".lifespan(4)" in renderer and ".spawn(LightningBoltData.SpawnFunction.NO_DELAY)" in renderer
 assert "this.lightningRenderer.render(" in renderer
 
-assert "mod_version=0.7.22-organic-area-bombing-alpha" in version
+assert "mod_version=0.7.23-ground-hunt-electric-alpha" in version
 jar=list((ROOT/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jar)==1,jar
 with ZipFile(jar[0]) as z:
