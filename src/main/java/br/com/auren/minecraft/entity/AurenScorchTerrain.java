@@ -14,14 +14,14 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SpreadingSnowyDirtBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
-/** World edits are server-owned, mobGriefing-gated and natural-terrain only. */
+/** World edits are server-owned, mobGriefing-gated and block-type-whitelisted. */
 public final class AurenScorchTerrain {
     private AurenScorchTerrain() {}
 
     /**
      * CE stage<=3 processes the cube centered on impact (one block around
-     * each axis). Only original terrain can become original CE-looking ash.
-     * No chests, buildings, farmland or player-crafted blocks are removed.
+     * each axis). Only whitelisted block types can become CE-looking scorch blocks.
+     * Player-placed dirt, stone and cobblestone are indistinguishable from natural blocks.
      */
     public static void scorch(ServerLevel level, BlockPos impact, AurenDragon dragon) {
         if (!level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)) return;
@@ -40,8 +40,8 @@ public final class AurenScorchTerrain {
 
     /**
      * Original CE fire transformation table: grass, dirt, gravel,
-     * cobblestone, overworld stone, dirt path. Ignores player blocks,
-     * existing scorch blocks, block entities and unloaded terrain.
+     * cobblestone, overworld stone, dirt path. Ignores non-whitelisted types, existing scorch blocks,
+     * block entities and unloaded terrain. Whitelisted player-placed blocks can be affected.
      *
      * The original CE has additional leaf/flower/log/ash transformations;
      * these intentionally remain outside the terrain-only v0.7.6 scope.
