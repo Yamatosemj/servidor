@@ -65,11 +65,19 @@ public final class AurenFireBreath {
     }
 
     public void tick() {
+        // Rider controls remain unchanged. Unmounted orders come ONLY from
+        // the server-side AurenAttackOrders, not an untrusted client packet.
+        Player rider = dragon.getControllingPassenger() instanceof Player pilot ? pilot : null;
+        Player owner = dragon.getOwner() instanceof Player player ? player : null;
+        Vec3 autoAim = dragon.getAttackOrders().getFireAim();
+        boolean riddenFire = rider != null && dragon.isOwnedBy(rider)
+                && dragon.isRiderFiring() && !dragon.isRiderLightning();
+        boolean autonomousFire = !dragon.isVehicle() && owner != null
+                && owner.isAlive() && owner.level() == dragon.level()
+                && autoAim != null && dragon.getFlightMode() == AurenFlightController.FLYING;
         if (!(dragon.level() instanceof ServerLevel level)
                 || !dragon.isAlive() || dragon.isSmallForm() || dragon.isOnShoulder()
-                || !dragon.isRiderFiring() || dragon.isRiderLightning()
-                || !(dragon.getControllingPassenger() instanceof Player rider)
-                || !dragon.isOwnedBy(rider)) {
+                || (!riddenFire && !autonomousFire)) {
             reset();
             return;
         }
@@ -84,8 +92,15 @@ public final class AurenFireBreath {
         }
 
         // Original CE rayTraceRider: controller's eye and view, 10*stage range.
-        Vec3 eye = rider.getEyePosition(1.0F);
-        Vec3 endpoint = eye.add(rider.getViewVector(1.0F).scale(CE_REACH));
+        Vec3 eye = riddenFire ? rider.getEyePosition(1.0F) : getHeadPosition();
+        Vec3 endpoint = riddenFire
+                ? eye.add(rider.getViewVector(1.0F).scale(CE_REACH)) : autoAim;
+        // CE stage-3 reach is 30 blocks. Do not artificially extend it for
+        // distant order waypoints: orbit until within range before firing.
+        if (autonomousFire && eye.distanceToSqr(endpoint) > CE_REACH * CE_REACH) {
+            reset();
+            return;
+        }
         BlockHitResult blockHit = level.clip(new ClipContext(
                 eye, endpoint, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, dragon));
         Vec3 burnTarget = blockHit.getType() == HitResult.Type.MISS
@@ -96,17 +111,21 @@ public final class AurenFireBreath {
         // The upstream CE block-only ray can pass through a mob in open sky.
         // Use vanilla ProjectileUtil to select the first hostile/non-allied
         // entity intersecting the sight ray, then apply CE area-breath there.
-        EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
-                level, dragon, eye, burnTarget, new AABB(eye, burnTarget).inflate(1.0D),
-                entity -> entity instanceof LivingEntity target && target.isAlive()
-                        && target != rider && target != dragon
-                        && !dragon.isAlliedTo(target)
-                        && !(target instanceof TamableAnimal tame
-                        && tame.isTame() && tame.getOwnerUUID() != null
-                        && tame.getOwnerUUID().equals(dragon.getOwnerUUID())));
-        if (entityHit != null) {
-            burnTarget = entityHit.getLocation();
-            impactBlock = null;
+        // An area order MUST aim at the marked place, not snap onto an
+        // unrelated entity passing across the view ray.
+        if (riddenFire || !dragon.getAttackOrders().isAreaOrder()) {
+            EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
+                    level, dragon, eye, burnTarget, new AABB(eye, burnTarget).inflate(1.0D),
+                    entity -> entity instanceof LivingEntity target && target.isAlive()
+                            && target != rider && target != owner && target != dragon
+                            && !dragon.isAlliedTo(target)
+                            && !(target instanceof TamableAnimal tame
+                            && tame.isTame() && tame.getOwnerUUID() != null
+                            && tame.getOwnerUUID().equals(dragon.getOwnerUUID())));
+            if (entityHit != null) {
+                burnTarget = entityHit.getLocation();
+                impactBlock = null;
+            }
         }
 
         Vec3 head = getHeadPosition();
@@ -150,7 +169,8 @@ public final class AurenFireBreath {
         // CE destruction manager applies a stage-scaled area breath at the
         // impact. Auren throttles hit ticks for compatibility on Zalith.
         if (this.burnProgress == CE_BURN_PROGRESS_MAX && dragon.tickCount % 5 == 0) {
-            applyBreathImpact(level, rider, streamEnd, impactBlock);
+            applyBreathImpact(level, riddenFire ? rider : owner, streamEnd, impactBlock,
+                    autonomousFire && dragon.getAttackOrders().isAreaOrder());
         }
     }
 
@@ -194,12 +214,14 @@ public final class AurenFireBreath {
 
     /** Stage-3 FireDragon destruction manager, without non-bundled CE blocks. */
     private void applyBreathImpact(ServerLevel level, Player rider,
-                                   Vec3 center, BlockHitResult blockHit) {
+                                   Vec3 center, BlockHitResult blockHit,
+                                   boolean areaOrder) {
         // CE attackDamageFire default=2, stage=3: 6 damage per hit.
         float damage = CE_STAGE * CE_FIRE_DAMAGE_SCALE;
         AABB bounds = new AABB(center, center).inflate(CE_IMPACT_RADIUS);
         for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, bounds)) {
             if (target == dragon || target == rider || !target.isAlive()) continue;
+            if (areaOrder && !withinArea(target.position())) continue;
             if (target instanceof TamableAnimal tame && tame.isTame()
                     && tame.getOwnerUUID() != null
                     && tame.getOwnerUUID().equals(dragon.getOwnerUUID())) continue;
@@ -214,13 +236,20 @@ public final class AurenFireBreath {
         // and only runs if mobGriefing is enabled.
         BlockPos scorchCenter = blockHit != null
                 ? blockHit.getBlockPos() : BlockPos.containing(center).below();
-        AurenScorchTerrain.scorch(level, scorchCenter, dragon);
+        if (areaOrder) {
+            AurenScorchTerrain.scorch(level, scorchCenter, dragon,
+                    dragon.getAttackOrders().getAreaCenter(),
+                    dragon.getAttackOrders().getRadius());
+        } else {
+            AurenScorchTerrain.scorch(level, scorchCenter, dragon);
+        }
 
         // Blue SOUL_FIRE persists only where vanilla soul fire can survive.
         // Do not place ordinary red fire or bypass block survival. On other
         // blocks, blue particles + entity burn still work as before.
         // Whitelisted terrain may temporarily turn into CE-textured scorched blocks.
         if (blockHit != null && blockHit.getType() == HitResult.Type.BLOCK
+                && (!areaOrder || withinArea(blockHit.getLocation()))
                 && level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)
                 && dragon.getRandom().nextBoolean()) {
             BlockPos firePos = blockHit.getBlockPos().relative(blockHit.getDirection());
@@ -229,5 +258,14 @@ public final class AurenFireBreath {
                 level.setBlockAndUpdate(firePos, Blocks.SOUL_FIRE.defaultBlockState());
             }
         }
+    }
+
+    private boolean withinArea(Vec3 point) {
+        BlockPos block = dragon.getAttackOrders().getAreaCenter();
+        int radius = dragon.getAttackOrders().getRadius();
+        if (block == null || radius < 5) return false;
+        double dx = point.x - (block.getX() + 0.5D);
+        double dz = point.z - (block.getZ() + 0.5D);
+        return dx * dx + dz * dz <= radius * radius;
     }
 }
