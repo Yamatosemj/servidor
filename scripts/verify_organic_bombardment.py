@@ -28,7 +28,8 @@ for token in (
     "safeAreaWaypoint(level, center,",
     "findDistributedAreaImpact(level, center)",
     "chooseAreaFocus(level, center)",
-    "if (best != null) rememberAreaImpact(center, best)",
+    "public void recordAreaImpact(Vec3 impact)",
+    "rememberAreaImpact(center, impact)",
     "int cell = areaCell(center, aim.x, aim.z)",
     "areaCoverage[cell] * 16.0D",
     "lastAreaImpact != null",
@@ -55,6 +56,8 @@ for old in (
 assert "MAX_MARK_DISTANCE = 64" in orders
 assert "selectedRadius % 5 != 0" in orders
 assert "&& !level.hasChunkAt(" not in orders or "level.hasChunkAt(" in orders
+assert "dragon.getAttackOrders().recordAreaImpact(center)" in fire
+assert "if (areaOrder && blockHit != null)" in fire
 assert "withinArea(target.position())" in fire
 assert "withinArea(blockHit.getLocation())" in fire
 assert "AurenScorchTerrain.scorchFace(" in fire

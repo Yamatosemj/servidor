@@ -449,6 +449,16 @@ public final class AurenAttackOrders {
         return row * 5 + col;
     }
 
+    /** Only the SERVER's actual breath impacts count as burned coverage. */
+    public void recordAreaImpact(Vec3 impact) {
+        if (mode != AREA || areaCenter == null || impact == null) return;
+        Vec3 center = Vec3.atCenterOf(areaCenter);
+        double dx = impact.x - center.x;
+        double dz = impact.z - center.z;
+        if (dx * dx + dz * dz <= radius * radius)
+            rememberAreaImpact(center, impact);
+    }
+
     private void rememberAreaImpact(Vec3 center, Vec3 impact) {
         int cell = areaCell(center, impact.x, impact.z);
         areaCoverage[cell] = Math.min(200, areaCoverage[cell] + 1);
@@ -653,7 +663,6 @@ public final class AurenAttackOrders {
                 best = aim;
             }
         }
-        if (best != null) rememberAreaImpact(center, best);
         return best;
     }
 

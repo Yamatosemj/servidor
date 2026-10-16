@@ -318,6 +318,10 @@ public final class AurenFireBreath {
         }
         previousGroundImpact = onWall ? null : thisGroundImpact;
         previousGroundImpactTick = dragon.tickCount;
+        // Coverage memory follows genuine 5-tick impacts, not merely the
+        // driver's requested aim (which could be blocked or not yet charged).
+        if (areaOrder && blockHit != null)
+            dragon.getAttackOrders().recordAreaImpact(center);
 
         // Blue SOUL_FIRE persists only where vanilla soul fire can survive.
         // Do not place ordinary red fire or bypass block survival. On other
