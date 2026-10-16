@@ -43,7 +43,8 @@ assert "new WaterAvoidingRandomStrollGoal" not in dragon
 idle=(root/"src/main/java/br/com/auren/minecraft/entity/AurenNaturalIdleGoal.java").read_text()
 assert "dragon.getFlightMode() == AurenFlightController.GROUNDED" in idle
 assert "dragon.getAttackOrders().hasOrder()" in idle
-assert dragon.count("&& !AurenDragon.this.getAttackOrders().hasOrder()") >= 2
+assert dragon.count("!AurenDragon.this.getAttackOrders().hasOrder()") >= 3
+assert "dragon.getAttackOrders().hasOrder()" in idle
 assert "&& waypoint != null && combatTicks < nextWaypointTick" in orders
 assert "tackleApproachPoint(level, enemy)" in orders
 assert "recoveryPoint(level, enemy)" in orders
