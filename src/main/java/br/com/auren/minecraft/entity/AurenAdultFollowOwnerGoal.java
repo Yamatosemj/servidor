@@ -57,6 +57,7 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
 
     private boolean adultMayFollow(LivingEntity player) {
         return this.dragon.isSmallForm() == this.baby
+                && !this.dragon.getAttackOrders().hasOrder()
                 && !this.dragon.isOnShoulder()
                 && !this.dragon.isVehicle()
                 && this.dragon.isTame()
@@ -109,7 +110,8 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
     public void stop() {
         this.owner = null;
         this.dragon.getNavigation().stop();
-        this.dragon.getFlightController().land();
+        if (!this.dragon.getAttackOrders().hasOrder())
+            this.dragon.getFlightController().land();
     }
 
     @Override
