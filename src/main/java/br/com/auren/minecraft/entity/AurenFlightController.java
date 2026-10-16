@@ -33,6 +33,10 @@ public final class AurenFlightController {
     private int ticksSinceOwner;
     private int flightTicks;
     private int obstructionTicks;
+    // A stationary marked-prey firing stance must NOT be represented by a
+    // moving waypoint a few centimetres above our current position.
+    private boolean holding;
+    private Vec3 holdFacing;
 
     AurenFlightController(AurenDragon dragon) {
         this.dragon = dragon;
@@ -80,6 +84,8 @@ public final class AurenFlightController {
 
         this.owner = targetOwner;
         this.patrolPoint = null;
+        this.holding = false;
+        this.holdFacing = null;
         this.ticksSinceOwner = 0;
         return true;
     }
@@ -102,6 +108,21 @@ public final class AurenFlightController {
         return true;
     }
 
+    /**
+     * Stop CE pursuit acceleration while breathing at hidden prey.
+     * Hold altitude with no artificial near-zero waypoint, and turn gently
+     * towards the impact: no runaway body rotation while stationary.
+     */
+    public boolean holdFacing(LivingEntity targetOwner, Vec3 aim) {
+        if (aim == null || !follow(targetOwner)) return false;
+        this.holding = true;
+        this.holdFacing = aim;
+        this.patrolPoint = null;
+        this.iafFlightManager.setFlightTarget(null);
+        this.iafFlightManager.setTacklePursuit(false);
+        return true;
+    }
+
     private boolean canLiftOff(ServerLevel level) {
         BlockPos above = dragon.blockPosition().above(2);
         return level.hasChunkAt(above)
@@ -114,6 +135,8 @@ public final class AurenFlightController {
                 || dragon.getFlightMode() == LANDING) return;
         this.owner = null;
         this.patrolPoint = null;
+        this.holding = false;
+        this.holdFacing = null;
         this.iafFlightManager.clear();
         dragon.setFlightMode(LANDING);
         dragon.setNoGravity(false);
@@ -129,6 +152,8 @@ public final class AurenFlightController {
         this.iafFlightManager.clear();
         this.owner = null;
         this.patrolPoint = null;
+        this.holding = false;
+        this.holdFacing = null;
         this.ticksSinceOwner = 0;
         this.flightTicks = 0;
         this.obstructionTicks = 0;
@@ -175,6 +200,25 @@ public final class AurenFlightController {
         this.flightTicks++;
         dragon.setNoGravity(true);
         dragon.fallDistance = 0;
+        if (this.holding) {
+            this.iafFlightManager.setFlightTarget(null);
+            // No horizontal acceleration and no yaw spin from a self-target.
+            // This preserves CE moving-flight physics outside this posture.
+            dragon.setDeltaMovement(dragon.getDeltaMovement().scale(0.72D));
+            if (this.holdFacing != null) {
+                Vec3 diff = this.holdFacing.subtract(dragon.position());
+                if (diff.x * diff.x + diff.z * diff.z > 0.25D) {
+                    float desiredYaw = (float) (Mth.atan2(diff.z, diff.x)
+                            * (180.0D / Math.PI)) - 90.0F;
+                    dragon.setYRot(AurenIafDragonFlightManager.approachDegrees(
+                            dragon.getYRot(), desiredYaw, 3.0F));
+                    dragon.yBodyRot = dragon.getYRot();
+                    dragon.setYHeadRot(dragon.getYRot());
+                }
+            }
+            this.obstructionTicks = 0;
+            return;
+        }
 
         if (state == TAKING_OFF && this.flightTicks >= TAKEOFF_TICKS)
             dragon.setFlightMode(FLYING);
