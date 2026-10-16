@@ -1,51 +1,44 @@
-"""CI regression guard for autonomous forward fire and area-only demolition."""
+"""Regression gate: fire ignites wood, NEVER directly destroys blocks.
+
+Static checks complement NeoForge compilation, not a substitute for playtest.
+"""
 from pathlib import Path
 from zipfile import ZipFile
-from math import cos, radians
 root=Path(__file__).resolve().parents[1]
-java=root/"src/main/java/br/com/auren/minecraft/entity"
-fire=(java/"AurenFireBreath.java").read_text()
-terrain=(java/"AurenScorchTerrain.java").read_text()
-orders=(java/"AurenAttackOrders.java").read_text()
-for value in ("MIN_FORWARD_DOT", "autonomousFire && !canAimForward(getHeadPosition(), autoAim)",
-              "private boolean canAimForward(", "double forwardX = -Math.sin(yaw)",
-              "double forwardZ = Math.cos(yaw)", "AurenScorchTerrain.bombard("):
-    assert value in fire, value
-for value in ("public static void bombard(", "GameRules.RULE_MOBGRIEFING",
-              "markedCenter == null || radius < 5 || radius > 30",
-              "dx * dx + dz * dz > radius * radius", "destroyed >= 20",
-              "level.hasChunkAt(pos)", "level.getBlockEntity(pos) != null",
-              "hardness < 0 || hardness > 8.0F",
-              "state.is(BlockTags.PLANKS)", "state.is(Blocks.GLASS)",
-              "level.destroyBlock(pos, false)"):
-    assert value in terrain, value
-for value in ("findForwardAreaImpact(", "getHeightmapPos(",
-              "Heightmap.Types.MOTION_BLOCKING_NO_LEAVES",
-              "dragon.getFireBreathHeadPosition()",
-              "distanceSq > 25.0D * 25.0D", "distanceSq < 7.0D * 7.0D",
-              "nextTacticTick = combatTicks + 75"):
-    assert value in orders, value
-# A 55-degree arc is still strictly forward; backward attacks remain invalid.
-assert 1.0 >= cos(radians(55))
-assert -1.0 < cos(radians(55))
-assert cos(radians(70)) < cos(radians(55))
-for token in ("igniteVillage(", "BlockTags.MINEABLE_WITH_SHOVEL",
-              "BlockTags.MINEABLE_WITH_PICKAXE", "Blocks.FIRE.defaultBlockState()",
-              "level.getBlockEntity(wood) != null"):
+java=root/"src/main/java/br/com/auren/minecraft"
+fire=(java/"entity/AurenFireBreath.java").read_text()
+terrain=(java/"entity/AurenScorchTerrain.java").read_text()
+animation=(java/"client/AurenOriginalAnimations.java").read_text()
+orders=(java/"entity/AurenAttackOrders.java").read_text()
+for forbidden in ("destroyBlock(", "removeBlock(", "setBlock(\"air\"", "createExplosion"):
+    assert forbidden not in fire and forbidden not in terrain, forbidden
+assert "AurenScorchTerrain.bombard(" not in fire
+assert "public static void bombard(" not in terrain
+assert "canAimForward(" not in fire
+assert "MIN_FORWARD_DOT" not in fire
+assert "getHeadPosition()" in fire
+assert "neckLower * 0.65D" in fire
+assert "AurenScorchTerrain.igniteVillage(" in fire
+assert "AurenScorchTerrain.scorch(level, scorchCenter, dragon);" in fire
+for token in ("lowerBreathBone(", "streamBreath", "streamCharge",
+              '"Neck1", 0.06F', '"Neck2", 0.10F',
+              '"Neck3", 0.12F', '"Head", 0.17F'):
+    assert token in animation, token
+for token in ("public static void igniteVillage(", "GameRules.RULE_MOBGRIEFING",
+              "BlockTags.WOODEN_STAIRS", "BlockTags.WOODEN_SLABS",
+              "BlockTags.WOODEN_DOORS", "BlockTags.PLANKS",
+              "level.getBlockEntity(wood) != null", "lit >= 16",
+              "Blocks.FIRE.defaultBlockState().canSurvive(level, firePos)",
+              "level.setBlockAndUpdate(firePos, Blocks.FIRE.defaultBlockState())"):
     assert token in terrain, token
-for token in ("aimGraceTicks++ < 16", "this.burnProgress - 1",
-              "AurenScorchTerrain.igniteVillage(", "Math.cos(Math.toRadians(55.0D))"):
-    assert token in fire, token
-for token in ("areaFiringPass = areaPhase == 2", "safeAreaWaypoint(",
-              "nextWaypointTick = combatTicks + (areaFiringPass ? 180 : 120)"):
+for token in ("findForwardAreaImpact(", "areaFiringPass = areaPhase == 2",
+              "safeAreaWaypoint(", "nextSweepTick = combatTicks + 3"):
     assert token in orders, token
-for r in [5,10,15,20,25,30]:
-    assert (r+1)**2 > r*r
-assert "mod_version=0.7.11-sustained-fire-alpha" in (root/"gradle.properties").read_text()
+assert "0.7.12-fire-ignition-alpha" in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
-assert len(jars)==1,jars
-with ZipFile(jars[0]) as z:
-    assert z.testzip() is None
-    for cls in ("AurenAttackOrders","AurenScorchTerrain","AurenFireBreath"):
-        assert f"br/com/auren/minecraft/entity/{cls}.class" in z.namelist()
-print("PASS: front-only autonomous fire, bounded destructive area, tactical distance")
+assert len(jars)==1, jars
+with ZipFile(jars[0]) as jar:
+    assert jar.testzip() is None
+    for cls in ("AurenAttackOrders", "AurenScorchTerrain", "AurenFireBreath"):
+        assert "br/com/auren/minecraft/entity/"+cls+".class" in jar.namelist()
+print("PASS: no direct demolition or angle gate, real fire ignition, lowered CE breath pose")

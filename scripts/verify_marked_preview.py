@@ -54,7 +54,7 @@ assert 'isAreaEnabled()' in orders
 assert 'getMarkedEnemyEntityId()' in orders
 assert 'DRAGON_BREATH.isDown()' in client and 'DRAGON_LIGHTNING.isDown()' in client
 assert 'Commands.literal("atacar")' in server and 'Commands.literal("parar")' in server
-assert 'mod_version=0.7.11-sustained-fire-alpha' in (root / 'gradle.properties').read_text()
+assert 'mod_version=0.7.12-fire-ignition-alpha' in (root / 'gradle.properties').read_text()
 jars = list((root / 'build/libs').glob('aurenminecraft-*.jar'))
 assert len(jars) == 1, jars
 with ZipFile(jars[0]) as jar:
