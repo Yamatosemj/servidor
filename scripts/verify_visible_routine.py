@@ -32,6 +32,9 @@ for x in (
     "dragon.getMind().idleUnready(",
     "dragon.getMind().idlePathFailed()",
     "dragon.getMind().idleFinished(",
+    "reportRouteCompletion();",
+    "dragon.getMind().idleRouteEnded(",
+    "initialOwnerDistance - dragon.distanceTo(owner)",
     "dragon.getAttackOrders().hasOrder()",
 ):
     assert x in idle,x
@@ -39,6 +42,9 @@ assert "new AurenLocalDecisionPolicy" not in idle
 for x in (
     "private int idleStarts",
     "private int failedIdlePaths",
+    "private int stalledIdleRoutes",
+    "public void idleRouteEnded(String route, double progressBlocks)",
+    '" | ultimo trajeto: " + lastRouteResult',
     "idleStatus = \"executando: \" + switch (activity)",
     "case APPROACH_OWNER -> \"aproximando do dono\"",
     "public void idleUnready(String reason)",
