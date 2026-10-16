@@ -123,11 +123,14 @@ public final class AurenWorldPerception {
                 .map(key -> key.location().getPath().replace('_', ' '))
                 .orElse("desconhecido");
         boolean sky = level.canSeeSky(ownerPos.above());
-        BlockState ceiling = level.getBlockState(ownerPos.above(2));
+        // The topmost surface, not the block two blocks above the player's
+        // head: natural caves often have HIGH ceilings of air underneath rock.
+        int surfaceY = level.getHeightmapPos(
+                net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                ownerPos).getY();
+        int roofDepth = surfaceY - ownerPos.getY();
         String environment = sky ? "a céu aberto"
-                : (ceiling.is(Blocks.STONE) || ceiling.is(Blocks.DEEPSLATE)
-                        || ceiling.is(Blocks.TUFF) || ceiling.is(Blocks.DIRT)
-                        ? "caverna" : "interior/abrigo");
+                : roofDepth >= 7 ? "caverna" : "interior/abrigo";
         String weather = level.isThundering() ? "tempestade"
                 : level.isRainingAt(ownerPos) ? "chuva" : "tempo limpo";
         long daytime = level.getDayTime() % 24000L;

@@ -16,6 +16,7 @@ for token in (
  "entity instanceof Animal", "entity instanceof Player",
  "owner.getHealth() <= owner.getMaxHealth() * 0.35F",
  "level.getBiome(ownerPos).unwrapKey()", "level.canSeeSky(ownerPos.above())",
+ "int roofDepth = surfaceY - ownerPos.getY()", "roofDepth >= 7",
  "level.isRainingAt(ownerPos)", "level.isThundering()",
  "level.getDayTime() % 24000L", "state.is(Blocks.LAVA)",
  "state.is(Blocks.FIRE)", "state.is(Blocks.BELL)",
