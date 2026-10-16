@@ -393,6 +393,7 @@ final class AurenRelentlessHunt {
         if (caveEntrance == null) return null;
         Path chosen = null;
         double bestCost = Double.POSITIVE_INFINITY;
+        int pathsChecked = 0;
         for (int dist : new int[] {3, 5, 8, 11}) {
             for (int i = 0; i < 8; i++) {
                 double angle = i * Math.PI / 4.0D;
@@ -401,6 +402,9 @@ final class AurenRelentlessHunt {
                 for (int dy : new int[] {0, 1, -1}) {
                     BlockPos test = new BlockPos(x, caveEntrance.getY() + dy, z);
                     if (!safeAdultGround(level, test)) continue;
+                    // A* on Android is expensive; never attempt unlimited
+                    // full routes within one server tick.
+                    if (++pathsChecked > 28) return chosen;
                     Path path = dragon.getNavigation().createPath(test, 0);
                     if (path == null || !path.canReach()) continue;
                     double score = dragon.blockPosition().distSqr(test) * 0.25D
@@ -458,8 +462,9 @@ final class AurenRelentlessHunt {
 
         if (dragon.position().distanceToSqr(Vec3.atCenterOf(caveEntrance))
                 > 11.0D * 11.0D) {
-            if (!dragon.getNavigation().isDone()
-                    && dragon.tickCount < nextGroundMouthPathTick) return true;
+            // Do not overwrite a valid approach route just because the
+            // navigator temporarily considers the next corner completed.
+            if (dragon.tickCount < nextGroundMouthPathTick) return true;
             if (dragon.tickCount >= nextGroundMouthPathTick) {
                 nextGroundMouthPathTick = dragon.tickCount + 55;
                 Path approach = groundCaveApproach(level);
