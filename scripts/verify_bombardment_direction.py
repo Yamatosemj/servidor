@@ -41,7 +41,7 @@ for token in ("areaFiringPass = areaPhase == 2", "safeAreaWaypoint(",
     assert token in orders, token
 for r in [5,10,15,20,25,30]:
     assert (r+1)**2 > r*r
-assert "mod_version=0.7.10-directional-bombardment-alpha" in (root/"gradle.properties").read_text()
+assert "mod_version=0.7.11-sustained-fire-alpha" in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars
 with ZipFile(jars[0]) as z:
