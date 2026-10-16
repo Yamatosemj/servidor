@@ -119,9 +119,12 @@ public final class AurenAttackOrders {
         if (mode == NONE || !(dragon.level() instanceof ServerLevel level)) return;
         // Keep vanilla owner-hurt goal from redirecting a manually marked attack.
         dragon.setTarget(null);
+        // Autonomous orders pause during mounted flight without changing
+        // the rider's existing CE gravity/flight mode.
+        if (dragon.isVehicle()) return;
         if (!(dragon.getOwner() instanceof ServerPlayer owner)
                 || !owner.isAlive() || owner.isSpectator() || owner.level() != level
-                || !dragon.isAlive() || dragon.isVehicle() || dragon.isSmallForm()
+                || !dragon.isAlive() || dragon.isSmallForm()
                 || dragon.isOnShoulder() || dragon.isOrderedToSit()) {
             dragon.getFlightController().land();
             return;
