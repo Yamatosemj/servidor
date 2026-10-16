@@ -43,7 +43,9 @@ for token in (
   "pendingRestore = true",
   "if (pendingRestore) {",
   "walkToSafeExit();",
-  "&& caveLanding == null",
+  "(caveLanding == null || caveRouteExhausted)",
+  "compactLastProgressTick",
+  "caveRouteExhausted = true",
   "compact = false;",
 ):
     assert token in hunt, token

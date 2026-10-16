@@ -51,7 +51,10 @@ final class AurenRelentlessHunt {
     private boolean noAerialRoute;
     private boolean routeChecked;
     private boolean attemptedCave;
+    private boolean caveRouteExhausted;
     private boolean compact;
+    private int compactLastProgressTick;
+    private double compactClosestDistanceSq;
     private boolean pendingRestore;
     private BlockPos lastCaveAttempt;
     private Vec3 caveLanding;
@@ -89,6 +92,7 @@ final class AurenRelentlessHunt {
         routeChecked = false;
         noAerialRoute = false;
         attemptedCave = false;
+        caveRouteExhausted = false;
         caveLanding = null;
         lastSafeAdultPosition = null;
         fireAim = null;
@@ -106,6 +110,7 @@ final class AurenRelentlessHunt {
         noAerialRoute = false;
         routeChecked = false;
         attemptedCave = false;
+        caveRouteExhausted = false;
         lastCaveAttempt = null;
         caveLanding = null;
         landingRefreshTick = 0;
@@ -235,8 +240,10 @@ final class AurenRelentlessHunt {
     private Path findCaveScoutingPath(ServerLevel level, LivingEntity enemy) {
         Path bestPath = null;
         double bestScore = Double.POSITIVE_INFINITY;
+        int inspected = 0;
         for (int distance : new int[] {2, 4, 7, 10}) {
             for (int i = 0; i < 12; i++) {
+                if (++inspected > 16) return bestPath;
                 double theta = i * Math.PI / 6.0D;
                 BlockPos pos = BlockPos.containing(
                         enemy.getX() + Math.cos(theta) * distance,
@@ -306,12 +313,16 @@ final class AurenRelentlessHunt {
         if (route == null || !route.canReach()) {
             // No route: stay mobile. Undo temporary shrinking where safe
             // instead of entering a permanent pendingRestore deadlock.
+            caveRouteExhausted = true;
             pendingRestore = true;
             tryRestore();
             if (pendingRestore) walkToSafeExit();
             return true;
         }
         compact = true;
+        caveRouteExhausted = false;
+        compactLastProgressTick = dragon.tickCount;
+        compactClosestDistanceSq = dragon.distanceToSqr(enemy);
         pendingRestore = false;
         failedGroundRoutes = 0;
         nextNavigationCheck = 0;
@@ -331,6 +342,23 @@ final class AurenRelentlessHunt {
             dragon.getNavigation().stop();
             return;
         }
+        double currentDistance = dragon.distanceToSqr(enemy);
+        if (currentDistance + 2.25D < compactClosestDistanceSq) {
+            compactClosestDistanceSq = currentDistance;
+            compactLastProgressTick = dragon.tickCount;
+        }
+        // A partial route to the *outside* of a cave is not proof we can
+        // actually reach the prey. Detect failed progress before deciding
+        // this cave is sealed and permitting a last-resort stone breach.
+        if (dragon.tickCount - compactLastProgressTick > 160
+                && currentDistance > 9.0D) {
+            caveRouteExhausted = true;
+            compact = false;
+            pendingRestore = true;
+            dragon.getNavigation().stop();
+            walkToSafeExit();
+            return;
+        }
         if (meleeCooldown > 0) --meleeCooldown;
         if (meleeCooldown == 0 && dragon.getBoundingBox().inflate(0.65D)
                 .intersects(enemy.getBoundingBox()) && dragon.hasLineOfSight(enemy)) {
@@ -346,6 +374,7 @@ final class AurenRelentlessHunt {
                 dragon.getNavigation().moveTo(path, 1.17D);
                 failedGroundRoutes = 0;
             } else if (++failedGroundRoutes >= 4) {
+                caveRouteExhausted = true;
                 compact = false;
                 pendingRestore = true;
                 dragon.getNavigation().stop();
@@ -375,6 +404,8 @@ final class AurenRelentlessHunt {
             routeChecked = false;
             noAerialRoute = false;
             attemptedCave = false;
+            caveRouteExhausted = false;
+            caveLanding = null;
             siegeCharges = 0;
             return false;
         }
@@ -382,6 +413,8 @@ final class AurenRelentlessHunt {
         if (lastCaveAttempt != null
                 && enemy.blockPosition().distSqr(lastCaveAttempt) > 10.0D) {
             attemptedCave = false;
+            caveRouteExhausted = false;
+            caveLanding = null;
             lastCaveAttempt = null;
         }
         if (blockedTicks < COVER_BREATH_DELAY) return false;
@@ -412,7 +445,7 @@ final class AurenRelentlessHunt {
 
         if (blockedTicks >= SIEGE_DELAY && routeChecked && noAerialRoute
                 && (!shelteredUnderground(level, enemy) || attemptedCave)
-                && caveLanding == null
+                && (caveLanding == null || caveRouteExhausted)
                 && siegeCharges < MAX_SIEGE_CHARGES && dragon.tickCount >= nextSiegeTick
                 && canBreachRock(level, owner, enemy, wall.getBlockPos())) {
             // Localized vanilla MOB explosion (respects mobGriefing and
