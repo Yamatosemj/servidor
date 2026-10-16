@@ -45,6 +45,8 @@ public final class AurenFireBreath {
     private static final float CE_FIRE_DAMAGE_SCALE = 2.0F;
     private static final int CE_IGNITE_SECONDS = 5 + CE_STAGE * 5;
     private static final float CE_RENDER_SIZE = 3.25F / 0.35F;
+    // Autonomous attacks must respect where the actual dragon muzzle faces.
+    private static final double MIN_FORWARD_DOT = Math.cos(Math.toRadians(35.0D));
 
     private final AurenDragon dragon;
     private int fireBreathTicks;
@@ -79,6 +81,14 @@ public final class AurenFireBreath {
                 || !dragon.isAlive() || dragon.isSmallForm() || dragon.isOnShoulder()
                 || (!riddenFire && !autonomousFire)) {
             reset();
+            return;
+        }
+
+        // Charge while turning, but do not emit fire outside the muzzle's
+        // forward arc. Mounted R retains the original rider-view behavior.
+        if (autonomousFire && !canAimForward(getHeadPosition(), autoAim)) {
+            this.fireBreathTicks = Math.min(CE_WARMUP_TICKS, this.fireBreathTicks + 1);
+            this.burnProgress = 0;
             return;
         }
 
@@ -174,6 +184,18 @@ public final class AurenFireBreath {
         }
     }
 
+    /** Autonomous fire can never curve around the body or shoot backward. */
+    private boolean canAimForward(Vec3 muzzle, Vec3 aim) {
+        Vec3 delta = aim.subtract(muzzle);
+        double horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
+        if (horizontal < 1.0D || muzzle.distanceToSqr(aim) > CE_REACH * CE_REACH)
+            return false;
+        double yaw = Math.toRadians(dragon.getYRot());
+        double forwardX = -Math.sin(yaw);
+        double forwardZ = Math.cos(yaw);
+        return (delta.x * forwardX + delta.z * forwardZ) / horizontal >= MIN_FORWARD_DOT;
+    }
+
     /**
      * Adapted from CE DragonBaseEntity.getHeadPosition, using stage-3 size
      * and Auren's synced flight blend (no custom mouth-part entity exists).
@@ -237,6 +259,11 @@ public final class AurenFireBreath {
         BlockPos scorchCenter = blockHit != null
                 ? blockHit.getBlockPos() : BlockPos.containing(center).below();
         if (areaOrder) {
+            // Stronger CE-inspired strike exists ONLY for explicitly marked
+            // aerial bombardment; riding and creature combat remain unchanged.
+            AurenScorchTerrain.bombard(level, scorchCenter, dragon,
+                    dragon.getAttackOrders().getAreaCenter(),
+                    dragon.getAttackOrders().getRadius());
             AurenScorchTerrain.scorch(level, scorchCenter, dragon,
                     dragon.getAttackOrders().getAreaCenter(),
                     dragon.getAttackOrders().getRadius());
