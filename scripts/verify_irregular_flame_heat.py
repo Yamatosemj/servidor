@@ -14,13 +14,13 @@ fire=(java/"AurenFireBreath.java").read_text()
 orders=(java/"AurenAttackOrders.java").read_text()
 
 for token in (
-    "for (int dx = -3; dx <= 3; ++dx)",
-    "for (int dz = -3; dz <= 3; ++dz)",
+    "for (int dx = -5; dx <= 5; ++dx)",
+    "for (int dz = -5; dz <= 5; ++dz)",
     "double offsetX = (dragon.getRandom().nextDouble() - 0.5D) * 0.7D",
-    "double coverage = Math.max(0.22D, 0.93D - distance * 0.60D)",
+    "double coverage = Math.max(0.20D, 0.94D - distance * 0.57D)",
     "if (distance > 1.0D) continue;",
     "if (dragon.getRandom().nextDouble() > coverage) continue;",
-    "MAX_FLAMES_PER_IMPACT = 12",
+    "MAX_FLAMES_PER_IMPACT = 16",
     "igniteSurface(level, pos, markedCenter, radius)",
     "Blocks.FIRE.defaultBlockState()",
     "Blocks.SOUL_FIRE.defaultBlockState()",
@@ -32,6 +32,7 @@ for token in (
     "SCORCH_HEAT = 28",
     "MAGMA_HEAT = 135",
     "GRASS_BREAK_HEAT = 115",
+    "DIRT_BREAK_HEAT = 165",
     "MAGMA_BREAK_HEAT = 330",
     "if (cell.heat >= MAGMA_HEAT)",
     "if (cell.heat >= MAGMA_BREAK_HEAT)",
@@ -68,7 +69,7 @@ for token in (
 # removed by the heat stages. No generic demolition or explosion APIs.
 assert "destroyBlock(" not in terrain and "removeBlock(" not in terrain
 assert "createExplosion" not in terrain and "createExplosion" not in fire
-assert terrain.count("after = Blocks.AIR.defaultBlockState()") == 2
+assert terrain.count("after = Blocks.AIR.defaultBlockState()") == 3
 assert "if (!eligible(original)" in terrain
 assert "level.getBlockEntity(wood) != null" in terrain
 assert "areaFiringPass = areaPhase == 2 || areaPhase == 3" in orders
@@ -80,22 +81,22 @@ shapes=set()
 for _ in range(120):
     ox=(rng.random()-0.5)*0.7
     oz=(rng.random()-0.5)*0.7
-    rx=2.2+rng.random()
-    rz=2.0+rng.random()*1.2
+    rx=3.6+rng.random()*1.5
+    rz=3.5+rng.random()*1.6
     tiles=set()
-    for dx in range(-3,4):
-        for dz in range(-3,4):
+    for dx in range(-5,6):
+        for dz in range(-5,6):
             d=((dx-ox)/rx)**2+((dz-oz)/rz)**2
             if d>1.0: continue
-            coverage=max(0.22,0.93-d*0.60)
+            coverage=max(0.20,0.94-d*0.57)
             if (dx,dz)!=(0,0) and rng.random()>coverage:continue
             tiles.add((dx,dz))
     assert (0,0) in tiles
-    assert len(tiles) < 49  # not a filled square
+    assert len(tiles) < 121  # not a filled square
     shapes.add(frozenset(tiles))
 assert len(shapes)>110, len(shapes)
-assert 0<28<135<330 and 28<195<330
-assert "mod_version=0.7.22-organic-area-bombing-alpha" in (root/"gradle.properties").read_text()
+assert 0<28<135<330 and 28<115<165<330
+assert "mod_version=0.7.23-ground-hunt-electric-alpha" in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars
 with ZipFile(jars[0]) as jar:

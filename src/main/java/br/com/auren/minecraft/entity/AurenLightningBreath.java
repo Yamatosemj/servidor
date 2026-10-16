@@ -67,11 +67,17 @@ public final class AurenLightningBreath {
     }
 
     public void tick() {
+        Player rider = dragon.getControllingPassenger() instanceof Player pilot
+                && dragon.isOwnedBy(pilot) ? pilot : null;
+        Player owner = dragon.getOwner() instanceof Player guardian ? guardian : null;
+        Vec3 compactAim = dragon.getAttackOrders().getCompactLightningAim();
+        boolean mountedLightning = rider != null && !dragon.isSmallForm()
+                && dragon.isRiderLightning();
+        boolean compactLightning = compactAim != null && owner != null
+                && owner.isAlive() && owner.level() == dragon.level();
         if (!(dragon.level() instanceof ServerLevel level)
-                || !dragon.isAlive() || dragon.isSmallForm() || dragon.isOnShoulder()
-                || !dragon.isRiderLightning()
-                || !(dragon.getControllingPassenger() instanceof Player rider)
-                || !dragon.isOwnedBy(rider)) {
+                || !dragon.isAlive() || dragon.isOnShoulder()
+                || (!mountedLightning && !compactLightning)) {
             reset();
             return;
         }
@@ -89,8 +95,10 @@ public final class AurenLightningBreath {
 
         // Original DragonBaseEntity.rayTraceRider, with server ownership
         // and no client-supplied coordinates. Stage 3: 10*3 = 30 blocks.
-        Vec3 eye = rider.getEyePosition(1.0F);
-        Vec3 endpoint = eye.add(rider.getViewVector(1.0F).scale(CE_REACH));
+        Vec3 eye = compactLightning ? dragon.getFireBreathHeadPosition()
+                : rider.getEyePosition(1.0F);
+        Vec3 endpoint = compactLightning ? compactAim
+                : eye.add(rider.getViewVector(1.0F).scale(CE_REACH));
         BlockHitResult blockHit = level.clip(new ClipContext(
                 eye, endpoint, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, dragon));
         Vec3 target = blockHit.getType() == HitResult.Type.MISS
@@ -98,15 +106,19 @@ public final class AurenLightningBreath {
 
         // Prefer the first attackable entity BEFORE the first solid block,
         // not monsters behind structures or the owner's tame animals.
-        EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
-                level, dragon, eye, target, new AABB(eye, target).inflate(1.0D),
-                entity -> entity instanceof LivingEntity living && living.isAlive()
-                        && living != rider && living != dragon
-                        && !dragon.isAlliedTo(living)
-                        && !(living instanceof TamableAnimal tame && tame.isTame()
-                            && tame.getOwnerUUID() != null
-                            && tame.getOwnerUUID().equals(dragon.getOwnerUUID())));
-        if (entityHit != null) target = entityHit.getLocation();
+        // Compact hunter already has one server-validated MARKED prey. Do
+        // not retarget the bolt to bystanders or the owner's other pets.
+        if (mountedLightning) {
+            EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
+                    level, dragon, eye, target, new AABB(eye, target).inflate(1.0D),
+                    entity -> entity instanceof LivingEntity living && living.isAlive()
+                            && living != rider && living != dragon
+                            && !dragon.isAlliedTo(living)
+                            && !(living instanceof TamableAnimal tame && tame.isTame()
+                                && tame.getOwnerUUID() != null
+                                && tame.getOwnerUUID().equals(dragon.getOwnerUUID())));
+            if (entityHit != null) target = entityHit.getLocation();
+        }
 
         // Prevent mouth-to-target line clipping through a wall. The CE
         // similarly stops/redirects lightning when a ray is blocked.
@@ -131,20 +143,26 @@ public final class AurenLightningBreath {
                 this.burnProgress / (double) CE_BURN_PROGRESS_MAX);
         dragon.setLightningTarget(currentEnd);
         if (this.burnProgress >= CE_BURN_PROGRESS_MAX && dragon.tickCount % 5 == 0) {
-            applyBreathImpact(level, rider, currentEnd);
+            applyBreathImpact(level, compactLightning ? owner : rider,
+                    currentEnd, compactLightning);
         }
     }
 
     /** Lightning branch of CE destruction manager, without mod-specific blocks. */
-    private void applyBreathImpact(ServerLevel level, Player rider, Vec3 center) {
+    private void applyBreathImpact(ServerLevel level, Player rider,
+                                   Vec3 center, boolean compact) {
         if (!level.hasChunkAt(BlockPos.containing(center))) return;
 
-        float damage = CE_STAGE * CE_LIGHTNING_DAMAGE_SCALE;
-        // Source uses AABB with radius 3.5 around center block.
-        AABB bounds = new AABB(center, center).inflate(CE_DAMAGE_RADIUS);
+        // The little dragon is dangerous but does not project a huge
+        // adult-scale area shock that hits unrelated creatures in a tunnel.
+        float damage = compact ? 5.0F : CE_STAGE * CE_LIGHTNING_DAMAGE_SCALE;
+        double area = compact ? 1.35D : CE_DAMAGE_RADIUS;
+        AABB bounds = new AABB(center, center).inflate(area);
         for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, bounds)) {
             if (target == dragon || target == rider || !target.isAlive()
                     || target.isSpectator()) continue;
+            if (compact && !dragon.getAttackOrders().isMarkedEnemy(target))
+                continue;
             if (target instanceof TamableAnimal tame && tame.isTame()
                     && tame.getOwnerUUID() != null
                     && tame.getOwnerUUID().equals(dragon.getOwnerUUID())) continue;

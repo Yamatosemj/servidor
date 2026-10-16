@@ -15,6 +15,7 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.ClipContext;
@@ -42,6 +43,9 @@ public final class AurenAttackOrders {
     private int nextSweepTick;
     private int meleeCooldown;
     private int sightLostTicks;
+    private int groundNextPathTick;
+    private int groundRouteFailedTicks;
+    private BlockPos groundRouteTarget;
     private int areaLegs;
     // 0: new organic sortie, 1: enter, 2: curved firing bend, 3: firing exit.
     // CE flight controls still steer; only waypoints/impact decisions change.
@@ -88,6 +92,29 @@ public final class AurenAttackOrders {
     public int getRadius() { return radius; }
     public Vec3 getFireAim() { return fireAim; }
 
+    /**
+     * Compact hunter's electric breath is a MARKED-PREY ability, not an
+     * automatic attack on unrelated hostiles. Sight and distance are checked
+     * every tick on the server, while a real ground path is still followed.
+     */
+    public boolean isMarkedEnemy(LivingEntity candidate) {
+        return mode == ENEMY && candidate != null
+                && markedEnemy != null && markedEnemy.equals(candidate.getUUID())
+                && canMarkTarget(candidate);
+    }
+
+    public Vec3 getCompactLightningAim() {
+        if (mode != ENEMY || !hunter.isCompact() || !dragon.isSmallForm()
+                || dragon.isOnShoulder() || dragon.isVehicle()
+                || dragon.getFlightMode() != AurenFlightController.GROUNDED)
+            return null;
+        LivingEntity enemy = recentlyResolvedEnemy;
+        if (!canMarkTarget(enemy) || !dragon.hasLineOfSight(enemy)
+                || dragon.distanceToSqr(enemy) > 17.0D * 17.0D)
+            return null;
+        return enemy.getBoundingBox().getCenter();
+    }
+
     public String description() {
         if (mode == AREA && areaCenter != null)
             return "Bombardeio livre (" + radius + " blocos), centro " + areaCenter.toShortString();
@@ -103,6 +130,9 @@ public final class AurenAttackOrders {
         nextSweepTick = 0;
         meleeCooldown = 0;
         sightLostTicks = 0;
+        groundNextPathTick = 0;
+        groundRouteFailedTicks = 0;
+        groundRouteTarget = null;
         areaLegs = 0;
         areaPhase = 0;
         areaRunDirection = null;
@@ -313,6 +343,56 @@ public final class AurenAttackOrders {
         tackleBreakawayUntil = 0;
     }
 
+    /**
+     * Prefer a REAL ground A* route before taking off. The marked target
+     * is not a flight order: pursuing on foot allows Auren to approach the
+     * cave entrance rather than hovering above its ceiling.
+     *
+     * Replan sparingly to avoid resetting turns at every corner. If the adult
+     * has no route to a concealed target, hold off on takeoff long enough for
+     * the cave-mouth/small-form hunter to get a chance at 110 ticks.
+     */
+    private boolean tickGroundEnemy(ServerLevel level, LivingEntity enemy,
+                                    boolean directSight) {
+        if (dragon.getFlightMode() != AurenFlightController.GROUNDED
+                || dragon.isSmallForm() || dragon.isVehicle()) return false;
+        double distanceSq = dragon.distanceToSqr(enemy);
+        if (distanceSq > 35.0D * 35.0D) return false;
+
+        if (combatTicks >= groundNextPathTick
+                || groundRouteTarget == null
+                || groundRouteTarget.distSqr(enemy.blockPosition()) > 9.0D) {
+            groundNextPathTick = combatTicks + 35;
+            Path path = dragon.getNavigation().createPath(enemy, 0);
+            if (path != null && path.canReach()) {
+                groundRouteFailedTicks = 0;
+                groundRouteTarget = enemy.blockPosition();
+                if (distanceSq > 10.0D * 10.0D)
+                    dragon.getNavigation().moveTo(path, 1.12D);
+                else
+                    dragon.getNavigation().stop();
+            } else {
+                groundRouteTarget = null;
+                groundRouteFailedTicks = Math.min(300, groundRouteFailedTicks + 35);
+            }
+        }
+
+        if (directSight && distanceSq <= 24.0D * 24.0D) {
+            // Fire from the ground. Hold far enough away for the fire cone;
+            // do not take off merely to trigger the fire-breath state.
+            if (distanceSq <= 10.0D * 10.0D)
+                dragon.getNavigation().stop();
+            fireAim = enemy.getBoundingBox().getCenter();
+            return true;
+        }
+        fireAim = null;
+        if (groundRouteTarget != null && !dragon.getNavigation().isDone())
+            return true;
+        // Wait for the *cave* detector before aerial assault. This avoids
+        // the previous immediate takeoff when the prey ducks into a tunnel.
+        return !directSight && sightLostTicks < 145;
+    }
+
     private void tickEnemy(ServerLevel level, ServerPlayer owner, LivingEntity enemy) {
         boolean directSight = dragon.hasLineOfSight(enemy);
         sightLostTicks = directSight ? 0 : Math.min(10000, sightLostTicks + 1);
@@ -324,6 +404,7 @@ public final class AurenAttackOrders {
             fireAim = hunter.getFireAim();
             return;
         }
+        if (tickGroundEnemy(level, enemy, directSight)) return;
         // If a wall hides the prey, stop a blind dive and search for a
         // clear aerial vantage instead of circling uselessly.
         if (tactic == null || combatTicks >= nextTacticTick

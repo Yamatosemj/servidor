@@ -31,8 +31,9 @@ public final class AurenScorchTerrain {
     private static final int SCORCH_HEAT = 28;
     private static final int MAGMA_HEAT = 135;
     private static final int GRASS_BREAK_HEAT = 115;
+    private static final int DIRT_BREAK_HEAT = 165;
     private static final int MAGMA_BREAK_HEAT = 330;
-    private static final int MAX_FLAMES_PER_IMPACT = 12;
+    private static final int MAX_FLAMES_PER_IMPACT = 16;
 
     // One in-memory, bounded tracker per ServerLevel. Does not force chunks to
     // load, create extra block entities, or persist heat into saved worlds.
@@ -74,19 +75,21 @@ public final class AurenScorchTerrain {
         cleanup(tracker, time);
         double offsetX = (dragon.getRandom().nextDouble() - 0.5D) * 0.7D;
         double offsetZ = (dragon.getRandom().nextDouble() - 0.5D) * 0.7D;
-        double radiusX = 2.2D + dragon.getRandom().nextDouble() * 1.0D;
-        double radiusZ = 2.0D + dragon.getRandom().nextDouble() * 1.2D;
+        // Widen actual char/heat reach to match the already broader blue
+        // flames, while retaining a ragged, non-square falloff at the edge.
+        double radiusX = 3.6D + dragon.getRandom().nextDouble() * 1.5D;
+        double radiusZ = 3.5D + dragon.getRandom().nextDouble() * 1.6D;
         int flames = 0;
 
         // No fixed 4x4 or completely-filled disc. Dense molten center with
         // ragged edges that change naturally as the fire stream sweeps.
-        for (int dx = -3; dx <= 3; ++dx) {
-            for (int dz = -3; dz <= 3; ++dz) {
+        for (int dx = -5; dx <= 5; ++dx) {
+            for (int dz = -5; dz <= 5; ++dz) {
                 double nx = (dx - offsetX) / radiusX;
                 double nz = (dz - offsetZ) / radiusZ;
                 double distance = nx * nx + nz * nz;
                 if (distance > 1.0D) continue;
-                double coverage = Math.max(0.22D, 0.93D - distance * 0.60D);
+                double coverage = Math.max(0.20D, 0.94D - distance * 0.57D);
                 if (dx != 0 || dz != 0) {
                     if (dragon.getRandom().nextDouble() > coverage) continue;
                 }
@@ -141,11 +144,11 @@ public final class AurenScorchTerrain {
         cleanup(tracker, now);
         double driftU = (dragon.getRandom().nextDouble() - 0.5D) * 0.7D;
         double driftV = (dragon.getRandom().nextDouble() - 0.5D) * 0.7D;
-        for (int u = -2; u <= 2; u++) {
-            for (int v = -2; v <= 2; v++) {
+        for (int u = -3; u <= 3; u++) {
+            for (int v = -3; v <= 3; v++) {
                 double distance = (u - driftU) * (u - driftU)
                         + (v - driftV) * (v - driftV);
-                if (distance > 6.5D) continue;
+                if (distance > 11.0D) continue;
                 if ((u != 0 || v != 0) && dragon.getRandom().nextDouble()
                         > Math.max(0.20D, 0.92D - distance * 0.11D)) continue;
                 BlockPos surface = switch (face.getAxis()) {
@@ -205,7 +208,8 @@ public final class AurenScorchTerrain {
 
     private static boolean eligible(BlockState state) {
         return state.getBlock() instanceof SpreadingSnowyDirtBlock
-                || state.is(Blocks.DIRT) || state.is(Blocks.GRAVEL)
+                || state.is(Blocks.DIRT) || state.is(Blocks.COARSE_DIRT)
+                || state.is(Blocks.ROOTED_DIRT) || state.is(Blocks.GRAVEL)
                 || state.is(Blocks.DIRT_PATH) || state.is(Blocks.COBBLESTONE)
                 || state.is(BlockTags.BASE_STONE_OVERWORLD)
                 || state.is(Blocks.MAGMA_BLOCK)
@@ -258,6 +262,17 @@ public final class AurenScorchTerrain {
             if (cell.heat >= GRASS_BREAK_HEAT) after = Blocks.AIR.defaultBlockState();
             else if (cell.heat >= SCORCH_HEAT) {
                 after = AurenScorchedBlocks.GRASS.get().defaultBlockState();
+            }
+        } else if (original.is(Blocks.DIRT) || original.is(Blocks.COARSE_DIRT)
+                || original.is(Blocks.ROOTED_DIRT) || original.is(Blocks.DIRT_PATH)
+                || original.is(AurenScorchedBlocks.DIRT.get())
+                || original.is(AurenScorchedBlocks.DIRT_PATH.get())) {
+            // Bare dirt used to stop forever at the scorched texture.
+            // Heat now accumulates after carbonization until erosion.
+            if (cell.heat >= DIRT_BREAK_HEAT) {
+                after = Blocks.AIR.defaultBlockState();
+            } else if (cell.heat >= SCORCH_HEAT) {
+                after = convertNaturalBlock(original);
             }
         } else if (original.is(BlockTags.BASE_STONE_OVERWORLD)
                 || original.is(Blocks.COBBLESTONE)
@@ -358,7 +373,8 @@ public final class AurenScorchTerrain {
     private static BlockState convertNaturalBlock(BlockState original) {
         if (original.getBlock() instanceof SpreadingSnowyDirtBlock)
             return AurenScorchedBlocks.GRASS.get().defaultBlockState();
-        if (original.is(Blocks.DIRT))
+        if (original.is(Blocks.DIRT) || original.is(Blocks.COARSE_DIRT)
+                || original.is(Blocks.ROOTED_DIRT))
             return AurenScorchedBlocks.DIRT.get().defaultBlockState();
         if (original.is(Blocks.GRAVEL))
             return AurenScorchedBlocks.GRAVEL.get().defaultBlockState();
