@@ -91,16 +91,21 @@ def verify():
     assert "this.dragon.getNavigation().stop()" in follow
     assert "private final PathNavigation navigation" not in follow
     # Walk first, and only switch to the CE flight mover after repeated
-    # ground path failure/stalling or after 40 ticks of a long chase.
+    # ground path failure/stalling or after 120 ticks of a long chase.
     for expected in (
-        "GROUND_WALK_BEFORE_FLIGHT_TICKS = 40",
-        "GROUND_STALL_TICKS = 30",
-        "ADULT_LONG_CHASE_DISTANCE = 32.0D",
-        "BABY_LONG_CHASE_DISTANCE = 14.0D",
-        "getNavigation().moveTo(this.owner, WALK_SPEED)",
+        "GROUND_WALK_BEFORE_FLIGHT_TICKS = 120",
+        "getNavigation().createPath(this.owner, 0)",
+        "OWNER_REPATH_SQ = 3.5D * 3.5D",
+        "this.dragon.position()",
+        "canSeeSky(from)",
+        "canSeeSky(to)",
+        "GROUND_STALL_TICKS = 80",
+        "ADULT_LONG_CHASE_DISTANCE = 44.0D",
+        "BABY_LONG_CHASE_DISTANCE = 26.0D",
+        "getNavigation().moveTo(candidate, WALK_SPEED)",
         "this.stalledGroundTicks >= GROUND_STALL_TICKS",
         "this.groundPursuitTicks >= GROUND_WALK_BEFORE_FLIGHT_TICKS",
-        "if (blocked || longPursuit)",
+        "if (openSky && (blocked || longPursuit))",
         "if (flightMode != AurenFlightController.GROUNDED) return;",
         "START_DISTANCE = 15.0D",
         "STOP_DISTANCE = 8.0D",
@@ -128,7 +133,7 @@ def verify():
     ):
         assert expected in loader, f"Chunk ticket regression: {expected}"
     assert "&& !dragon.isSmallForm()" not in loader
-    assert "mod_version=0.7.23-ground-hunt-electric-alpha" in version
+    assert "mod_version=0.7.24-natural-companion-alpha" in version
     print("PASS: ground-first CE follow; bounded vertical speed; 15/8 adult, 4.5/1.7 baby; safe 50+ teleport; bounded tickets")
 
 if __name__ == "__main__":

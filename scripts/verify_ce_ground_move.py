@@ -51,7 +51,7 @@ assert "this.savedGroundMoveControl = this.moveControl;" in entity
 assert "this.moveControl = this.savedGroundMoveControl;" in entity
 assert "this.moveControl = flightMoveControl;" in entity
 assert "dragon.useOriginalGroundNavigation();" in flight
-assert "this.dragon.getNavigation().moveTo(this.owner, WALK_SPEED)" in follow
+assert "this.dragon.getNavigation().moveTo(candidate, WALK_SPEED)" in follow
 assert "this.dragon.getFlightController().follow(this.owner)" in follow
 assert 'modId="iceandfire"' not in metadata
 assert "curse.maven:iceandfire" not in build
