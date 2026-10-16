@@ -90,7 +90,7 @@ assert "new LightningBoltData(" in renderer
 assert ".lifespan(4)" in renderer and ".spawn(LightningBoltData.SpawnFunction.NO_DELAY)" in renderer
 assert "this.lightningRenderer.render(" in renderer
 
-assert "mod_version=0.7.26-offline-mind-alpha" in version
+assert "mod_version=0.7.27-visible-offline-routine-alpha" in version
 jar=list((ROOT/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jar)==1,jar
 with ZipFile(jar[0]) as z:
