@@ -44,7 +44,7 @@ assert "&& waypoint != null && combatTicks < nextWaypointTick" in orders
 assert "tackleApproachPoint(level, enemy)" in orders
 assert "recoveryPoint(level, enemy)" in orders
 assert "dragon.getBoundingBox().inflate(0.7D).intersects(enemy.getBoundingBox())" in orders
-assert "level.hasChunkAt(enemy.blockPosition())" in orders
+assert "dragon.level().hasChunkAt(enemy.blockPosition())" in orders
 assert "MAX_MARK_DISTANCE * MAX_MARK_DISTANCE" in orders
 assert "Vec3.atCenterOf(center)" in orders
 assert "Alvo inválido ou além de 64 blocos" in commands
