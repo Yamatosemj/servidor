@@ -106,6 +106,7 @@ public final class AurenLocalMind {
         previous = activity;
         ++localDecisions;
         ++idleStarts;
+        lastBlocked = "nenhum"; // Do not show a stale cooldown while a routine is active.
         idleStatus = "executando: " + switch (activity) {
             case OBSERVE -> "observando";
             case EXPLORE -> "explorando";
