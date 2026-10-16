@@ -1,3 +1,19 @@
+# Auren Minecraft 0.7.12 — incêndio, não demolição
+
+## Correções após o teste da 0.7.11
+
+- **Nenhuma rajada de fogo quebra blocos diretamente.** Removida completamente a rotina de demolição `bombard` / `level.destroyBlock` introduzida na 0.7.10. A carbonização CE de terreno continua como efeito visual temporário, sem romper blocos.
+- **Sopro autônomo sem qualquer limitação de ângulo**, como pedido. O alvo continua definido exclusivamente pelo servidor; não usamos mais a regra de 35° nem a de 55°.
+- **A cabeça realmente baixa durante o sopro:** usa os quadros originais do Ice and Fire CE `attack_stream_charge*` e `attack_stream_breath`, com inclinação suave adicional nos ossos Neck1, Neck2, Neck3 e Head. A posição do bocal do fogo também baixa para acompanhar a pose.
+- **Incêndio mais forte:** cria até 16 focos de fogo comum perto de cada impacto, tentando incendiar telhados de escadas e lajes de madeira, cercas, portas, troncos, tábuas, folhas, lã e feno. Rajada visual ainda **azul**; incêndio que se espalha é **laranja**, por ser o comportamento vanilla de madeira. Fogo montado e combate a criatura também podem iniciar incêndios em material inflamável.
+- **Voo e controles:** conserva as passadas coordenadas, HUD discreto e marcação por V/Shift+V/B. **Sem novas teclas.**
+- **Segurança:** `mobGriefing=false` impede novas ignições/alterações do terreno pelo mod. `doFireTick=true` permite a propagação/consumo vanilla. **O fogo vanilla pode se espalhar naturalmente além do círculo inicialmente marcado** e queimar construções, baús e materiais inflamáveis. Testar apenas em mundo descartável ou cópia de segurança.
+- **QA:** compilação automática checa invariantes e ausência de demolição direta; ainda requer teste visual do movimento do pescoço e da continuidade do fogo dentro do Minecraft.
+
+---
+
+## Histórico de versões (as descrições abaixo não substituem o comportamento da 0.7.12)
+
 # Auren Minecraft 0.7.11 — rajada contínua e bombardeio coordenado
 
 ## Correção do teste 0.7.10

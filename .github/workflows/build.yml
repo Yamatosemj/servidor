@@ -34,7 +34,7 @@ jobs:
         run: python3 scripts/verify_marked_assault.py
       - name: Verify discreet key target preview and aerial mode
         run: python3 scripts/verify_marked_preview.py
-      - name: Verify autonomous facing and destructive area safety
+      - name: Verify fire ignition without direct block demolition
         run: python3 scripts/verify_bombardment_direction.py
       - name: Verify blue soul-fire volume and original CE attack-stream poses
         run: python3 scripts/verify_blue_fire_pose.py
@@ -55,6 +55,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: auren-0711-SUSTAINED-DRAGONFIRE-AND-BOMBARDMENT
+          name: auren-0712-FIRE-IGNITION-NO-DEMOLITION
           path: build/libs/*.jar
           if-no-files-found: error
