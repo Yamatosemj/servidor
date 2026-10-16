@@ -26,6 +26,7 @@ import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.target.OwnerHurtTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.OwnerHurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
@@ -726,8 +727,22 @@ public final class AurenDragon extends TamableAnimal {
         this.goalSelector.addGoal(1, new FloatGoal(this));
         // Vanilla tameable companion owner-protection targets, with the
         // Auren-specific on-shoulder / mounted suppression below.
-        this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
-        this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
+        // Self-defence is NOT proactive aggression. If a mob hits Auren
+        // directly he may retaliate, but never target the owner, allied
+        // creatures or protected creative/spectator players.
+        this.targetSelector.addGoal(1, new HurtByTargetGoal(this) {
+            @Override public boolean canUse() {
+                LivingEntity attacker = AurenDragon.this.getLastHurtByMob();
+                return attacker != null && AurenDragon.this.isTame()
+                        && !AurenDragon.this.isOnShoulder()
+                        && !AurenDragon.this.isVehicle()
+                        && !AurenDragon.this.getAttackOrders().hasOrder()
+                        && AurenDragon.this.getAttackOrders().canMarkTarget(attacker)
+                        && super.canUse();
+            }
+        });
+        this.targetSelector.addGoal(2, new OwnerHurtByTargetGoal(this));
+        this.targetSelector.addGoal(3, new OwnerHurtTargetGoal(this));
         // Priority above follow (2): when the owner hits a mob, fight that
         // mob first and resume following when it dies or leaves range.
         this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.15D, true) {

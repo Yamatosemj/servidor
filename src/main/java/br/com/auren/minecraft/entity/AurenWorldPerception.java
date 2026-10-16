@@ -31,12 +31,12 @@ public final class AurenWorldPerception {
                            int animals, int otherPlayers, String nearestMonster,
                            int nearestMonsterBlocks, boolean dangerNearOwner,
                            boolean lowOwnerHealth, boolean fireNearby,
-                           boolean lavaNearby, boolean villageClue) {
+                           boolean ownerBurning, boolean lavaNearby, boolean villageClue) {
         public String summary() {
-            if (dangerNearOwner || lowOwnerHealth || fireNearby || lavaNearby) {
+            if (dangerNearOwner || lowOwnerHealth || ownerBurning || lavaNearby) {
                 String problem = lowOwnerHealth ? "dono ferido"
                         : dangerNearOwner ? "criaturas perigosas perto do dono"
-                        : lavaNearby ? "lava próxima" : "fogo próximo";
+                        : ownerBurning ? "dono pegando fogo" : "lava próxima";
                 return "AUREN • ALERTA: " + problem;
             }
             return "AUREN • " + environment + " • " + monsters
@@ -57,7 +57,8 @@ public final class AurenWorldPerception {
             if (lowOwnerHealth) out.append(" Dono com pouca vida.");
             if (dangerNearOwner) out.append(" Monstro perto do dono.");
             if (lavaNearby) out.append(" Lava próxima.");
-            if (fireNearby) out.append(" Fogo próximo.");
+            if (fireNearby) out.append(" Chamas detectadas na região.");
+            if (ownerBurning) out.append(" Dono está pegando fogo.");
             if (villageClue) out.append(" Sino detectado nas proximidades.");
             return out.toString();
         }
@@ -80,8 +81,11 @@ public final class AurenWorldPerception {
 
     public int alertLevel() {
         if (latest == null) return 0;
-        if (latest.lowOwnerHealth() || latest.dangerNearOwner()) return 2;
-        return latest.fireNearby() || latest.lavaNearby() ? 1 : 0;
+        if (latest.lowOwnerHealth() || latest.dangerNearOwner()
+                || latest.ownerBurning()) return 2;
+        // The dragon's own flames are observations, NOT an alert. Warn only
+        // if the OWNER actually catches fire or is at risk near lava.
+        return latest.lavaNearby() ? 1 : 0;
     }
 
     public String describe() {
@@ -191,9 +195,10 @@ public final class AurenWorldPerception {
         Snapshot observed = new Snapshot(level.getGameTime(), biome, environment,
                 weather, time, monsters, animals, players, nearestName,
                 nearestName == null ? -1 : (int) Math.round(Math.sqrt(nearestSq)),
-                danger, lowHealth, nearbyFire, nearbyLava, bell);
+                danger, lowHealth, nearbyFire, owner.isOnFire(), nearbyLava, bell);
         String areaKey = biome + "/" + environment + "/" + weather + "/" + time;
-        String dangerKey = danger + "/" + lowHealth + "/" + nearbyFire + "/" + nearbyLava;
+        String dangerKey = danger + "/" + lowHealth + "/" + owner.isOnFire()
+                + "/" + nearbyLava;
         if (latest != null) {
             if (!Objects.equals(lastAreaKey, areaKey))
                 remember("Ambiente mudou: " + environment + " em " + biome);

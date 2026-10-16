@@ -24,6 +24,9 @@ public final class AurenMinecraft {
             ENTITIES.register("auren", () ->
                     EntityType.Builder.of(AurenDragon::new, MobCategory.CREATURE)
                             .sized(1.65F, 2.0F)
+                            // Dragonfire cannot hurt the fire dragon itself.
+                            // In particular: FIRE, SOUL_FIRE, MAGMA and LAVA.
+                            .fireImmune()
                             .clientTrackingRange(12)
                             .build(MOD_ID + ":auren"));
 
