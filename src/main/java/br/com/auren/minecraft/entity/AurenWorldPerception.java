@@ -193,15 +193,19 @@ public final class AurenWorldPerception {
                 nearestName == null ? -1 : (int) Math.round(Math.sqrt(nearestSq)),
                 danger, lowHealth, nearbyFire, nearbyLava, bell);
         String areaKey = biome + "/" + environment + "/" + weather + "/" + time;
-        // Keep meaningful environment-risk transitions, including a newly
-        // discovered bell/village hint; no spam on raw creature counts.
-        String dangerKey = danger + "/" + lowHealth + "/" + nearbyFire
-                + "/" + nearbyLava + "/" + bell;
+        String dangerKey = danger + "/" + lowHealth + "/" + nearbyFire + "/" + nearbyLava;
         if (latest != null) {
             if (!Objects.equals(lastAreaKey, areaKey))
                 remember("Ambiente mudou: " + environment + " em " + biome);
             if (!Objects.equals(lastDangerKey, dangerKey))
-                remember("Risco alterado: " + (observed.summary()));
+                remember("Risco alterado: " + observed.summary());
+            if (latest.villageClue() != bell)
+                remember(bell ? "Sino de vila detectado." : "Sino de vila fora do alcance.");
+            // Report notable hostile arrivals/departures once, rather than
+            // spamming every entity-count change in crowded environments.
+            if ((latest.monsters() == 0) != (monsters == 0))
+                remember(monsters == 0 ? "Monstros se afastaram."
+                        : "Monstros detectados nas proximidades.");
         }
         lastAreaKey = areaKey;
         lastDangerKey = dangerKey;
