@@ -58,6 +58,52 @@ def assets = [
         ['models/tabula/lightningdragon/lightningdragon_attack_stream_charge3.tbl', '40988fd55cb0954ba72d8ae2ba99e24ab316d591'],
     'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_attack_stream_breath.tbl':
         ['models/tabula/lightningdragon/lightningdragon_attack_stream_breath.tbl', 'f5183e5bcc089caac704d3c6a7937725dcbc5d62'],
+    'assets/aurenminecraft/blockstates/chared_cobblestone.json':
+        ['blockstates/chared_cobblestone.json', 'b701976e6f2eec4ae180eff219450b473b4633b8'],
+    'assets/aurenminecraft/blockstates/chared_dirt.json':
+        ['blockstates/chared_dirt.json', 'ed39193f12b6659b1d0b9b171e12facc2f089212'],
+    'assets/aurenminecraft/blockstates/chared_dirt_path.json':
+        ['blockstates/chared_dirt_path.json', '1b2051b95de504c704ee866b3277a4e5e86a981f'],
+    'assets/aurenminecraft/blockstates/chared_grass.json':
+        ['blockstates/chared_grass.json', '888958e79c0cbd5c5e7c4765e87cbeeb054ca324'],
+    'assets/aurenminecraft/blockstates/chared_gravel.json':
+        ['blockstates/chared_gravel.json', '68e4e25becd87575c3353bb728afefc365a807a6'],
+    'assets/aurenminecraft/blockstates/chared_stone.json':
+        ['blockstates/chared_stone.json', '4ecc4cbb32228b1fd0b654f0cfb97f32fddc78db'],
+    'assets/aurenminecraft/models/block/chared_cobblestone.json':
+        ['models/block/chared_cobblestone.json', '74fa4a2e662c67c2ddd03a588d35511fe24068ba'],
+    'assets/aurenminecraft/models/block/chared_dirt.json':
+        ['models/block/chared_dirt.json', '176059f384c14eb18c2ece220cec136845e7b91a'],
+    'assets/aurenminecraft/models/block/chared_dirt_path.json':
+        ['models/block/chared_dirt_path.json', '838d62d6a2e518c8320befe719165d3b9ac51f72'],
+    'assets/aurenminecraft/models/block/chared_grass.json':
+        ['models/block/chared_grass.json', 'ce47016d22c0ac4b9fd7276a9e1cd7ca7a2a7141'],
+    'assets/aurenminecraft/models/block/chared_gravel.json':
+        ['models/block/chared_gravel.json', 'f8ab194283ecb6d3656f272a34227148a093e56f'],
+    'assets/aurenminecraft/models/block/chared_stone.json':
+        ['models/block/chared_stone.json', 'f110fa29eed258c54a8737ad17a71cb8f3c21974'],
+    'assets/aurenminecraft/textures/block/chared_cobblestone.png':
+        ['textures/block/chared_cobblestone.png', '4516903d43ca4de0468864d5705807b281f94077'],
+    'assets/aurenminecraft/textures/block/chared_dirt.png':
+        ['textures/block/chared_dirt.png', '327f6a3b499d747befc2b49216d8039d703466b1'],
+    'assets/aurenminecraft/textures/block/chared_dirt_path_side.png':
+        ['textures/block/chared_dirt_path_side.png', 'd1b0955be32ea20353b7022a93e721c687d106eb'],
+    'assets/aurenminecraft/textures/block/chared_dirt_path_top.png':
+        ['textures/block/chared_dirt_path_top.png', 'e0284cd798414a4c632b0a416e528fba02df3820'],
+    'assets/aurenminecraft/textures/block/chared_grass_side.png':
+        ['textures/block/chared_grass_side.png', 'df007d9cadcd5326a32493f3cf30b465f1feba25'],
+    'assets/aurenminecraft/textures/block/chared_grass_top.png':
+        ['textures/block/chared_grass_top.png', '0b3cdc0b904492afc511c1af78246a1c032709bf'],
+    'assets/aurenminecraft/textures/block/chared_gravel.png':
+        ['textures/block/chared_gravel.png', 'fa95fdb2df6f2bf145f1ecdbbe3e7121c6543762'],
+    'assets/aurenminecraft/textures/block/chared_stone.png':
+        ['textures/block/chared_stone.png', '4d82aa613d494e20a3faba5420d8b775ea0e85a9'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_bite1.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_bite1.tbl', '5527d37b3513afb00c0efea0c'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_bite2.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_bite2.tbl', '854f8078d2f7cf3799e4b1d8e9e1bb1ee1206378'],
+    'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_bite3.tbl':
+        ['models/tabula/lightningdragon/lightningdragon_bite3.tbl', 'f274022206186a7151e482a5e6e847c3a0ccc928'],
     'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_ground.tbl':
         ['models/tabula/lightningdragon/lightningdragon_ground.tbl', 'b6fb4bf7a465b5cfe48889ce7dafcff0ea9d2576'],
     'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_sitting.tbl':
@@ -115,7 +161,17 @@ def fetchDragonAssets = tasks.register('fetchDragonAssets') {
             def actual = HexFormat.of().formatHex(hash.digest())
             if (actual != source[1]) throw new GradleException('Asset SHA mismatch: ' + destination)
             output.parentFile.mkdirs()
-            output.bytes = bytes
+            // CE's visual JSON models carry iceandfire:* references.
+            // Rewrite ONLY their namespace to the registered Auren scorch
+            // blocks, after validating the original byte hash.
+            if (destination.endsWith('.json') &&
+                    (destination.contains('/blockstates/') || destination.contains('/models/block/'))) {
+                output.bytes = new String(bytes, StandardCharsets.UTF_8)
+                        .replace('iceandfire:', 'aurenminecraft:')
+                        .getBytes(StandardCharsets.UTF_8)
+            } else {
+                output.bytes = bytes
+            }
             logger.lifecycle('Verified CE asset: ' + destination)
         }
     }

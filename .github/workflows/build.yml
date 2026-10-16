@@ -28,6 +28,8 @@ jobs:
         run: python3 scripts/verify_single_dragon.py
       - name: Verify ORIGINAL CE grounded movement logic and restore after flying
         run: python3 scripts/verify_ce_ground_move.py
+      - name: Verify owner defense, baby bite and scorched CE terrain
+        run: python3 scripts/verify_defend_scorch.py
       - name: Verify blue soul-fire volume and original CE attack-stream poses
         run: python3 scripts/verify_blue_fire_pose.py
       - name: Verify CE lightning and keep fire + ONE Auren
@@ -47,6 +49,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: auren-075-BLUE-FIRE-ORIGINAL-ATTACK-POSE
+          name: auren-076-OWNER-DEFENSE-BABY-SCORCH
           path: build/libs/*.jar
           if-no-files-found: error

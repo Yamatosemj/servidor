@@ -95,6 +95,8 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
         // Overlay the CE's ORIGINAL charge/open-mouth breath pose on top of
         // walking/flying. Does not change the body flight keyframes or wings.
         AurenOriginalAnimations.instance().applyBreathPose(model, dragon, partialTick);
+        // CE native bite keyframes for baby and adult defending their owner.
+        AurenOriginalAnimations.instance().applyBitePose(model, dragon);
     }
 
     @Override

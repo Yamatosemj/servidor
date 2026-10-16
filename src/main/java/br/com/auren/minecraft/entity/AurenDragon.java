@@ -23,6 +23,9 @@ import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
+import net.minecraft.world.entity.ai.goal.target.OwnerHurtTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.OwnerHurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
@@ -64,6 +67,8 @@ public final class AurenDragon extends TamableAnimal {
     // Attack animation uses CE stream charge/breath Tabula poses. Only a
     // compact tick counter is synchronized, never client-supplied controls.
     private static final EntityDataAccessor<Integer> BREATH_ATTACK_TICKS =
+            SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> BITE_ATTACK_TICKS =
             SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT);
 
     // Client-side animation progress, mirroring CE ridingProgress 0..20 ticks.
@@ -125,6 +130,7 @@ public final class AurenDragon extends TamableAnimal {
         return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 60.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.27D)
+                .add(Attributes.ATTACK_DAMAGE, 7.0D)
                 .add(Attributes.FOLLOW_RANGE, 32.0D);
     }
 
@@ -140,6 +146,7 @@ public final class AurenDragon extends TamableAnimal {
         builder.define(LIGHTNING_TARGET_Y, 0.0F);
         builder.define(LIGHTNING_TARGET_Z, 0.0F);
         builder.define(BREATH_ATTACK_TICKS, 0);
+        builder.define(BITE_ATTACK_TICKS, 0);
     }
 
     public boolean isSmallForm() {
@@ -200,6 +207,11 @@ public final class AurenDragon extends TamableAnimal {
     /** Server-authored CE charging/stream state shared by R and G attacks. */
     public int getBreathAttackTicks() {
         return this.entityData.get(BREATH_ATTACK_TICKS);
+    }
+
+    /** 0..12 tick synced bite animation; works in both baby and adult form. */
+    public int getBiteAttackTicks() {
+        return this.entityData.get(BITE_ATTACK_TICKS);
     }
 
     /** Smooth model transition (0-1), without changing the wing flight state. */
@@ -610,6 +622,24 @@ public final class AurenDragon extends TamableAnimal {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(1, new FloatGoal(this));
+        // Vanilla tameable companion owner-protection targets, with the
+        // Auren-specific on-shoulder / mounted suppression below.
+        this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
+        this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
+        // Priority above follow (2): when the owner hits a mob, fight that
+        // mob first and resume following when it dies or leaves range.
+        this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.15D, true) {
+            @Override public boolean canUse() {
+                return !AurenDragon.this.isOnShoulder()
+                        && !AurenDragon.this.isVehicle() && AurenDragon.this.isTame()
+                        && super.canUse();
+            }
+            @Override public boolean canContinueToUse() {
+                return !AurenDragon.this.isOnShoulder()
+                        && !AurenDragon.this.isVehicle() && AurenDragon.this.isTame()
+                        && super.canContinueToUse();
+            }
+        });
         // One CE-inspired flight system, but SEPARATE comfortable ranges:
         // adult begins at 15, stops at 8; baby begins at 4.5, stops at 1.7.
         // Both use real aerial motion; teleport is a 50+ block last resort.
@@ -628,6 +658,25 @@ public final class AurenDragon extends TamableAnimal {
         });
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
+    }
+
+    /**
+     * CE-style ground bite; baby deals lighter damage but is not passive.
+     * Target selection is driven by OwnerHurtTargetGoal / OwnerHurtByTargetGoal
+     * and the only targets allowed here are non-allied living entities.
+     */
+    @Override
+    public boolean doHurtTarget(Entity target) {
+        if (!(target instanceof LivingEntity living) || !living.isAlive()
+                || this.isOnShoulder() || this.isVehicle() || this.isAlliedTo(living)
+                || !this.isTame()) return false;
+        // The child is capable of biting: 3 damage vs the adult's 7.
+        float damage = this.isSmallForm() ? 3.0F : 7.0F;
+        boolean hit = living.hurt(this.damageSources().mobAttack(this), damage);
+        if (hit && !this.level().isClientSide()) {
+            this.entityData.set(BITE_ATTACK_TICKS, 12);
+        }
+        return hit;
     }
 
     @Override
@@ -690,6 +739,10 @@ public final class AurenDragon extends TamableAnimal {
             this.dragonPitch = this.entityData.get(RIDER_BODY_PITCH);
         }
         // Update synchronized CE-style interpolation for actual flight modes.
+        if (!this.level().isClientSide()) {
+            int remainingBite = this.entityData.get(BITE_ATTACK_TICKS);
+            if (remainingBite > 0) this.entityData.set(BITE_ATTACK_TICKS, remainingBite - 1);
+        }
         this.previousBreathProgress = this.breathProgress;
         float wantedBreath = getBreathAttackTicks() > 0 ? BREATH_POSE_BLEND_TICKS : 0.0F;
         this.breathProgress = Mth.clamp(this.breathProgress
@@ -804,6 +857,8 @@ public final class AurenDragon extends TamableAnimal {
         this.fireBreath.reset();
         this.lightningBreath.reset();
         this.entityData.set(BREATH_ATTACK_TICKS, 0);
+        this.entityData.set(BITE_ATTACK_TICKS, 0);
+        this.setTarget(null);
         this.breathProgress = 0.0F;
         this.previousBreathProgress = 0.0F;
         this.riderTakeoffTicks = 0;

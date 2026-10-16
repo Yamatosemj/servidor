@@ -209,6 +209,13 @@ public final class AurenFireBreath {
             }
         }
 
+        // CE destruction manager transforms a 3x3x3 terrain area at the
+        // stage-3 impact. This is entirely distinct from damage to mobs
+        // and only runs if mobGriefing is enabled.
+        BlockPos scorchCenter = blockHit != null
+                ? blockHit.getBlockPos() : BlockPos.containing(center).below();
+        AurenScorchTerrain.scorch(level, scorchCenter, dragon);
+
         // Blue SOUL_FIRE persists only where vanilla soul fire can survive.
         // Do not place ordinary red fire or bypass block survival. On other
         // blocks, blue particles + entity burn still work as before.
