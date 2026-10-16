@@ -23,6 +23,8 @@ for x in (
     "dragon.setNaturalRestPose(night() ? 2 : 1)",
     "for (int dy : new int[] {0, 1, -1, 2, -2})",
     "MAX_SEARCH_ATTEMPTS = 12",
+    "dragon.tickCount < nextRoutineTick",
+    "nextRoutineTick = dragon.tickCount + MIN_COOLDOWN_TICKS",
     "if (++pathsTried > 6) return null",
     "dragon.level().noCollision(dragon, space)",
     "dragon.level().getBlockState(below).isFaceSturdy(",

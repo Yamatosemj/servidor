@@ -81,3 +81,5 @@ Solução proposta na branch `fix/auren-0727-visible-offline-routine`:
 - teste concreto de 60–90 segundos em campo aberto e ambiente construído.
 
 **Critério para fechar a etapa 1:** usuário observa ao menos um comportamento novo OU os diagnósticos mostram concretamente por que a rotina não inicia. Se ainda não houver diferença, investigar prioridades de GoalSelector e geometria no mundo, sem iniciar etapa 2 por impulso.
+
+- **0.7.27 — outra causa confirmada:** cooldown ocioso era decrementado por chamada de `Goal.canUse()`, não por tick; como o selector não consulta a cada tick, os intervalos reais podiam triplicar ou mais. Corrigido com `nextRoutineTick` em ticks absolutos. 

@@ -2,6 +2,9 @@
 
 **Motivo da atualização:** o usuário não percebeu mudanças em gameplay após a 0.7.26. A política de utilidade mudou o ranking mas oferecia quase as mesmas atividades visuais; na prática `EXPLORE` podia falhar a escolha de altura/piso e cair para `OBSERVE`, que só mexia a cabeça. Isso não é teste satisfatório de autonomia.
 
+### Outra causa objetiva encontrada
+O `GoalSelector` não consulta `canUse()` em todos os ticks. A implementação antiga diminuía `cooldownTicks` cada vez que era consultada, **alongando as pausas entre rotinas** e fazendo o Auren parecer imóvel por períodos maiores que os previstos. Corrigimos usando tempo absoluto `dragon.tickCount`, mantendo pausas reais de 100–230 ticks.
+
 ### Correções pontuais
 1. **Ação nova `APPROACH_OWNER`:** quando descansando perto do dono mas a mais de ~3,6 blocos na forma grande (2,5 na pequena), o Auren pode se aproximar voluntariamente por uma rota A* para um piso seguro **ao lado do dono**, sem entrar no hitbox dele, sem voar e sem atrapalhar combate/montaria.
 2. **Descanso diurno mais perceptível:** a pontuação do descanso foi recalibrada. Quando explorar não é possível, descansar/sentar passa a ser uma alternativa real, em vez de sempre cair para observar invisivelmente.
