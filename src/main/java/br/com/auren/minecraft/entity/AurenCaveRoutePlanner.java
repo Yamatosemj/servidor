@@ -32,16 +32,13 @@ final class AurenCaveRoutePlanner {
                 || !level.hasChunkAt(position.above())
                 || !level.hasChunkAt(position.below())) return false;
         BlockState feet = level.getBlockState(position);
-        BlockState head = level.getBlockState(position.above());
         BlockState floor = level.getBlockState(position.below());
         // One-block-high tunnels ARE traversable to Auren's 0.7m child.
         // Do not require two air blocks above the floor: that would reject
         // the very caves the tiny shape is intended to access.
         return feet.isAir() && floor.getFluidState().isEmpty()
                 && feet.getFluidState().isEmpty()
-                && !floor.getCollisionShape(level, position.below()).isEmpty()
-                && (head.isAir() || !head.getCollisionShape(
-                        level, position.above()).isEmpty());
+                && !floor.getCollisionShape(level, position.below()).isEmpty();
     }
 
     /**

@@ -407,10 +407,9 @@ final class AurenRelentlessHunt {
             // route ends, the prey moved, or the navigator stopped making
             // physical progress; never overwrite the route every 15 ticks.
             boolean goalMoved = compactRouteGoal == null
-                    || (compactRouteGoal.equals(enemy.blockPosition())
-                    && dragon.distanceToSqr(enemy) > 9.0D
-                    && !dragon.getNavigation().isDone()
-                    && dragon.tickCount - compactLastProgressTick > 80);
+                    || (caveEntrance != null
+                    && !compactRouteGoal.equals(caveEntrance)
+                    && compactRouteGoal.distSqr(enemy.blockPosition()) > 9.0D);
             boolean stalled = dragon.tickCount - compactLastMotionTick > 50;
             if (!dragon.getNavigation().isDone() && !goalMoved && !stalled)
                 return;
