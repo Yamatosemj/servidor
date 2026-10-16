@@ -22,6 +22,13 @@ public final class AurenLocalMind {
     private float vigilance = 12.0F;
     private AurenLocalDecisionPolicy.Activity previous;
     private int localDecisions;
+    // Live server-only diagnostics. Do not NBT-save transient Goals or
+    // last path failures; saved preferences are already preserved separately.
+    private int idleStarts;
+    private int failedIdlePaths;
+    private String idleStatus = "aguardando oportunidade";
+    private String lastBlocked = "nenhum";
+    private String lastCompleted = "nenhuma";
 
     public AurenLocalMind(AurenDragon dragon) { this.dragon = dragon; }
 
@@ -63,11 +70,36 @@ public final class AurenLocalMind {
         return AurenLocalDecisionPolicy.rank(context);
     }
 
+    /** The owner can diagnose a real idle rather than infer it from energy. */
+    public void idleUnready(String reason) {
+        if (reason != null && !reason.isBlank()) lastBlocked = reason;
+        if (!idleStatus.startsWith("executando"))
+            idleStatus = "aguardando: " + lastBlocked;
+    }
+
+    public void idlePathFailed() {
+        failedIdlePaths = Math.min(99999, failedIdlePaths + 1);
+    }
+
+    public void idleFinished(String summary) {
+        lastCompleted = summary == null ? "finalizada" : summary;
+        idleStatus = "aguardando oportunidade";
+    }
+
     /** Only successful actions update the recent-choice bias. */
     public void accepted(AurenLocalDecisionPolicy.Activity activity) {
         if (activity == null) return;
         previous = activity;
         ++localDecisions;
+        ++idleStarts;
+        idleStatus = "executando: " + switch (activity) {
+            case OBSERVE -> "observando";
+            case EXPLORE -> "explorando";
+            case INVESTIGATE -> "investigando animal";
+            case REST -> "descansando";
+            case SEEK_SHELTER -> "procurando abrigo";
+            case APPROACH_OWNER -> "aproximando do dono";
+        };
         if (activity == AurenLocalDecisionPolicy.Activity.EXPLORE
                 || activity == AurenLocalDecisionPolicy.Activity.INVESTIGATE)
             curiosity = clamp(curiosity - 8.0F);
@@ -81,6 +113,11 @@ public final class AurenLocalMind {
                 + "/100, alerta " + Math.round(vigilance)
                 + "/100 | ultima escolha: " + (previous == null ? "nenhuma"
                     : previous.name().toLowerCase(java.util.Locale.ROOT))
+                + " | rotina: " + idleStatus
+                + " | iniciadas: " + idleStarts
+                + ", caminhos inviaveis: " + failedIdlePaths
+                + " | ultima interrupcao: " + lastCompleted
+                + " | limite: " + lastBlocked
                 + " | IA externa: nao necessaria";
     }
 
