@@ -50,10 +50,11 @@ assert "toggleAreaEnabled()" in orders
 assert "areaEnabled = !tag.contains" in orders
 assert "target == dragon.getOwner()" in orders
 assert "canFlyTo(ServerLevel level, Vec3 point)" in orders
-assert "dragon.getRandom().nextDouble()" in orders
-# Changing direction alone still produces an orbit; enforce crossing legs.
-for pattern in ("int legStyle = areaLegs % 5", "angle = bearing + Math.PI",
-                "nextHeadingFlipLeg", "height = 5.5D", "height = 11.0D",
+# Aerial bombing is a committed attack leg, not random orbit waypoints.
+for pattern in ("areaPhase = 0", "areaPhase == 1", "nextPhase = 2",
+                "areaFiringPass = areaPhase == 2", "radius * 0.98D",
+                "nextWaypointTick = combatTicks + (areaFiringPass ? 180 : 120)",
+                "Math.sin(combatTicks * 0.06D)", "nextSweepTick = combatTicks + 3",
                 "tackleBreakawayUntil", "boolean landedHit = dragon.doHurtTarget(enemy)"):
     assert pattern in orders, pattern
 assert "new AurenAttackOrders(this)" in dragon

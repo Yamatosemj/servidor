@@ -13,7 +13,7 @@ for value in ("MIN_FORWARD_DOT", "autonomousFire && !canAimForward(getHeadPositi
     assert value in fire, value
 for value in ("public static void bombard(", "GameRules.RULE_MOBGRIEFING",
               "markedCenter == null || radius < 5 || radius > 30",
-              "dx * dx + dz * dz > radius * radius", "destroyed >= 14",
+              "dx * dx + dz * dz > radius * radius", "destroyed >= 20",
               "level.hasChunkAt(pos)", "level.getBlockEntity(pos) != null",
               "hardness < 0 || hardness > 8.0F",
               "state.is(BlockTags.PLANKS)", "state.is(Blocks.GLASS)",
@@ -25,10 +25,20 @@ for value in ("findForwardAreaImpact(", "getHeightmapPos(",
               "distanceSq > 25.0D * 25.0D", "distanceSq < 7.0D * 7.0D",
               "nextTacticTick = combatTicks + 75"):
     assert value in orders, value
-# Numerical safety sanity. North-facing cannot breathe toward southern aim.
-assert 1.0 >= cos(radians(35))
-assert -1.0 < cos(radians(35))
-assert cos(radians(50)) < cos(radians(35))
+# A 55-degree arc is still strictly forward; backward attacks remain invalid.
+assert 1.0 >= cos(radians(55))
+assert -1.0 < cos(radians(55))
+assert cos(radians(70)) < cos(radians(55))
+for token in ("igniteVillage(", "BlockTags.MINEABLE_WITH_SHOVEL",
+              "BlockTags.MINEABLE_WITH_PICKAXE", "Blocks.FIRE.defaultBlockState()",
+              "level.getBlockEntity(wood) != null"):
+    assert token in terrain, token
+for token in ("aimGraceTicks++ < 16", "this.burnProgress - 1",
+              "AurenScorchTerrain.igniteVillage(", "Math.cos(Math.toRadians(55.0D))"):
+    assert token in fire, token
+for token in ("areaFiringPass = areaPhase == 2", "safeAreaWaypoint(",
+              "nextWaypointTick = combatTicks + (areaFiringPass ? 180 : 120)"):
+    assert token in orders, token
 for r in [5,10,15,20,25,30]:
     assert (r+1)**2 > r*r
 assert "mod_version=0.7.10-directional-bombardment-alpha" in (root/"gradle.properties").read_text()

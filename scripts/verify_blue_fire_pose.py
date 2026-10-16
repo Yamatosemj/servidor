@@ -26,7 +26,7 @@ for token in (
     "Blocks.SOUL_FIRE.defaultBlockState().canSurvive(level, firePos)",
     "level.setBlockAndUpdate(firePos, Blocks.SOUL_FIRE.defaultBlockState())",
     "double plumeLength = head.distanceTo(streamEnd)",
-    "double width = Math.min(1.6D,",
+    "double width = Math.min(2.0D,",
     "level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME",
     "CE_REACH = 10.0D * CE_STAGE",
     "CE_IMPACT_RADIUS = 3.5D",
