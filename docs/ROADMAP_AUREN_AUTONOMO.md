@@ -25,7 +25,7 @@ Cada componente usa **um único Auren** e preserva controles CE existentes. As a
 | # | Etapa | Entregável | Validação / status |
 |---|---|---|---|
 | 0 | Fundação funcional | Fogo, raios, formas, voo, caça, percepção, rotinas 0.7.25 | Feito tecnicamente; alguns casos de QA visual pendentes |
-| **1** | **Mente autônoma local — 0.7.26** | **Pontuação por utilidade, energia/curiosidade/alerta simulados, escolha de rotina e NBT** | **Em implementação nesta branch**; não marcar concluída antes de CI + teste no jogo |
+| **1** | **Mente autônoma local — 0.7.26** | **Pontuação por utilidade, energia/curiosidade/alerta simulados, escolha de rotina e NBT** | **Código e CI aprovados; aguardando teste no jogo**. Não considerar a etapa totalmente concluída antes do playtest |
 | 2 | Prioridades e arbitragem | Autoridade única para conflitos entre proteger, cumprir ordem, seguir, descansar e reação imediata | Testar preempção, cancelamento, montaria e controle do dono; preservar `GoalSelector` e CE |
 | 3 | Memória local significativa | Eventos recentes, locais úteis, falhas de caminho e preferências compactas no save | Limites de tamanho, expiração, isolamento por dono e migração NBT |
 | 4 | Planejamento offline simples | Sequências de intenções (aproximar → investigar → retornar), tentativas limitadas e recuperação de falha | Rotas impossíveis não travam o Auren, timeout e alternativa natural |
@@ -40,7 +40,7 @@ Cada componente usa **um único Auren** e preserva controles CE existentes. As a
 - [x] O `AurenNaturalIdleGoal` pede opções ordenadas à mente; depois **valida A* e colisões existentes**. Se a primeira opção falhar, tenta a próxima em vez de travar.
 - [x] Estados internos são carregados e salvos no NBT da entidade (compatíveis com save 0.7.25 sem essas chaves).
 - [x] `/auren mente` revela uma visão limitada, apenas para o dono dentro de 64 blocos, sem HUD constante.
-- [ ] CI com teste executável do ranking, verificação de JAR e regressões completas.
+- [x] CI com teste executável do ranking, verificação de JAR e regressões completas. [Execução aprovada](https://github.com/Yamatosemj/servidor/actions/runs/38948553925) (39 etapas).
 - [ ] **Playtest**: dia/noite, chuva, animal próximo, dono se afastando, salvar/reentrar, combate e voo CE sem regressão.
 
 ### Regras de segurança já nesta etapa
@@ -66,3 +66,5 @@ Cada componente usa **um único Auren** e preserva controles CE existentes. As a
 
 - **2026-10-16:** escolhemos arquitetura *offline-first*: cérebro local permanente, integração LLM opcional.
 - **0.7.26:** começar por mecanismo de ranking isolado, adaptar somente rotina ociosa; persistência dos valores; comando de observabilidade. Sem alterar controladores de voo/combate.
+
+- **0.7.26, validação técnica:** suíte GitHub Actions aprovada em 16/10/2026; o teste manual de gameplay e o merge continuam pendentes.
