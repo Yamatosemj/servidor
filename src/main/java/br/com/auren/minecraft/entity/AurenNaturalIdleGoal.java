@@ -36,6 +36,8 @@ public final class AurenNaturalIdleGoal extends Goal {
     private long nextRoutineTick;
     private Routine routine = Routine.OBSERVE;
     private Vec3 interestPoint;
+    private Vec3 routeStart;
+    private double initialOwnerDistance;
     private Animal interestingAnimal;
 
     public AurenNaturalIdleGoal(AurenDragon dragon) {
@@ -119,6 +121,8 @@ public final class AurenNaturalIdleGoal extends Goal {
         interestingAnimal = null;
         interestPoint = null;
         dragon.getNavigation().stop();
+        routeStart = dragon.position();
+        initialOwnerDistance = dragon.distanceTo(owner);
         remainingTicks = MIN_REST_TICKS + dragon.getRandom().nextInt(
                 MAX_REST_TICKS - MIN_REST_TICKS + 1);
 
@@ -290,6 +294,7 @@ public final class AurenNaturalIdleGoal extends Goal {
                 if (dragon.distanceToSqr(interestingAnimal) < 3.8D * 3.8D
                         || dragon.getNavigation().isDone()) {
                     dragon.getNavigation().stop();
+                    reportRouteCompletion();
                     routine = Routine.OBSERVE;
                 }
             }
@@ -297,6 +302,7 @@ public final class AurenNaturalIdleGoal extends Goal {
                 || routine == Routine.SEEK_SHELTER
                 || routine == Routine.APPROACH_OWNER) {
             if (dragon.getNavigation().isDone()) {
+                reportRouteCompletion();
                 routine = Routine.OBSERVE;
                 dragon.getNavigation().stop();
             } else if (dragon.tickCount % 40 < 8) {
@@ -322,6 +328,16 @@ public final class AurenNaturalIdleGoal extends Goal {
         }
     }
 
+    /** A path starting does not prove the dragon actually moved. */
+    private void reportRouteCompletion() {
+        if (routeStart == null || owner == null) return;
+        double progress = routine == Routine.APPROACH_OWNER
+                ? initialOwnerDistance - dragon.distanceTo(owner)
+                : dragon.position().distanceTo(routeStart);
+        dragon.getMind().idleRouteEnded(
+                routine.name().toLowerCase(java.util.Locale.ROOT), progress);
+    }
+
     @Override
     public void stop() {
         dragon.setNaturalRestPose(0);
@@ -331,6 +347,7 @@ public final class AurenNaturalIdleGoal extends Goal {
         owner = null;
         interestingAnimal = null;
         interestPoint = null;
+        routeStart = null;
         remainingTicks = 0;
         routine = Routine.OBSERVE;
         nextRoutineTick = dragon.tickCount + MIN_COOLDOWN_TICKS
