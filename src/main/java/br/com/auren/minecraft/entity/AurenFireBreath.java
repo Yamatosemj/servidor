@@ -274,26 +274,28 @@ public final class AurenFireBreath {
         // grass/magma. Wooden buildings only burn by ordinary vanilla fire.
         BlockPos scorchCenter = blockHit != null
                 ? blockHit.getBlockPos() : BlockPos.containing(center).below();
-        if (areaOrder) {
-            AurenScorchTerrain.scorch(level, scorchCenter, dragon,
-                    dragon.getAttackOrders().getAreaCenter(),
-                    dragon.getAttackOrders().getRadius());
-            AurenScorchTerrain.igniteVillage(level, scorchCenter, dragon,
-                    dragon.getAttackOrders().getAreaCenter(),
-                    dragon.getAttackOrders().getRadius());
+        // Apply heat to the face the ray ACTUALLY struck, including rock
+        // walls and cave ceilings. Keep the proven top-down footprint intact.
+        boolean onWall = blockHit != null
+                && blockHit.getDirection() != net.minecraft.core.Direction.UP;
+        BlockPos areaCenter = areaOrder ? dragon.getAttackOrders().getAreaCenter() : null;
+        int areaRadius = areaOrder ? dragon.getAttackOrders().getRadius() : 0;
+        if (onWall) {
+            AurenScorchTerrain.scorchFace(level, scorchCenter,
+                    blockHit.getDirection(), dragon, areaCenter, areaRadius);
         } else {
-            AurenScorchTerrain.scorch(level, scorchCenter, dragon);
-            // Riding and marked creature breath can also start a real fire
-            // when the ray strikes flammable material.
-            AurenScorchTerrain.igniteVillage(level, scorchCenter, dragon, null, 0);
+            AurenScorchTerrain.scorch(level, scorchCenter, dragon,
+                    areaCenter, areaRadius);
         }
+        AurenScorchTerrain.igniteVillage(level, scorchCenter, dragon,
+                areaCenter, areaRadius);
 
         // A moving fire stream should burn a contiguous, irregular RIBBON
         // across the surface, not isolated identical impact squares.
         // Only join nearby contacts in the same active stream, avoiding a
         // giant teleporting fire line when the target is suddenly retargeted.
         Vec3 thisGroundImpact = Vec3.atCenterOf(scorchCenter);
-        if (previousGroundImpact != null
+        if (!onWall && previousGroundImpact != null
                 && dragon.tickCount - previousGroundImpactTick <= 10) {
             double horizontal = Math.hypot(
                     thisGroundImpact.x - previousGroundImpact.x,
@@ -314,7 +316,7 @@ public final class AurenFireBreath {
                 }
             }
         }
-        previousGroundImpact = thisGroundImpact;
+        previousGroundImpact = onWall ? null : thisGroundImpact;
         previousGroundImpactTick = dragon.tickCount;
 
         // Blue SOUL_FIRE persists only where vanilla soul fire can survive.

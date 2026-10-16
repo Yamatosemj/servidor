@@ -1,3 +1,29 @@
+# Auren Minecraft 0.7.21 — Defesa, fogo lateral e caça pela entrada
+
+Correções guiadas pelo teste em jogo da v0.7.20. Não há integração com IA externa.
+
+- **Imunidade ao fogo:** entidade Auren está marcada como `fireImmune()` no EntityType, protegendo contra fogo/soul fire/magma/lava vanilla. Seu próprio jato já evitava dano direto ao dragão, mas os blocos incendiados eram perigosos.
+- **Autodefesa real, sem agressão gratuita:** `HurtByTargetGoal` valida agressor e aliados; se um **dragão adulto** é diretamente ferido por uma criatura válida, cria ordem de caça contra quem o feriu (se não houver uma ordem em andamento). Morder um monstro pelo dono não dispara este mecanismo. O Auren pequeno usa a meta de contra-ataque corpo a corpo.
+- **Chamas percebidas sem alertas irritantes:** fireNearby permanece como informação factual em `/auren ambiente`, mas o HUD não considera o próprio incêndio um perigo automático. Avisa caso o **dono esteja realmente pegando fogo**, esteja ferido, ameçado por monstro ou perto de lava.
+- **Grama queima mais rápido:** limite de erosão para grama 195 → 115 unidades de calor acumulado. Não há demolição instantânea; o centro de uma rajada contínua deve mudar antes das bordas.
+- **Queimadura lateral/parede/teto:** o sopro detecta a face atingida e esquenta uma mancha irregular de blocos **expostos nessa face**. Rocha vira magma, depois ar após calor suficiente; terra e grama/carbonizados avançam pelas regras preexistentes. A área é conservada no modo bombardeio; locais inacessíveis/entidades de bloco não são alterados; fogo real só é colocado quando o vanilla permite sustentá-lo.
+- **Caça em caverna:** quando há entrada conectada à presa mas não existe pouso seguro para a caixa adulta, procura posições de voo com raio para **a boca da caverna**, para direcionar o jato ao acesso em vez de escavar o teto. Limite de tentativas antes da destruição rochosa de último recurso. Continua sendo um adaptador de IA; uma rota 3D perfeita não está garantida.
+
+**Regressões preservadas:** voo original inspirado em CE, montaria, marcações V/B, tamanho, câmera, animação e visual do jato azul.
+
+## Testes no Minecraft
+1. Ataque o Auren **com um zumbi** enquanto ele não tem alvo marcado: deve reagir ao zumbi. Não deve perseguir um monstro apenas porque está por perto.
+2. Caminhe sobre soul fire ou magma com o Auren: não deve receber dano térmico vanilla.
+3. Queime um barranco de grama pela lateral por vários segundos, observe escurecimento/erosão sem quadrado perfeito.
+4. Queime uma parede de pedra pelo lado até gerar magma, depois até abrir uma falha. O fogo não deve pular paredes para atingir blocos escondidos.
+5. Creeper em caverna com boca lateral sem plataforma de pouso: Auren deve procurar posição de voo mirando entrada antes de perfurar o teto, sem garantir que consiga entrar em todos os mapas.
+6. `H`: fogo distante não deve emitir alerta; se o DONO está queimando, alertar; manter lava/monstros/vida baixa.
+7. Repita montaria, ataque aéreo, Shift+V e fogo azul que já funcionavam.
+
+**CI verifica compilação e invariantes estruturais, não comportamento real em cavernas.**
+
+---
+
 # Auren Minecraft 0.7.20 — Revisão de confiabilidade
 
 Esta versão **não adiciona mais poderes**. Corrige falhas confirmadas na 0.7.19 e reforça o teste dos sistemas existentes.

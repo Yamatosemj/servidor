@@ -21,7 +21,8 @@ assert "MIN_FORWARD_DOT" not in fire
 assert "getHeadPosition()" in fire
 assert "neckLower * 0.65D" in fire
 assert "AurenScorchTerrain.igniteVillage(" in fire
-assert "AurenScorchTerrain.scorch(level, scorchCenter, dragon);" in fire
+assert "AurenScorchTerrain.scorch(level, scorchCenter, dragon," in fire
+assert "AurenScorchTerrain.scorchFace(level, scorchCenter," in fire
 for token in ("lowerBreathBone(", "streamBreath", "streamCharge",
               '"Neck1", 0.06F', '"Neck2", 0.10F',
               '"Neck3", 0.12F', '"Head", 0.17F'):
@@ -36,7 +37,7 @@ for token in ("public static void igniteVillage(", "GameRules.RULE_MOBGRIEFING",
 for token in ("findForwardAreaImpact(", "areaFiringPass = areaPhase == 2",
               "safeAreaWaypoint(", "nextSweepTick = combatTicks + 3"):
     assert token in orders, token
-assert "0.7.20-reliability-review-alpha" in (root/"gradle.properties").read_text()
+assert "0.7.21-defense-flame-hunt-alpha" in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1, jars
 with ZipFile(jars[0]) as jar:

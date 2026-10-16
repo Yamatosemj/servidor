@@ -30,7 +30,7 @@ public final class AurenScorchTerrain {
     private static final int MAX_HEAT_POSITIONS = 4096;
     private static final int SCORCH_HEAT = 28;
     private static final int MAGMA_HEAT = 135;
-    private static final int GRASS_BREAK_HEAT = 195;
+    private static final int GRASS_BREAK_HEAT = 115;
     private static final int MAGMA_BREAK_HEAT = 330;
     private static final int MAX_FLAMES_PER_IMPACT = 12;
 
@@ -114,6 +114,70 @@ public final class AurenScorchTerrain {
                     level.sendParticles(ParticleTypes.LARGE_SMOKE,
                             pos.getX() + 0.5D, pos.getY() + 1.12D, pos.getZ() + 0.5D,
                             1, 0.24D, 0.10D, 0.24D, 0.015D);
+                }
+            }
+        }
+    }
+
+    /**
+     * Irradiate the ACTUAL impact face (cliff wall / overhang / cave ceiling).
+     * The original top-down scorch() missed vertical surfaces entirely.
+     * Jitter and probabilistic edge coverage avoid square wall burn decals.
+     * Only the directly exposed face is heated: it cannot scorch rock hidden
+     * behind the wall or through non-loaded regions.
+     */
+    public static void scorchFace(ServerLevel level, BlockPos impact,
+                                  Direction face, AurenDragon dragon,
+                                  BlockPos markedCenter, int radius) {
+        if (face == Direction.UP) {
+            scorch(level, impact, dragon, markedCenter, radius);
+            return;
+        }
+        if (!level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)
+                || (markedCenter != null && (radius < 5 || radius > 30))
+                || !level.hasChunkAt(impact)) return;
+        HeatTracker tracker = HEAT.computeIfAbsent(level, ignored -> new HeatTracker());
+        long now = level.getGameTime();
+        cleanup(tracker, now);
+        double driftU = (dragon.getRandom().nextDouble() - 0.5D) * 0.7D;
+        double driftV = (dragon.getRandom().nextDouble() - 0.5D) * 0.7D;
+        for (int u = -2; u <= 2; u++) {
+            for (int v = -2; v <= 2; v++) {
+                double distance = (u - driftU) * (u - driftU)
+                        + (v - driftV) * (v - driftV);
+                if (distance > 6.5D) continue;
+                if ((u != 0 || v != 0) && dragon.getRandom().nextDouble()
+                        > Math.max(0.20D, 0.92D - distance * 0.11D)) continue;
+                BlockPos surface = switch (face.getAxis()) {
+                    case X -> impact.offset(0, u, v);
+                    case Z -> impact.offset(u, v, 0);
+                    case Y -> impact.offset(u, 0, v);
+                };
+                if (!level.hasChunkAt(surface)
+                        || !withinArea(surface, markedCenter, radius)
+                        || level.getBlockEntity(surface) != null) continue;
+                BlockState state = level.getBlockState(surface);
+                if (!eligible(state)) continue;
+                BlockPos exposed = surface.relative(face);
+                if (!level.hasChunkAt(exposed)) continue;
+                BlockState front = level.getBlockState(exposed);
+                if (!front.isAir() && !front.is(Blocks.FIRE)
+                        && !front.is(Blocks.SOUL_FIRE)) continue;
+                int gain = Math.max(8, 21 - (int) (distance * 2.0D))
+                        + dragon.getRandom().nextInt(5);
+                applyHeat(level, surface, tracker, now, gain);
+
+                double x = surface.getX() + 0.5D + face.getStepX() * 0.62D;
+                double y = surface.getY() + 0.5D + face.getStepY() * 0.62D;
+                double z = surface.getZ() + 0.5D + face.getStepZ() * 0.62D;
+                level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,
+                        x, y, z, 5, 0.20D, 0.24D, 0.20D, 0.04D);
+                // Vanilla fire is only placed when survivable. On bare stone
+                // the heat/magma erosion remains real without fake air fire.
+                if (level.isEmptyBlock(exposed)
+                        && Blocks.FIRE.defaultBlockState().canSurvive(level, exposed)
+                        && dragon.getRandom().nextFloat() < 0.5F) {
+                    level.setBlockAndUpdate(exposed, Blocks.FIRE.defaultBlockState());
                 }
             }
         }

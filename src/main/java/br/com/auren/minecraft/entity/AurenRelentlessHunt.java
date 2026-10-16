@@ -64,6 +64,9 @@ final class AurenRelentlessHunt {
     private int compactStartTick;
     private int nextEntranceSearchTick;
     private Vec3 caveLanding;
+    private Vec3 caveMouthVantage;
+    private int mouthVantageRefreshTick;
+    private int inaccessibleMouthTicks;
     private Vec3 lastSafeAdultPosition;
     private int landingRefreshTick;
     private Vec3 fireAim;
@@ -100,6 +103,9 @@ final class AurenRelentlessHunt {
         attemptedCave = false;
         caveRouteExhausted = false;
         caveLanding = null;
+        caveMouthVantage = null;
+        mouthVantageRefreshTick = 0;
+        inaccessibleMouthTicks = 0;
         caveEntrance = null;
         compactRouteGoal = null;
         lastCompactMovement = null;
@@ -122,6 +128,9 @@ final class AurenRelentlessHunt {
         caveRouteExhausted = false;
         lastCaveAttempt = null;
         caveEntrance = null;
+        caveMouthVantage = null;
+        mouthVantageRefreshTick = 0;
+        inaccessibleMouthTicks = 0;
         compactRouteGoal = null;
         lastCompactMovement = null;
         caveLanding = null;
@@ -250,6 +259,89 @@ final class AurenRelentlessHunt {
     }
 
     /**
+     * A narrow cliff entrance often has NO adult-size landing shelf at the
+     * cave's elevation. In that case, look for a flight vantage facing the
+     * cave opening instead of burning straight down through the mountain.
+     * This is a cautious fallback, not a complete 3D flight pathfinder.
+     */
+    private Vec3 findMouthVantage(ServerLevel level) {
+        if (caveEntrance == null) return null;
+        Vec3 mouth = Vec3.atCenterOf(caveEntrance);
+        Vec3 best = null;
+        double bestScore = Double.POSITIVE_INFINITY;
+        for (int distance : new int[] {5, 9, 13}) {
+            for (int i = 0; i < 16; i++) {
+                double radians = i * Math.PI / 8.0D;
+                for (int up : new int[] {1, 4, 7}) {
+                    Vec3 candidate = mouth.add(Math.cos(radians) * distance,
+                            up, Math.sin(radians) * distance);
+                    BlockPos targetBlock = BlockPos.containing(candidate);
+                    if (!level.hasChunkAt(targetBlock)
+                            || !level.noCollision(dragon,
+                                dragon.getBoundingBox().move(candidate.subtract(dragon.position()))))
+                        continue;
+                    BlockHitResult sight = level.clip(new ClipContext(
+                            candidate, mouth, ClipContext.Block.COLLIDER,
+                            ClipContext.Fluid.NONE, dragon));
+                    if (sight.getType() == HitResult.Type.BLOCK
+                            && sight.getLocation().distanceToSqr(mouth) > 2.25D)
+                        continue;
+                    double score = candidate.distanceToSqr(dragon.position())
+                            + Math.abs(candidate.y - mouth.y) * 3.0D;
+                    if (score < bestScore) {
+                        bestScore = score;
+                        best = candidate;
+                    }
+                }
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Insist on an accessible cave MOUTH before treating the target as
+     * trapped under an impenetrable rock roof. Shoot into the opening when
+     * the adult cannot land rather than aiming straight down at the target.
+     */
+    private boolean pressureCaveMouth(ServerLevel level, ServerPlayer owner) {
+        if (caveEntrance == null || caveRouteExhausted
+                || dragon.getFlightMode() != AurenFlightController.FLYING)
+            return false;
+        if (caveMouthVantage == null || dragon.tickCount >= mouthVantageRefreshTick) {
+            caveMouthVantage = findMouthVantage(level);
+            mouthVantageRefreshTick = dragon.tickCount + 60;
+        }
+        Vec3 mouth = Vec3.atCenterOf(caveEntrance);
+        if (caveMouthVantage != null) {
+            inaccessibleMouthTicks = 0;
+            if (dragon.position().distanceToSqr(caveMouthVantage) > 16.0D) {
+                if (dragon.getFlightController().patrolAttack(
+                        owner, caveMouthVantage, false)) return true;
+            } else {
+                fireAim = mouth;
+                dragon.getFlightController().holdFacing(owner, mouth);
+                return true;
+            }
+        }
+        // Even without a stable vantage, avoid blindly switching back
+        // to rooftop destruction if the mouth is already visible.
+        BlockHitResult sight = level.clip(new ClipContext(
+                dragon.getFireBreathHeadPosition(), mouth,
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, dragon));
+        if (sight.getType() == HitResult.Type.MISS
+                && dragon.getFireBreathHeadPosition().distanceToSqr(mouth)
+                    < CHARGE_REACH * CHARGE_REACH) {
+            fireAim = mouth;
+            dragon.getFlightController().holdFacing(owner, mouth);
+            return true;
+        }
+        // After a bounded genuine search, allow the rock-only LAST RESORT.
+        if (++inaccessibleMouthTicks < 200) return true;
+        caveRouteExhausted = true;
+        return false;
+    }
+
+    /**
      * Native A* navigation is still the authority for actual movement.
      * Only scout an entrance TOPOLOGICALLY CONNECTED to the prey's cave.
      * Do not choose an apparently close point separated by solid rock.
@@ -300,7 +392,10 @@ final class AurenRelentlessHunt {
         if (caveEntrance == null || dragon.tickCount >= nextEntranceSearchTick) {
             caveEntrance = AurenCaveRoutePlanner.findEntrance(level, enemy);
             nextEntranceSearchTick = dragon.tickCount + 100;
-            if (caveEntrance == null) caveLanding = null;
+            if (caveEntrance == null) {
+                caveLanding = null;
+                caveMouthVantage = null;
+            }
         }
         // No connected cave mouth: small form has no useful route.
         if (caveEntrance == null) return false;
@@ -316,10 +411,11 @@ final class AurenRelentlessHunt {
             }
             // Never shrink while flying over the mountain! Look for a safe
             // open landing at the height of the cave mouth.
-            if (caveLanding == null) return false;
+            if (caveLanding == null) return pressureCaveMouth(level, owner);
             if (dragon.position().distanceToSqr(caveLanding) > 16.0D) {
-                return dragon.getFlightController().patrolAttack(
-                        owner, caveLanding, false);
+                if (dragon.getFlightController().patrolAttack(
+                        owner, caveLanding, false)) return true;
+                return pressureCaveMouth(level, owner);
             }
             dragon.getFlightController().land();
             return true;
@@ -455,6 +551,8 @@ final class AurenRelentlessHunt {
             attemptedCave = false;
             caveRouteExhausted = false;
             caveLanding = null;
+            caveMouthVantage = null;
+            inaccessibleMouthTicks = 0;
             caveEntrance = null;
             compactRouteGoal = null;
             siegeCharges = 0;
@@ -466,6 +564,8 @@ final class AurenRelentlessHunt {
             attemptedCave = false;
             caveRouteExhausted = false;
             caveLanding = null;
+            caveMouthVantage = null;
+            inaccessibleMouthTicks = 0;
             caveEntrance = null;
             compactRouteGoal = null;
             nextEntranceSearchTick = 0;

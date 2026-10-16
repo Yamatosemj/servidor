@@ -61,7 +61,7 @@ assert "new AurenAttackOrders(this)" in dragon
 assert "this.attackOrders.tick();" in dragon
 assert "this.attackOrders.save(tag);" in dragon
 assert "this.attackOrders.load(tag);" in dragon
-assert dragon.count("!AurenDragon.this.getAttackOrders().hasOrder()") == 4
+assert dragon.count("!AurenDragon.this.getAttackOrders().hasOrder()") == 5
 assert "&& !this.dragon.getAttackOrders().hasOrder()" in follow
 assert "if (!this.dragon.getAttackOrders().hasOrder())" in follow
 
@@ -81,6 +81,7 @@ for phrase in ("boolean autonomousFire =", "boolean riddenFire =",
                "dragon.getFlightMode() == AurenFlightController.FLYING",
                "withinArea(target.position())",
                "AurenScorchTerrain.scorch(level, scorchCenter, dragon,",
+                "AurenScorchTerrain.scorchFace(level, scorchCenter,",
                "dragon.isAlliedTo(target)", "GameRules.RULE_MOBGRIEFING"):
     assert phrase in fire, phrase
 # Both the ray-hit face and the adjacent soul-fire placement must stay inside
@@ -90,7 +91,7 @@ assert "withinArea(Vec3.atCenterOf(firePos))" in fire
 assert 4.5**2 <= 5**2 and not (5.5**2 <= 5**2)
 assert "BlockPos markedCenter, int radius" in terrain
 assert "dx * dx + dz * dz > radius * radius" in terrain
-assert "mod_version=0.7.20-reliability-review-alpha" in version
+assert "mod_version=0.7.21-defense-flame-hunt-alpha" in version
 
 # Pure numerical radius and sweep sanity (no engine/AI claim).
 for r in range(5, 31, 5):
