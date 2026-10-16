@@ -25,10 +25,10 @@ for token in (
   "dragon.getFlightController().patrolAttack(owner, recovery, false)",
 ):
     assert token in orders, token
-for token in ("areaFiringPass = areaPhase == 2",
-              "nextSweepTick = combatTicks + 3",
-              "findForwardAreaImpact(", "safeAreaWaypoint(",
-              "nextWaypointTick = combatTicks + (areaFiringPass ? 180 : 120)"):
+for token in ("areaFiringPass = areaPhase == 2 || areaPhase == 3",
+              "nextSweepTick = combatTicks + 6",
+              "findDistributedAreaImpact(", "safeAreaWaypoint(",
+              "nextWaypointTick = combatTicks + (areaFiringPass ? 115 : 130)"):
     assert token in orders, token
 assert "canAimForward(" not in fire
 assert "AurenScorchTerrain.bombard(" not in fire

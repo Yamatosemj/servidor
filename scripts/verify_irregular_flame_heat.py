@@ -71,7 +71,7 @@ assert "createExplosion" not in terrain and "createExplosion" not in fire
 assert terrain.count("after = Blocks.AIR.defaultBlockState()") == 2
 assert "if (!eligible(original)" in terrain
 assert "level.getBlockEntity(wood) != null" in terrain
-assert "areaFiringPass = areaPhase == 2" in orders
+assert "areaFiringPass = areaPhase == 2 || areaPhase == 3" in orders
 
 # Numeric smoke test of the footprint recipe. This mirrors the documented
 # shape probabilistically but does not execute Minecraft Java.
