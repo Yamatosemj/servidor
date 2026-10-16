@@ -90,7 +90,7 @@ assert "withinArea(Vec3.atCenterOf(firePos))" in fire
 assert 4.5**2 <= 5**2 and not (5.5**2 <= 5**2)
 assert "BlockPos markedCenter, int radius" in terrain
 assert "dx * dx + dz * dz > radius * radius" in terrain
-assert "mod_version=0.7.16-relentless-hunt-alpha" in version
+assert "mod_version=0.7.17-cave-aim-fix-alpha" in version
 
 # Pure numerical radius and sweep sanity (no engine/AI claim).
 for r in range(5, 31, 5):

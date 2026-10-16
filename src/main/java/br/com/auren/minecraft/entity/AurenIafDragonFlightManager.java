@@ -210,15 +210,16 @@ public final class AurenIafDragonFlightManager {
                     || dragon.getFlightMode() == AurenFlightController.LANDING) {
                 return;
             }
+            Vec3 flightTarget = this.flightManager.getFlightTarget();
+            // No collision-driven 180-degree spin while deliberately holding
+            // still to breathe at a hidden target.
+            if (flightTarget == null) return;
             if (this.dragon.horizontalCollision) {
                 this.dragon.setYRot(this.dragon.getYRot() + 180.0F);
                 this.speedModifier = 0.1F;
                 this.flightManager.invalidateTarget();
                 return;
             }
-
-            Vec3 flightTarget = this.flightManager.getFlightTarget();
-            if (flightTarget == null) return;
 
             float distX = (float) (flightTarget.x - this.dragon.getX());
             float distY = (float) (flightTarget.y - this.dragon.getY());

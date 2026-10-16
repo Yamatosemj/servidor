@@ -51,9 +51,15 @@ final class AurenRelentlessHunt {
     private boolean noAerialRoute;
     private boolean routeChecked;
     private boolean attemptedCave;
+    private boolean caveRouteExhausted;
     private boolean compact;
+    private int compactLastProgressTick;
+    private double compactClosestDistanceSq;
     private boolean pendingRestore;
     private BlockPos lastCaveAttempt;
+    private Vec3 caveLanding;
+    private Vec3 lastSafeAdultPosition;
+    private int landingRefreshTick;
     private Vec3 fireAim;
 
     AurenRelentlessHunt(AurenDragon dragon) {
@@ -73,8 +79,11 @@ final class AurenRelentlessHunt {
     }
 
     void load(CompoundTag tag) {
-        compact = tag.getBoolean("AurenHuntTemporarySmall") && dragon.isSmallForm();
-        pendingRestore = compact;
+        // Reload must never leave an orphaned tiny dragon waiting forever for
+        // a target. Reopen pathing to an adult-sized exit instead.
+        compact = false;
+        pendingRestore = tag.getBoolean("AurenHuntTemporarySmall")
+                && dragon.isSmallForm();
         // Intentional reset: revalidate the environment after world loading,
         // including ownership and path availability, before any siege shot.
         blockedTicks = 0;
@@ -83,6 +92,9 @@ final class AurenRelentlessHunt {
         routeChecked = false;
         noAerialRoute = false;
         attemptedCave = false;
+        caveRouteExhausted = false;
+        caveLanding = null;
+        lastSafeAdultPosition = null;
         fireAim = null;
     }
 
@@ -98,13 +110,19 @@ final class AurenRelentlessHunt {
         noAerialRoute = false;
         routeChecked = false;
         attemptedCave = false;
+        caveRouteExhausted = false;
         lastCaveAttempt = null;
+        caveLanding = null;
+        landingRefreshTick = 0;
         fireAim = null;
         tryRestore();
     }
 
     void tickPassive() {
-        if (pendingRestore && !compact) tryRestore();
+        if (pendingRestore && !compact) {
+            tryRestore();
+            if (pendingRestore) walkToSafeExit();
+        }
     }
 
     private void tryRestore() {
@@ -126,38 +144,185 @@ final class AurenRelentlessHunt {
         if (!level.noCollision(dragon, adult)) return;
         dragon.setSmallForm(false);
         pendingRestore = false;
+        lastSafeAdultPosition = null;
+        dragon.getNavigation().stop();
     }
 
-    /** The target must actually have thick terrain above its head. */
+    /**
+     * Never freeze in a tunnel merely because adult hitbox cannot expand.
+     * Reuse a known landing location or path to a nearby open, solid floor.
+     */
+    private void walkToSafeExit() {
+        if (!(dragon.level() instanceof ServerLevel level)
+                || !dragon.isSmallForm()
+                || dragon.getFlightMode() != AurenFlightController.GROUNDED)
+            return;
+        if (dragon.tickCount % 20 != 0 && !dragon.getNavigation().isDone()) return;
+        if (lastSafeAdultPosition != null && lastSafeAdultPosition.distanceToSqr(
+                dragon.position()) > 2.25D) {
+            Path back = dragon.getNavigation().createPath(
+                    BlockPos.containing(lastSafeAdultPosition), 0);
+            if (back != null && back.canReach()) {
+                dragon.getNavigation().moveTo(back, 1.10D);
+                return;
+            }
+        }
+        for (int dist : new int[] {3, 6, 9, 12}) {
+            for (int i = 0; i < 12; i++) {
+                double angle = i * Math.PI / 6.0D;
+                BlockPos candidate = BlockPos.containing(
+                        dragon.getX() + Math.cos(angle) * dist, dragon.getY(),
+                        dragon.getZ() + Math.sin(angle) * dist);
+                if (!safeAdultGround(level, candidate)) continue;
+                Path path = dragon.getNavigation().createPath(candidate, 0);
+                if (path != null && path.canReach()) {
+                    dragon.getNavigation().moveTo(path, 1.10D);
+                    return;
+                }
+            }
+        }
+    }
+
+    /** Ground that supports both an adult dragon and a safe landing. */
+    private boolean safeAdultGround(ServerLevel level, BlockPos floor) {
+        if (!level.hasChunkAt(floor) || !level.hasChunkAt(floor.above(4))
+                || !level.hasChunkAt(floor.below())
+                || level.getBlockState(floor.below()).isAir()
+                || !level.getBlockState(floor).isAir()) return false;
+        double half = 0.78D * 3.25D / 2.0D;
+        AABB adult = new AABB(floor.getX() + 0.5D - half, floor.getY(),
+                floor.getZ() + 0.5D - half, floor.getX() + 0.5D + half,
+                floor.getY() + 1.20D * 3.25D, floor.getZ() + 0.5D + half);
+        return level.noCollision(dragon, adult);
+    }
+
+    /**
+     * Sample the actual cave-mouth altitude, not the mountain TOP.
+     * Never choose a landing spot far above the hidden mob.
+     */
+    private Vec3 findCaveLanding(ServerLevel level, LivingEntity prey) {
+        Vec3 best = null;
+        double bestCost = Double.POSITIVE_INFINITY;
+        for (int dist : new int[] {5, 8, 11, 15}) {
+            for (int i = 0; i < 16; i++) {
+                double angle = i * Math.PI / 8.0D;
+                int x = (int) Math.floor(prey.getX() + Math.cos(angle) * dist);
+                int z = (int) Math.floor(prey.getZ() + Math.sin(angle) * dist);
+                for (int dy : new int[] {0, 1, -1, 2, -2, 3, -3}) {
+                    BlockPos ground = new BlockPos(x, prey.getBlockY() + dy, z);
+                    if (!safeAdultGround(level, ground)
+                            || !level.canSeeSky(ground.above(4))) continue;
+                    Vec3 landing = new Vec3(x + 0.5D, ground.getY(),
+                            z + 0.5D);
+                    // Don't scout an unloaded chunk above the mouth.
+                    Vec3 approach = landing.add(0.0D, 5.0D, 0.0D);
+                    if (!level.hasChunkAt(BlockPos.containing(approach))
+                            || !level.noCollision(dragon, dragon.getBoundingBox().move(
+                            approach.x - dragon.getX(),
+                            approach.y - dragon.getY(),
+                            approach.z - dragon.getZ()))) continue;
+                    double cost = dragon.position().distanceToSqr(approach)
+                            * 0.40D + prey.position().distanceToSqr(landing);
+                    if (cost < bestCost) {
+                        bestCost = cost;
+                        best = approach;
+                    }
+                }
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Small-size exploratory route toward the cave entrance. The prey
+     * itself may be unreachable until we are close enough to its entrance.
+     */
+    private Path findCaveScoutingPath(ServerLevel level, LivingEntity enemy) {
+        Path bestPath = null;
+        double bestScore = Double.POSITIVE_INFINITY;
+        int inspected = 0;
+        for (int distance : new int[] {2, 4, 7, 10}) {
+            for (int i = 0; i < 12; i++) {
+                if (++inspected > 16) return bestPath;
+                double theta = i * Math.PI / 6.0D;
+                BlockPos pos = BlockPos.containing(
+                        enemy.getX() + Math.cos(theta) * distance,
+                        enemy.getY(), enemy.getZ() + Math.sin(theta) * distance);
+                if (!level.hasChunkAt(pos) || !level.hasChunkAt(pos.below())
+                        || !level.getBlockState(pos).isAir()
+                        || level.getBlockState(pos.below()).isAir()) continue;
+                Path path = dragon.getNavigation().createPath(pos, 0);
+                if (path != null && path.canReach()) {
+                    double score = pos.distSqr(enemy.blockPosition())
+                            + dragon.blockPosition().distSqr(pos) * 0.08D;
+                    if (score < bestScore) {
+                        bestScore = score;
+                        bestPath = path;
+                    }
+                }
+            }
+        }
+        return bestPath;
+    }
+
+    /** The target must actually have a roof, not just hide behind a tree. */
     private boolean shelteredUnderground(ServerLevel level, LivingEntity target) {
         BlockPos column = target.blockPosition();
         if (!level.hasChunkAt(column)) return false;
         int roof = level.getHeightmapPos(
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, column).getY();
-        return roof >= target.getEyeY() + 6.0D;
+        return roof >= target.getEyeY() + 2.0D;
     }
 
-    private boolean startCavePursuit(ServerLevel level, LivingEntity enemy) {
+    private boolean startCavePursuit(ServerLevel level, ServerPlayer owner,
+                                     LivingEntity enemy) {
         if (compact || attemptedCave || dragon.isSmallForm()
                 || dragon.isVehicle() || dragon.isOnShoulder()
-                || dragon.distanceToSqr(enemy) > 24.0D * 24.0D) return false;
+                || dragon.distanceToSqr(enemy) > 40.0D * 40.0D) return false;
         if (!shelteredUnderground(level, enemy)) return false;
-        if (dragon.getFlightMode() != AurenFlightController.GROUNDED) {
-            // Do not instantly shrink midair; let the CE flight adapter land.
+
+        int mode = dragon.getFlightMode();
+        if (mode == AurenFlightController.FLYING
+                || mode == AurenFlightController.TAKING_OFF) {
+            if (caveLanding == null || !level.hasChunkAt(
+                    BlockPos.containing(caveLanding))
+                    || dragon.tickCount >= landingRefreshTick) {
+                caveLanding = findCaveLanding(level, enemy);
+                landingRefreshTick = dragon.tickCount + 60;
+            }
+            // Never shrink while flying over the mountain! Look for a safe
+            // open landing at the height of the cave mouth.
+            if (caveLanding == null) return false;
+            if (dragon.position().distanceToSqr(caveLanding) > 16.0D) {
+                return dragon.getFlightController().patrolAttack(
+                        owner, caveLanding, false);
+            }
             dragon.getFlightController().land();
             return true;
         }
-        if (!dragon.onGround()) return true;
+        if (mode == AurenFlightController.LANDING || !dragon.onGround())
+            return true;
+
         attemptedCave = true;
         lastCaveAttempt = enemy.blockPosition();
+        lastSafeAdultPosition = dragon.position();
         dragon.setSmallForm(true);
         Path route = dragon.getNavigation().createPath(enemy, 0);
+        if (route == null || !route.canReach())
+            route = findCaveScoutingPath(level, enemy);
         if (route == null || !route.canReach()) {
+            // No route: stay mobile. Undo temporary shrinking where safe
+            // instead of entering a permanent pendingRestore deadlock.
+            caveRouteExhausted = true;
             pendingRestore = true;
             tryRestore();
-            return false;
+            if (pendingRestore) walkToSafeExit();
+            return true;
         }
         compact = true;
+        caveRouteExhausted = false;
+        compactLastProgressTick = dragon.tickCount;
+        compactClosestDistanceSq = dragon.distanceToSqr(enemy);
         pendingRestore = false;
         failedGroundRoutes = 0;
         nextNavigationCheck = 0;
@@ -177,6 +342,23 @@ final class AurenRelentlessHunt {
             dragon.getNavigation().stop();
             return;
         }
+        double currentDistance = dragon.distanceToSqr(enemy);
+        if (currentDistance + 2.25D < compactClosestDistanceSq) {
+            compactClosestDistanceSq = currentDistance;
+            compactLastProgressTick = dragon.tickCount;
+        }
+        // A partial route to the *outside* of a cave is not proof we can
+        // actually reach the prey. Detect failed progress before deciding
+        // this cave is sealed and permitting a last-resort stone breach.
+        if (dragon.tickCount - compactLastProgressTick > 160
+                && currentDistance > 9.0D) {
+            caveRouteExhausted = true;
+            compact = false;
+            pendingRestore = true;
+            dragon.getNavigation().stop();
+            walkToSafeExit();
+            return;
+        }
         if (meleeCooldown > 0) --meleeCooldown;
         if (meleeCooldown == 0 && dragon.getBoundingBox().inflate(0.65D)
                 .intersects(enemy.getBoundingBox()) && dragon.hasLineOfSight(enemy)) {
@@ -186,13 +368,17 @@ final class AurenRelentlessHunt {
         if (++nextNavigationCheck >= 15) {
             nextNavigationCheck = 0;
             Path path = dragon.getNavigation().createPath(enemy, 0);
+            if (path == null || !path.canReach())
+                path = findCaveScoutingPath(level, enemy);
             if (path != null && path.canReach()) {
                 dragon.getNavigation().moveTo(path, 1.17D);
                 failedGroundRoutes = 0;
-            } else if (++failedGroundRoutes >= 3) {
+            } else if (++failedGroundRoutes >= 4) {
+                caveRouteExhausted = true;
                 compact = false;
                 pendingRestore = true;
                 dragon.getNavigation().stop();
+                walkToSafeExit();
             }
         }
     }
@@ -209,12 +395,17 @@ final class AurenRelentlessHunt {
             return true;
         }
         tryRestore();
-        if (pendingRestore) return true;
+        if (pendingRestore) {
+            walkToSafeExit();
+            return true;
+        }
         if (directSight) {
             blockedTicks = 0;
             routeChecked = false;
             noAerialRoute = false;
             attemptedCave = false;
+            caveRouteExhausted = false;
+            caveLanding = null;
             siegeCharges = 0;
             return false;
         }
@@ -222,6 +413,8 @@ final class AurenRelentlessHunt {
         if (lastCaveAttempt != null
                 && enemy.blockPosition().distSqr(lastCaveAttempt) > 10.0D) {
             attemptedCave = false;
+            caveRouteExhausted = false;
+            caveLanding = null;
             lastCaveAttempt = null;
         }
         if (blockedTicks < COVER_BREATH_DELAY) return false;
@@ -235,7 +428,7 @@ final class AurenRelentlessHunt {
         // A cave is a *different pursuit problem*. Test a real path in the
         // small form before damaging the mountain.
         if (blockedTicks >= CAVE_SEARCH_DELAY
-                && startCavePursuit(level, enemy)) return true;
+                && startCavePursuit(level, owner, enemy)) return true;
 
         if (dragon.getFlightMode() != AurenFlightController.FLYING) {
             // Leave standing/small navigation to vanilla/CE; only airborne
@@ -246,14 +439,13 @@ final class AurenRelentlessHunt {
         if (dragon.getFireBreathHeadPosition().distanceToSqr(strike)
                 > CHARGE_REACH * CHARGE_REACH) return false;
         fireAim = strike;
-        // Hold at the obstruction rather than switching randomly to an
-        // unreachable point; flame covers wood while heat melts stone.
-        Vec3 hold = dragon.position().add(0.0D, 0.12D, 0.0D);
-        if (level.noCollision(dragon, dragon.getBoundingBox().move(0, 0.12D, 0)))
-            dragon.getFlightController().patrolAttack(owner, hold, false);
+        // A real stationary firing posture: no self-directed waypoint that
+        // causes the flight mover to spin the entire body every tick.
+        dragon.getFlightController().holdFacing(owner, strike);
 
         if (blockedTicks >= SIEGE_DELAY && routeChecked && noAerialRoute
                 && (!shelteredUnderground(level, enemy) || attemptedCave)
+                && (caveLanding == null || caveRouteExhausted)
                 && siegeCharges < MAX_SIEGE_CHARGES && dragon.tickCount >= nextSiegeTick
                 && canBreachRock(level, owner, enemy, wall.getBlockPos())) {
             // Localized vanilla MOB explosion (respects mobGriefing and
