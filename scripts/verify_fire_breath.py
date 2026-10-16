@@ -46,7 +46,7 @@ for expr in (
 ):
     assert expr in fire, f"Missing FireDragon CE breath element: {expr}"
 
-# No client-controlled position; only the owner mounted on adult can breathe.
+# No client-controlled position; the mounted owner or server-authored order can breathe.
 assert "public boolean isRiderFiring()" in dragon
 assert "(this.riderControlState & 8) != 0" in dragon
 assert "this.riderControlState = (byte) (state & 15);" in dragon
@@ -61,14 +61,18 @@ assert "byte controlState" in packet
 assert "dragon.isOwnedBy(rider)" in fire
 assert "dragon.isSmallForm()" in fire
 assert "dragon.isRiderLightning()" in fire
-assert "dragon.getControllingPassenger() instanceof Player rider" in fire
+assert "dragon.getControllingPassenger() instanceof Player pilot" in fire
+assert "boolean riddenFire = rider != null && dragon.isOwnedBy(rider)" in fire
+assert "boolean autonomousFire = !dragon.isVehicle()" in fire
+assert "dragon.getAttackOrders().getFireAim()" in fire
+assert "dragon.getFlightMode() == AurenFlightController.FLYING" in fire
 assert "target == dragon || target == rider" in fire
 assert "tame.getOwnerUUID().equals(dragon.getOwnerUUID())" in fire
 assert "dragon.isAlliedTo(target)" in fire
 assert "dragon.hasLineOfSight(target)" in fire
 assert "level.hasChunkAt(BlockPos.containing(burnTarget))" in fire
 assert "if (this.burnProgress == CE_BURN_PROGRESS_MAX && dragon.tickCount % 5 == 0)" in fire
-assert "mod_version=0.7.6-defend-scorch-alpha" in version
+assert "mod_version=0.7.7-marked-assault-alpha" in version
 
 # Never expose a client-selectable target vector nor copy mod-specific block
 # destruction, random explosive charge or sound registries into the port.
