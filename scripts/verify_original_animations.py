@@ -64,6 +64,11 @@ def check():
     assert "AurenOriginalAnimations.instance().applyBreathPose(model, dragon, partialTick);" in renderer
     for name in ("flying", "hovering", "diving"):
         assert f'load("{name}")' in source
+    assert "CALM_SITTING_POSE" in renderer
+    assert "CALM_SLEEPING_POSE" in renderer
+    assert "dragon.getNaturalRestBlend(partialTick)" in renderer
+    assert "dragon.getRestVisualPose() == 2" in renderer
+    assert "AurenPoseTransition.apply(model," in renderer
     assert "AurenOriginalAnimations.instance().apply" in renderer
     assert "dragon.getFlightMode()" in source
     assert "dragon.getFlightBlend(partialTick)" in source
@@ -88,7 +93,7 @@ def check():
     assert "if (entity.isVehicle())" in renderer
     assert "pose.mulPose(Axis.XP.rotationDegrees(entity.getRiderVisualPitch(partialTick)))" in renderer
     assert "Axis.YP.rotationDegrees(90" not in renderer
-    assert "mod_version=0.7.24-natural-companion-alpha" in version
+    assert "mod_version=0.7.25-contextual-daily-routine-alpha" in version
     print(f"PASS: {len(NAMES)} compatible original Lightning Dragon "
           f"Tabula models are bundled and referenced; original CE folded wings and illustrated awake neck wrap integrated")
 

@@ -1,3 +1,30 @@
+# Auren Minecraft 0.7.25 — Rotina Natural Contextual
+
+O Auren desenvolve rotina própria sem depender da IA do computador. Esta versão **não altera o combate, o voo, a montaria, as transformações nem os ataques de fogo/raio**.
+
+### Novas rotinas (apenas se estiver manso, próximo e seguro)
+- **Observação:** acompanha o que o dono faz e olha ocasionalmente para os arredores. A direção da cabeça varia de forma irregular, evitando varreduras robóticas em intervalos constantes.
+- **Passeios curtos:** caminha por rotas terrestres A* para pontos com piso firme, colisão liberada e chunk carregado, mantendo-se perto do dono; não explora áreas descarregadas nem teleporta.
+- **Curiosidade pacífica:** ocasionalmente se aproxima com cuidado de animais pacíficos próximos ao dono e observa, **sem selecionar alvos de combate, atacar ou assustar deliberadamente**.
+- **Descanso diurno:** porções curtas em pose original de dragão sentado do Ice and Fire CE, interpoladas em 18 ticks; sem alterar o comando real de sentar.
+- **Sono noturno:** maior chance de usar a pose original de dragão dormindo quando anoitece, por um tempo limitado. Não é uma rotina fixa nem o deixa indisponível.
+- **Chuva:** quando está exposto, tenta encontrar um ponto coberto nas proximidades se houver rota segura. Se não houver, não força teleporte ou voo; continua atento.
+- **Interrupção imediata:** a rotina cessa quando o dono começa a se movimentar, sai do alcance, marca alvo, ocorre ameaça direta, monta no dragão, ativa ombro ou dá ordem de sentar.
+
+As fases são sorteadas conforme o contexto, com cooldown de 100–230 ticks e duração delimitada. **Nenhum novo pacote client->server**: o servidor apenas sincroniza um inteiro (0 ativo, 1 sentado, 2 dormindo) e o cliente interpola os quadros originais Tabula. As poses de descanso são suprimidas se montado, voando, atacando ou no ombro.
+
+### Como testar
+1. Dia com clima limpo: deixe o Auren próximo e fique parado por 1–3 minutos. Deve variar olhar, curtas caminhadas e alguns descansos sentado.
+2. À noite: deixe-o com você em local seguro. Ele deve dormir com maior frequência, sem ficar travado após o nascer do sol.
+3. Perto de vacas/ovelhas: observe aproximação e curiosidade, **sem morder nem incendiar** um animal não marcado.
+4. Chuva: se existir telhado acessível próximo, pode procurar abrigo; sem abrigo, não deve tentar atravessar paredes.
+5. No meio de uma rotina, caminhe para longe, marque um monstro, monte no Auren ou coloque-o no ombro: deve parar a rotina imediatamente.
+6. Verifique montagem, animações originais CE, raio do pequeno, sopro azul e ataque aéreo 0.7.22 sem regressões.
+
+**Limite:** ainda não há necessidades simuladas de fome, sono obrigatório, personalidade via LLM ou decisões de combate sem ordens. Compilação e testes estáticos não garantem qualidade visual em game.
+
+---
+
 # Auren Minecraft 0.7.24 — Companhia e movimentos naturais
 
 Sem poderes novos e **sem integração com a IA desktop**. Esta versão melhora apenas as decisões de andar, voar e agir tranquilamente ao lado do dono.
