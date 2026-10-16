@@ -29,6 +29,7 @@ public final class AurenFlightController {
     private final AurenIafDragonFlightManager iafFlightManager;
 
     private LivingEntity owner;
+    private Vec3 patrolPoint;
     private int ticksSinceOwner;
     private int flightTicks;
     private int obstructionTicks;
@@ -78,7 +79,18 @@ public final class AurenFlightController {
         }
 
         this.owner = targetOwner;
+        this.patrolPoint = null;
         this.ticksSinceOwner = 0;
+        return true;
+    }
+
+    /** Marked attack waypoint. Reuses the CE FlightMoveHelper, not new physics. */
+    public boolean patrol(LivingEntity targetOwner, Vec3 waypoint) {
+        if (waypoint == null || !(dragon.level() instanceof ServerLevel level)
+                || !level.hasChunkAt(BlockPos.containing(waypoint))) return false;
+        if (!follow(targetOwner)) return false;
+        this.patrolPoint = waypoint;
+        this.iafFlightManager.setFlightTarget(waypoint);
         return true;
     }
 
@@ -93,6 +105,7 @@ public final class AurenFlightController {
         if (dragon.getFlightMode() == GROUNDED
                 || dragon.getFlightMode() == LANDING) return;
         this.owner = null;
+        this.patrolPoint = null;
         this.iafFlightManager.clear();
         dragon.setFlightMode(LANDING);
         dragon.setNoGravity(false);
@@ -107,6 +120,7 @@ public final class AurenFlightController {
     public void reset() {
         this.iafFlightManager.clear();
         this.owner = null;
+        this.patrolPoint = null;
         this.ticksSinceOwner = 0;
         this.flightTicks = 0;
         this.obstructionTicks = 0;
@@ -159,7 +173,12 @@ public final class AurenFlightController {
 
         // The original CE flightManager.update chooses a line-of-sight
         // owner-escort target and adds upward momentum if the target is above.
-        this.iafFlightManager.update(this.owner);
+        if (this.patrolPoint != null) {
+            // HOVER_BLAST / SCORCH_STREAM route, under server authority.
+            this.iafFlightManager.setFlightTarget(this.patrolPoint);
+        } else {
+            this.iafFlightManager.update(this.owner);
+        }
         Vec3 goal = this.iafFlightManager.getFlightTarget();
 
         if (goal == null) {
