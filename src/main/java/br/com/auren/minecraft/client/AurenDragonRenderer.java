@@ -29,6 +29,10 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
     private static final ResourceLocation FOLDED_WINGS_POSE =
             ResourceLocation.fromNamespaceAndPath(AurenMinecraft.MOD_ID,
                     "lightningdragon/lightningdragon_sleeping");
+    private static final ResourceLocation CALM_SITTING_POSE =
+            ResourceLocation.fromNamespaceAndPath(AurenMinecraft.MOD_ID,
+                    "lightningdragon/lightningdragon_sitting");
+    private static final ResourceLocation CALM_SLEEPING_POSE = FOLDED_WINGS_POSE;
 
     private final TabulaModel<AurenDragon> groundModel;
     // Original IceAndFire CE LightningDragonEntityRenderer uses this SAME
@@ -44,6 +48,7 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
         // Cache two immutable source poses; no invented wing animation.
         TabulaModelHandlerHelper.getModel(SHOULDER_AWAKE_POSE);
         TabulaModelHandlerHelper.getModel(FOLDED_WINGS_POSE);
+        TabulaModelHandlerHelper.getModel(CALM_SITTING_POSE);
     }
 
     private static TabulaModel<AurenDragon> load(String modelName) {
@@ -92,6 +97,16 @@ public final class AurenDragonRenderer extends MobRenderer<AurenDragon, TabulaMo
         // The original CE Tabula walk and flight frames, not hand-crafted
         // joint swings, are the source of animation outside shoulder mode.
         AurenOriginalAnimations.instance().apply(model, dragon, limbSwing, limbSwingAmount, age);
+        // Smooth, complete CE source Tabula poses for quiet daytime sitting
+        // and deeper night-time sleeping. Combat, flight and riding override.
+        float resting = dragon.getNaturalRestBlend(partialTick);
+        if (resting > 0.01F && !dragon.isVehicle()
+                && dragon.getFlightMode() == br.com.auren.minecraft.entity.AurenFlightController.GROUNDED) {
+            ResourceLocation source = dragon.getRestVisualPose() == 2
+                    ? CALM_SLEEPING_POSE : CALM_SITTING_POSE;
+            AurenPoseTransition.apply(model,
+                    TabulaModelHandlerHelper.getModel(source), resting);
+        }
         // Overlay the CE's ORIGINAL charge/open-mouth breath pose on top of
         // walking/flying. Does not change the body flight keyframes or wings.
         AurenOriginalAnimations.instance().applyBreathPose(model, dragon, partialTick);
