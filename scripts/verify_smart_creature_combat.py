@@ -34,11 +34,27 @@ assert "canAimForward(" not in fire
 assert "AurenScorchTerrain.bombard(" not in fire
 assert "destroyBlock(" not in terrain
 assert "Blocks.FIRE.defaultBlockState()" in terrain
-assert "mod_version=0.7.13-smart-creature-combat-alpha" in (root/"gradle.properties").read_text()
+# Audit regression gates: orders never bypass collision tests or fight
+# against the ground-wandering goal; marked orders are achievable on receipt.
+dragon=(j/"AurenDragon.java").read_text()
+commands=(root/"src/main/java/br/com/auren/minecraft/AurenCommands.java").read_text()
+assert "AurenDragon.this.getFlightMode() == AurenFlightController.GROUNDED" in dragon
+assert dragon.count("&& !AurenDragon.this.getAttackOrders().hasOrder()") >= 2
+assert "&& waypoint != null && combatTicks < nextWaypointTick" in orders
+assert "tackleApproachPoint(level, enemy)" in orders
+assert "recoveryPoint(level, enemy)" in orders
+assert "dragon.getBoundingBox().inflate(0.7D).intersects(enemy.getBoundingBox())" in orders
+assert "level.hasChunkAt(enemy.blockPosition())" in orders
+assert "MAX_MARK_DISTANCE * MAX_MARK_DISTANCE" in orders
+assert "Vec3.atCenterOf(center)" in orders
+assert "Alvo inválido ou além de 64 blocos" in commands
+assert "patrolAttack(owner, next, true)" not in orders
+assert "level.hasChunkAt(BlockPos.containing(next))) {" not in orders
+assert "mod_version=0.7.14-combat-safety-alpha" in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1, jars
 with ZipFile(jars[0]) as f:
     assert f.testzip() is None
     for clazz in ("AurenAttackOrders","AurenFireBreath","AurenFlightController"):
         assert "br/com/auren/minecraft/entity/"+clazz+".class" in f.namelist()
-print("PASS: LOS-aware CE attacks, predictive tackle, continuous area + safe fire unchanged")
+print("PASS: collision-safe CE combat, no wandering conflicts, bounded marks, existing fire preserved")

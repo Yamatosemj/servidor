@@ -1,3 +1,16 @@
+# Auren Minecraft 0.7.14 — Correção da auditoria de combate
+
+- **Correção prioritária 1:** caminhada aleatória desativada sempre que há uma ordem de ataque ou voo ativo; não disputa navegação com o voo de combate.
+- **Correção prioritária 2:** o Auren nunca tenta uma investida contra um waypoint rejeitado pela colisão. Busca aproximação livre e recua para pontos seguros caso a criatura esteja atrás de paredes.
+- **Recuperação:** sem visão da criatura, procura uma posição válida no ar. Mantém o ponto de recuperação por um curto intervalo para não recalcular/oscilar a cada tick; só pousa quando não acha espaço seguro.
+- **Mordida:** exige sobreposição próxima das caixas de colisão, não apenas distância entre centros.
+- **Marcação:** criaturas/centros de bombardeio precisam estar a até 64 blocos do Auren, coerente com o limite que já existia durante execução da ordem. Mensagens explicam falhas por alcance.
+- **Transições:** após uma investida acertada, reavalia a próxima tática no fim do recuo, sem alterar o controlador original de voo.
+- **Preservação:** não alteramos `AurenFireBreath`, `AurenScorchTerrain`, animação de cabeça/voo, teclas, marcação por V, montaria nem o comportamento do bombardeio já aprovado.
+- **Limites:** testes automatizados de compilação, asserts e presença do JAR não substituem testes visuais em jogo. O adaptador ainda não é a IA completa da `DragonBaseEntity` do Ice and Fire CE.
+
+---
+
 # Auren Minecraft 0.7.13 — inteligência de combate a criaturas
 
 ## Melhorias focadas exclusivamente em alvos marcados

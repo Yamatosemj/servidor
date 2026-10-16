@@ -57,6 +57,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: auren-0713-TACTICAL-CREATURE-COMBAT
+          name: auren-0714-COMBAT-SAFETY-FIXES
           path: build/libs/*.jar
           if-no-files-found: error
