@@ -5,6 +5,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.AABB;
 
 import java.util.EnumSet;
@@ -28,13 +30,16 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
     static final double EMERGENCY_TELEPORT_DISTANCE = 50.0D;
 
     private static final double WALK_SPEED = 1.05D;
-    private static final int REPATH_INTERVAL_TICKS = 10;
+    private static final int REPATH_INTERVAL_TICKS = 25;
     private static final int MAX_TELEPORT_ATTEMPTS = 20;
     // Match CE's separation of terrestrial and aerial navigation.
-    private static final int GROUND_WALK_BEFORE_FLIGHT_TICKS = 40;
-    private static final int GROUND_STALL_TICKS = 30;
-    private static final double ADULT_LONG_CHASE_DISTANCE = 32.0D;
-    private static final double BABY_LONG_CHASE_DISTANCE = 14.0D;
+    private static final int GROUND_WALK_BEFORE_FLIGHT_TICKS = 120;
+    private static final int GROUND_STALL_TICKS = 80;
+    private static final double ADULT_LONG_CHASE_DISTANCE = 44.0D;
+    private static final double BABY_LONG_CHASE_DISTANCE = 26.0D;
+    private static final int MOTION_SAMPLE_TICKS = 20;
+    private static final double MOTION_SAMPLE_SQ = 0.55D * 0.55D;
+    private static final double OWNER_REPATH_SQ = 3.5D * 3.5D;
 
     private final AurenDragon dragon;
     private final boolean baby;
@@ -42,7 +47,10 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
     private int repathCooldown;
     private int groundPursuitTicks;
     private int stalledGroundTicks;
-    private double previousOwnerDistance;
+    private Vec3 previousGroundPosition;
+    private Vec3 lastPathOwnerPosition;
+    private int movementSampleTick;
+    private int noRouteTicks;
 
     public AurenAdultFollowOwnerGoal(AurenDragon dragon) {
         this(dragon, false);
@@ -103,13 +111,17 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
         this.repathCooldown = 0;
         this.groundPursuitTicks = 0;
         this.stalledGroundTicks = 0;
-        this.previousOwnerDistance = this.dragon.distanceTo(this.owner);
+        this.noRouteTicks = 0;
+        this.previousGroundPosition = this.dragon.position();
+        this.lastPathOwnerPosition = null;
+        this.movementSampleTick = this.dragon.tickCount;
     }
 
     @Override
     public void stop() {
         this.owner = null;
         this.dragon.getNavigation().stop();
+        this.lastPathOwnerPosition = null;
         if (!this.dragon.getAttackOrders().hasOrder())
             this.dragon.getFlightController().land();
     }
@@ -141,29 +153,58 @@ public final class AurenAdultFollowOwnerGoal extends Goal {
         // The CE navigator switches back to ground only after touchdown.
         if (flightMode != AurenFlightController.GROUNDED) return;
 
-        // Walk FIRST. Air travel is a fallback, not the default follow action.
-        boolean hasGroundRoute = this.dragon.getNavigation().moveTo(this.owner, WALK_SPEED);
-        double distance = Math.sqrt(distanceSq);
-        if (hasGroundRoute && this.previousOwnerDistance - distance > 0.3D) {
-            this.stalledGroundTicks = 0;
-        } else {
-            this.stalledGroundTicks += REPATH_INTERVAL_TICKS;
+        // Do not replace an active A* corner-by-corner route every ten ticks.
+        // Repath only if the owner moved meaningfully or navigation ended.
+        boolean movedOwner = this.lastPathOwnerPosition == null
+                || this.lastPathOwnerPosition.distanceToSqr(this.owner.position())
+                        > OWNER_REPATH_SQ;
+        boolean routeDone = this.dragon.getNavigation().isDone();
+        if (movedOwner || routeDone) {
+            Path candidate = this.dragon.getNavigation().createPath(this.owner, 0);
+            this.lastPathOwnerPosition = this.owner.position();
+            if (candidate != null && candidate.canReach()
+                    && this.dragon.getNavigation().moveTo(candidate, WALK_SPEED)) {
+                this.noRouteTicks = 0;
+            } else {
+                this.noRouteTicks = Math.min(300,
+                        this.noRouteTicks + REPATH_INTERVAL_TICKS);
+            }
         }
-        this.previousOwnerDistance = distance;
         this.groundPursuitTicks += REPATH_INTERVAL_TICKS;
 
-        boolean blocked = this.stalledGroundTicks >= GROUND_STALL_TICKS;
+        // A real detour can increase distance to the player before reaching
+        // them. Judge being stuck from Auren's OWN displacement, not whether
+        // it happened to move closer to the owner in a straight line.
+        if (this.dragon.tickCount - this.movementSampleTick >= MOTION_SAMPLE_TICKS) {
+            boolean moving = this.dragon.position()
+                    .distanceToSqr(this.previousGroundPosition) >= MOTION_SAMPLE_SQ;
+            if (moving) this.stalledGroundTicks = 0;
+            else this.stalledGroundTicks = Math.min(300,
+                    this.stalledGroundTicks + MOTION_SAMPLE_TICKS);
+            this.previousGroundPosition = this.dragon.position();
+            this.movementSampleTick = this.dragon.tickCount;
+        }
+
+        boolean blocked = this.stalledGroundTicks >= GROUND_STALL_TICKS
+                || this.noRouteTicks >= GROUND_STALL_TICKS;
         double longChase = this.baby ? BABY_LONG_CHASE_DISTANCE
                 : ADULT_LONG_CHASE_DISTANCE;
-        boolean longPursuit = this.groundPursuitTicks >= GROUND_WALK_BEFORE_FLIGHT_TICKS
+        boolean longPursuit = this.groundPursuitTicks
+                >= GROUND_WALK_BEFORE_FLIGHT_TICKS
                 && distanceSq >= longChase * longChase;
 
-        if (blocked || longPursuit) {
-            // Same CE mover/escort used in v0.6.1, but only when necessary.
-            // If the ceiling blocks takeoff, keep the active ground route.
-            if (this.dragon.getFlightController().follow(this.owner)) {
+        // In caves or under roofs, launching from the ground into a ceiling
+        // is much worse than continuing the available ground route.
+        // Emergency teleport remains the last resort beyond 50 blocks.
+        BlockPos from = this.dragon.blockPosition().above(2);
+        BlockPos to = this.owner.blockPosition().above(2);
+        boolean openSky = this.dragon.level().hasChunkAt(from)
+                && this.dragon.level().hasChunkAt(to)
+                && this.dragon.level().canSeeSky(from)
+                && this.dragon.level().canSeeSky(to);
+        if (openSky && (blocked || longPursuit)) {
+            if (this.dragon.getFlightController().follow(this.owner))
                 this.dragon.getNavigation().stop();
-            }
         }
     }
 
