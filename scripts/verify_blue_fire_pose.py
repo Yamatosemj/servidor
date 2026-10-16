@@ -71,7 +71,7 @@ assert "AurenOriginalAnimations.instance().applyBreathPose(model, dragon, partia
 assert "AurenOriginalAnimations.instance().apply(model, dragon, limbSwing, limbSwingAmount, age);" in renderer
 assert "new AurenRiderFeatureRenderer(this)" in renderer
 assert "this.lightningRenderer.render(partialTick, pose, buffer)" in renderer
-assert "mod_version=0.7.26-offline-mind-alpha" in version
+assert "mod_version=0.7.27-visible-offline-routine-alpha" in version
 
 original = {
     "attack_stream_charge1": "7865c66437438b74307df427d2febcac474426f9",
