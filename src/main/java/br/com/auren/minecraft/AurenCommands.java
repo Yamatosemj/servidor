@@ -143,6 +143,15 @@ public final class AurenCommands {
         return Command.SINGLE_SUCCESS;
     }
 
+    private static int mind(CommandContext<CommandSourceStack> context)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        AurenDragon dragon = getDragon(context);
+        if (dragon == null) return 0;
+        context.getSource().sendSuccess(() ->
+                Component.literal("Auren: " + dragon.getMind().describe()), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
     private static int memories(CommandContext<CommandSourceStack> context)
             throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         AurenDragon dragon = getDragon(context);
@@ -257,6 +266,7 @@ public final class AurenCommands {
                         .then(Commands.literal("ambiente").executes(AurenCommands::environment))
                         .then(Commands.literal("perceber").executes(AurenCommands::environment))
                         .then(Commands.literal("lembrar").executes(AurenCommands::memories))
+                        .then(Commands.literal("mente").executes(AurenCommands::mind))
         );
     }
 }

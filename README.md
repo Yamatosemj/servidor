@@ -1,3 +1,32 @@
+# Auren Minecraft 0.7.26 — Cérebro local offline-first
+
+> **Roadmap permanente:** [docs/ROADMAP_AUREN_AUTONOMO.md](docs/ROADMAP_AUREN_AUTONOMO.md). Esta é a **etapa 1**, não a conclusão de toda a autonomia.
+
+**Regra principal:** o Auren deve poder viver, acompanhar, voar, se defender e seguir rotinas **sem DeepSeek, modelos de linguagem, conexão com internet ou aplicativo externo**.
+
+### Esta versão começa a construir o cérebro autônomo
+- **Nova política local em Java puro:** cinco intenções de rotina (observar, explorar, investigar animais, descansar e buscar abrigo). A escolha é pontuada por energia, curiosidade, atenção a perigos, dia/noite, chuva e última decisão, com pequenas variações reproduzíveis.
+- **Memória de necessidades simuladas:** energia/curiosidade/alerta de 0 a 100; atualizações leves uma vez por segundo no servidor, apenas quando o dono está no mundo. Salvas no NBT da entidade e restauradas entre sessões, com compatibilidade com mundos da v0.7.25. Não são fome/sono obrigatórios nem sentimentos reais.
+- **Mesmo corpo, cérebro melhor:** o `AurenNaturalIdleGoal` recebe alternativas classificadas da mente, mas continua validando os caminhos A* e as colisões. Se um abrigo ou uma exploração não tem rota, tenta a alternativa segura seguinte. Isso não altera o sistema CE de voo, fogo, raio, montaria nem as ordens V.
+- **`/auren mente`** (somente dono dentro de 64 blocos): mostra energia, curiosidade, nível de alerta e última escolha, sem HUD intrusivo. Use para observar a evolução das variáveis.
+- **Teste executável separado:** `scripts/LocalDecisionPolicyTest.java` é compilado e executado com Java 21 sem Minecraft, testando cenários de chuva, noite, alta curiosidade e alerta. Testes anteriores e inspeção de JAR continuam.
+- **Nada de IA externa nesta versão**: não há token, API, chamada de rede, telemetria ou controlador de prompt.
+
+### Limites declarados
+- A política inicial **só escolhe rotinas pacíficas**. Prioridades entre combate, seguir, defesa, montaria e ordens do dono ainda são resolvidas pelos `GoalSelector`/controladores atuais; centralizar essas prioridades será a etapa 2.
+- Memória de acontecimentos, planejamento em várias etapas e personalidade adaptativa ainda não existem: ver roadmap.
+- A validação por CI **não substitui** teste de jogabilidade; manter PR draft até a confirmação do jogador.
+
+### Testar no Minecraft
+1. Rode `/auren mente` perto do seu dragão. Anote os valores; espere 2–3 minutos em ambiente seguro e veja mudança de energia/curiosidade.
+2. Com noite e Auren com energia mais baixa, deve preferir dormir por mais tempo; na chuva exposto deve priorizar abrigo **se acessível**.
+3. Com animais pacíficos próximos, ele pode investigá-los sem atacar.
+4. Saia e entre no mundo: `/auren mente` deve conservar os indicadores e última rotina selecionada.
+5. Marque inimigo, monte, use ombro, voe e ataque: nenhum conflito com rotina ou perda de defesa.
+6. Desligue internet: tudo isso continua funcionando.
+
+---
+
 # Auren Minecraft 0.7.25 — Rotina Natural Contextual
 
 O Auren desenvolve rotina própria sem depender da IA do computador. Esta versão **não altera o combate, o voo, a montaria, as transformações nem os ataques de fogo/raio**.

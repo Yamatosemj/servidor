@@ -64,7 +64,7 @@ assert "new AurenAdultFollowOwnerGoal(this, true)" in dragon
 assert "new AurenAdultFollowOwnerGoal(this)" in dragon
 assert "this.iafFlightManager.update(this.owner)" in flight
 assert "class AurenCeGroundMoveControl extends MoveControl" in ground
-assert "mod_version=0.7.25-contextual-daily-routine-alpha" in (ROOT/"gradle.properties").read_text()
+assert "mod_version=0.7.26-offline-mind-alpha" in (ROOT/"gradle.properties").read_text()
 jars=list((ROOT/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars
 with ZipFile(jars[0]) as jar:
