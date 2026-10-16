@@ -1,3 +1,55 @@
+# Auren Minecraft 0.7.6 — proteção do dono, mordida filhote e terreno queimado
+
+## Novidades
+
+- **Auren protege o dono.** Quando o dono ataca uma criatura, o Auren
+  corre atrás e morde; também pode defender o dono quando este é atacado.
+  A implementação usa objetivos `OwnerHurtTargetGoal`,
+  `OwnerHurtByTargetGoal` e `MeleeAttackGoal` da IA vanilla de tameables.
+  Depois de lutar, volta ao comportamento anterior de seguir.
+- **O filhote agora ataca** enquanto está no chão, com mordida de 3 pontos
+  de dano. O adulto morde com 7. As três animações de mordida vêm dos
+  modelos originais Lightning Dragon do CE, com hashes do Git fixados.
+  No ombro não ataca (forma ombro não tem IA, para não machucar o dono).
+- **O chão fica carbonizado como no Ice and Fire** ao receber fogo:
+  grama, terra, cascalho, pedra, pedregulho e caminho de terra usam
+  **texturas e modelos ORIGINAIS da CE** com namespace Auren.
+  São seis blocos de estado de terreno, **SEM BlockItems**, sem receitas,
+  sem loot nem abas criativas. No mundo de teste, as marcas somem aos
+  poucos por tick aleatório e os blocos naturais reaparecem.
+- Respeita `mobGriefing`: se falso, nenhum bloco do mundo é modificado.
+  Só transforma tipos de blocos permitidos; não altera diretamente baús,
+  plantações, blocos com inventário ou regiões descarregadas. **Atenção:**
+  pedra, terra e pedregulho colocados pelo jogador também podem queimar:
+  o jogo não distingue esses blocos dos gerados naturalmente.
+  O fogo azul pode existir sobre o terreno carbonizado por uma tag de
+  suporte do soul fire.
+- **R** permanece sopro azul, **G** permanece raio; montaria, voo,
+  pescoço, ombro e hitbox mantidos intactos.
+
+### Avisos para seus mundos
+
+**Faça backup:** esta versão introduz seis tipos de blocos novos no save.
+Evite abrir um mundo modificado pela 0.7.6 em versões anteriores do Auren
+sem um backup. O CE inteiro não está incluso. O relevo não é quebrado por
+explosões, mas blocos permitidos podem mudar temporariamente, inclusive
+em construções. Para não alterar blocos, use `/gamerule mobGriefing false`.
+
+### O que testar
+
+1. Atingir um zumbi com espada e observar Auren adulto ir mordê-lo.
+2. Transformar em filhote, deixar no chão e atacar um zumbi:
+   ele deve morder e mostrar animação. Com filhote no ombro, não atacar.
+3. Ativar `/gamerule mobGriefing true`, montar, mirar o sopro R no chão.
+   Terra/pedra/grama precisam escurecer com textura original, podendo
+   ficar com soul fire azul. Em `mobGriefing false` não modifica o chão.
+4. Testar se R e G ainda funcionam, voo/montaria/seguir preservados.
+
+**Atenção:** somente CI compilação e verificações estáticas disponíveis;
+IA, decaimento do chão e modelo em multiplayer requerem playtest real.
+
+---
+
 # Auren Minecraft 0.7.5 — Fogo azul volumétrico e animação original de ataque
 
 ## O que mudou
@@ -26,7 +78,7 @@
 ## Validação manual em Minecraft 1.21.1
 
 1. Em mundo de teste, substitua somente o JAR antigo pelo
-   `aurenminecraft-0.7.5-blue-fire-animation-alpha.jar`.
+   `aurenminecraft-0.7.6-defend-scorch-alpha.jar`.
 2. Monte no Auren, segure **R** por 3 segundos e olhe-o de lado em
    terceira pessoa. Verifique se mandíbula/pescoço realmente animam.
 3. Veja se as chamas ficam **azuis e largas**, sem parecer um laser.
@@ -68,7 +120,7 @@ As poses são originais da CE; a seleção/sincronização foi adaptada ao
 
 ### Teste desta etapa
 
-Em um mundo de backup com somente `aurenminecraft-0.7.5-blue-fire-animation-alpha.jar`:
+Em um mundo de backup com somente `aurenminecraft-0.7.6-defend-scorch-alpha.jar`:
 domestique e monte, segure G para eletricidade contra um zumbi, solte G
 e verifique parada imediata. Teste a direção do olhar, bloco no caminho,
 animal domesticado ao lado, uso de R antes/depois de G, voo autônomo após
@@ -148,7 +200,7 @@ e abas do IceAndFire, contrariando o objetivo.
 
 ## Este build contém SOMENTE o Auren
 
-- **Um mod JAR para instalar: `aurenminecraft-0.7.5-blue-fire-animation-alpha.jar`.**
+- **Um mod JAR para instalar: `aurenminecraft-0.7.6-defend-scorch-alpha.jar`.**
 - Registra **exatamente um tipo de criatura**, `aurenminecraft:auren`.
 - **Nenhum mod IceAndFire**, nenhuma aba/receita/item/criatura extra do CE.
 - **Uranus 3.0-beta.1** incluído dentro do JAR como dependência da

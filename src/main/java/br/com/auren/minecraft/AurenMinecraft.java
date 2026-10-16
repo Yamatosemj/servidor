@@ -1,6 +1,7 @@
 package br.com.auren.minecraft;
 
 import br.com.auren.minecraft.entity.AurenDragon;
+import br.com.auren.minecraft.entity.AurenScorchedBlocks;
 import br.com.auren.minecraft.network.AurenRiderNetwork;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
@@ -28,6 +29,8 @@ public final class AurenMinecraft {
 
     public AurenMinecraft(IEventBus modBus) {
         ENTITIES.register(modBus);
+        // Scorch-marks only: NO BlockItems or creative inventory entries.
+        AurenScorchedBlocks.register(modBus);
         modBus.addListener(AurenRiderNetwork::registerPayloads);
         NeoForge.EVENT_BUS.addListener(AurenCommands::register);
         modBus.addListener(this::registerAttributes);

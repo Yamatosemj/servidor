@@ -1,0 +1,11 @@
+{
+  "replace": false,
+  "values": [
+    "aurenminecraft:chared_grass",
+    "aurenminecraft:chared_dirt",
+    "aurenminecraft:chared_stone",
+    "aurenminecraft:chared_cobblestone",
+    "aurenminecraft:chared_gravel",
+    "aurenminecraft:chared_dirt_path"
+  ]
+}

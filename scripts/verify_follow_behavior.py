@@ -128,7 +128,7 @@ def verify():
     ):
         assert expected in loader, f"Chunk ticket regression: {expected}"
     assert "&& !dragon.isSmallForm()" not in loader
-    assert "mod_version=0.7.5-blue-fire-animation-alpha" in version
+    assert "mod_version=0.7.6-defend-scorch-alpha" in version
     print("PASS: ground-first CE follow; bounded vertical speed; 15/8 adult, 4.5/1.7 baby; safe 50+ teleport; bounded tickets")
 
 if __name__ == "__main__":

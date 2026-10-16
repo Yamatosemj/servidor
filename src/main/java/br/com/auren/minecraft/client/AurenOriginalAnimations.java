@@ -36,6 +36,7 @@ public final class AurenOriginalAnimations {
     // upstream .tbl archives are copied/sha-verified by Gradle.
     private final List<TabulaModel<AurenDragon>> streamCharge;
     private final TabulaModel<AurenDragon> streamBreath;
+    private final List<TabulaModel<AurenDragon>> bite;
 
     private AurenOriginalAnimations() {
         this.walk = loadSeries("walk", 4);
@@ -45,6 +46,7 @@ public final class AurenOriginalAnimations {
         this.diving = load("diving");
         this.streamCharge = loadSeries("attack_stream_charge", 3);
         this.streamBreath = load("attack_stream_breath");
+        this.bite = loadSeries("bite", 3);
     }
 
     private static class Holder {
@@ -137,6 +139,20 @@ public final class AurenOriginalAnimations {
         // Original CE bone naming, and original poses: jaw opens + head
         // rises as the attack charges. Never overwrite flapping wing bones.
         AurenPoseTransition.applyBones(model, pose, blend,
+                "BodyUpper", "Neck1", "Neck2", "Neck3", "Head", "Jaw");
+    }
+
+    /** Original CE three-keyframe BITE attack for adult and baby defenders. */
+    public void applyBitePose(TabulaModel<AurenDragon> model, AurenDragon dragon) {
+        if (dragon.isOnShoulder()) return;
+        int ticks = dragon.getBiteAttackTicks();
+        if (ticks <= 0) return;
+        // The server starts at 12 and counts down. Preserve the original
+        // pose order bite1 -> bite2 -> bite3.
+        TabulaModel<AurenDragon> pose = this.bite.get(ticks > 8 ? 0 : ticks > 4 ? 1 : 2);
+        float weight = ticks > 9 ? (13.0F - ticks) / 4.0F
+                : ticks <= 3 ? ticks / 3.0F : 1.0F;
+        AurenPoseTransition.applyBones(model, pose, Mth.clamp(weight, 0, 1),
                 "BodyUpper", "Neck1", "Neck2", "Neck3", "Head", "Jaw");
     }
 
