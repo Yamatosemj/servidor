@@ -36,6 +36,9 @@ public final class AurenAttackOverlay {
     private static final int PREVIEW_TICKS = 80;
     private static long previewUntil = Long.MIN_VALUE;
     private static net.minecraft.client.multiplayer.ClientLevel previewLevel;
+    private static final int PERCEPTION_TICKS = 140;
+    private static long perceptionUntil = Long.MIN_VALUE;
+    private static net.minecraft.client.multiplayer.ClientLevel perceptionLevel;
 
     /** Preview is temporary; gameplay never leaves permanent rings in the world. */
     public static void revealForTicks(Minecraft mc) {
@@ -48,6 +51,21 @@ public final class AurenAttackOverlay {
     public static void resetTransient() {
         previewUntil = Long.MIN_VALUE;
         previewLevel = null;
+        perceptionUntil = Long.MIN_VALUE;
+        perceptionLevel = null;
+    }
+
+    /** A quick 7-second glance; never a permanent intrusive overlay. */
+    public static void revealPerceptionForTicks(Minecraft mc) {
+        if (mc.level != null) {
+            perceptionLevel = mc.level;
+            perceptionUntil = mc.level.getGameTime() + PERCEPTION_TICKS;
+        }
+    }
+
+    private static boolean perceptionActive(Minecraft mc) {
+        return mc.level != null && mc.level == perceptionLevel
+                && mc.level.getGameTime() < perceptionUntil;
     }
 
     private static boolean previewActive(Minecraft mc) {
@@ -215,9 +233,9 @@ public final class AurenAttackOverlay {
         if (dragon == null) return;
         int mode = dragon.getSyncedMarkMode();
         boolean transientHint = previewActive(mc);
-        // Nothing on screen while idle. Only a small blue heading for a
-        // currently executing order or during the short keypress hint.
-        if (mode == 0 && !transientHint) return;
+        boolean perceptionHint = perceptionActive(mc);
+        // Nothing on screen while idle. Perception is opt-in for 7 seconds.
+        if (mode == 0 && !transientHint && !perceptionHint) return;
 
         GuiGraphics graphics = event.getGuiGraphics();
         String status = switch (mode) {
@@ -227,8 +245,24 @@ public final class AurenAttackOverlay {
                     + (dragon.isSyncedAreaAttackEnabled() ? "LIGADO" : "DESLIGADO")
                     + "  •  RAIO " + selectedRadius;
         };
-        int x = (graphics.guiWidth() - mc.font.width(status)) / 2;
-        graphics.drawString(mc.font, status, x, 8, 0x66DAFF, true);
+        if (mode != 0 || transientHint) {
+            int x = (graphics.guiWidth() - mc.font.width(status)) / 2;
+            graphics.drawString(mc.font, status, x, 8, 0x66DAFF, true);
+        }
+
+        if (perceptionHint) {
+            String observed = dragon.getSyncedPerceptionBrief();
+            int alert = dragon.getSyncedPerceptionAlert();
+            int color = alert == 2 ? 0xF6BB79 : alert == 1 ? 0xB4E4F8 : 0x66DAFF;
+            int y = mode != 0 || transientHint ? 30 : 8;
+            graphics.drawString(mc.font, observed,
+                    (graphics.guiWidth() - mc.font.width(observed)) / 2,
+                    y, color, true);
+            String prompt = "H: observar   /auren ambiente: detalhes";
+            graphics.drawString(mc.font, prompt,
+                    (graphics.guiWidth() - mc.font.width(prompt)) / 2,
+                    y + 12, 0x8CBCCD, true);
+        }
 
         if (transientHint) {
             String hint = mode != 0

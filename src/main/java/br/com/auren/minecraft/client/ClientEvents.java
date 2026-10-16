@@ -42,6 +42,11 @@ public final class ClientEvents {
     private static final KeyMapping TOGGLE_BOMBARDMENT = new KeyMapping(
             "key.aurenminecraft.toggle_bombardment", GLFW.GLFW_KEY_B,
             "key.categories.gameplay");
+    // H temporarily reveals the Auren's latest SERVER-verified perception.
+    // No extra packets, background overlay or action is sent by this key.
+    private static final KeyMapping PERCEPTION = new KeyMapping(
+            "key.aurenminecraft.perception", GLFW.GLFW_KEY_H,
+            "key.categories.gameplay");
     private static int lastPilotId = -1;
     private static byte lastPilotControls = -1;
 
@@ -52,6 +57,7 @@ public final class ClientEvents {
         event.register(DRAGON_LIGHTNING);
         event.register(MARK_TARGET);
         event.register(TOGGLE_BOMBARDMENT);
+        event.register(PERCEPTION);
     }
 
     /** Port of CE ClientEvents.onLivingUpdate rider input, once per client tick. */
@@ -66,6 +72,10 @@ public final class ClientEvents {
         }
         // Input is edge-triggered and ignored while typing in menus/chat.
         if (mc.screen == null && mc.player.isAlive()) {
+            while (PERCEPTION.consumeClick()) {
+                if (AurenAttackOverlay.nearbyOwnedDragon(mc) != null)
+                    AurenAttackOverlay.revealPerceptionForTicks(mc);
+            }
             while (MARK_TARGET.consumeClick()) {
                 AurenDragon owned = AurenAttackOverlay.nearbyOwnedDragon(mc);
                 if (owned == null) continue;
