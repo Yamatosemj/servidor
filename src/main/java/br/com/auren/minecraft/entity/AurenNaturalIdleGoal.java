@@ -227,6 +227,7 @@ public final class AurenNaturalIdleGoal extends Goal {
     private Path chooseInterestPath(boolean shelteredOnly, double minDist,
                                     double maxDist) {
         if (owner == null) return null;
+        int pathsTried = 0;
         for (int attempt = 0; attempt < MAX_SEARCH_ATTEMPTS; ++attempt) {
             double angle = dragon.getRandom().nextDouble() * Math.PI * 2.0D;
             double d = minDist + dragon.getRandom().nextDouble()
@@ -253,6 +254,8 @@ public final class AurenNaturalIdleGoal extends Goal {
                         destination.y - dragon.getY(),
                         destination.z - dragon.getZ());
                 if (!dragon.level().noCollision(dragon, space)) continue;
+                // Do not run an unbounded number of A* searches in a tick.
+                if (++pathsTried > 6) return null;
                 Path path = dragon.getNavigation().createPath(floor, 0);
                 if (path != null && path.canReach()) {
                     interestPoint = destination;
