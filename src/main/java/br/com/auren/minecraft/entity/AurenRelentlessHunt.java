@@ -264,7 +264,7 @@ final class AurenRelentlessHunt {
                     strike.x, strike.y, strike.z, 65,
                     1.1D, 0.75D, 1.1D, 0.11D);
             level.playSound(null, wall.getBlockPos(),
-                    SoundEvents.GENERIC_EXPLODE, dragon.getSoundSource(), 1.5F, 0.76F);
+                    SoundEvents.GENERIC_EXPLODE.value(), dragon.getSoundSource(), 1.5F, 0.76F);
             ++siegeCharges;
             nextSiegeTick = dragon.tickCount + SIEGE_COOLDOWN;
         }
