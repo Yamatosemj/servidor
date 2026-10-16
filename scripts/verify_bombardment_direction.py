@@ -21,7 +21,8 @@ assert "MIN_FORWARD_DOT" not in fire
 assert "getHeadPosition()" in fire
 assert "neckLower * 0.65D" in fire
 assert "AurenScorchTerrain.igniteVillage(" in fire
-assert "AurenScorchTerrain.scorch(level, scorchCenter, dragon);" in fire
+assert "AurenScorchTerrain.scorch(level, scorchCenter, dragon," in fire
+assert "AurenScorchTerrain.scorchFace(level, scorchCenter," in fire
 for token in ("lowerBreathBone(", "streamBreath", "streamCharge",
               '"Neck1", 0.06F', '"Neck2", 0.10F',
               '"Neck3", 0.12F', '"Head", 0.17F'):
