@@ -50,7 +50,7 @@ assert "Vec3.atCenterOf(center)" in orders
 assert "Alvo inválido ou além de 64 blocos" in commands
 assert "patrolAttack(owner, next, true)" not in orders
 assert "level.hasChunkAt(BlockPos.containing(next))) {" not in orders
-assert "mod_version=0.7.17-cave-aim-fix-alpha" in (root/"gradle.properties").read_text()
+assert "mod_version=0.7.18-cave-route-navigation-alpha" in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1, jars
 with ZipFile(jars[0]) as f:

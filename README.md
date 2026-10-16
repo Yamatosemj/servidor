@@ -1,3 +1,19 @@
+# Auren Minecraft 0.7.18 — Navegação real em cavernas
+
+**Problema observado na 0.7.17:** o Auren pequeno ainda se dirigia aproximadamente para a presa, sem seguir corretamente a entrada da caverna; ele também abandonava desvios válidos quando se afastava inicialmente do inimigo.
+
+- **Abertura conectada ao interior:** novo `AurenCaveRoutePlanner.findEntrance()` percorre apenas células transitáveis da caverna a partir da presa (máximo de 1600 nós). A entrada precisa estar conectada por corredores reais, e não só geometricamente perto do creeper.
+- **Pouso:** procura lugar com espaço para o adulto perto da *entrada identificada*, evitando pousar do outro lado da montanha.
+- **Navegação:** forma pequena usa `PathNavigation.createPath` e `moveTo(Path,...)`; tenta rota direta para a presa; se bloqueada, caminho até a entrada conectada pelo algoritmo. Não gera vetor de direção reta como substituto para a navegação.
+- **Preserva desvios:** não interrompe a rota a cada 15 ticks; só tenta novo caminho após 40 ticks e se a anterior terminou, o destino mudou ou não há movimento físico.
+- **Sem falso travamento:** mover-se *para longe da presa* ao contornar a caverna não equivale a estar preso. Só recupera depois de 100 ticks sem se deslocar ou timeout geral.
+- **Custo:** escaneia somente chunks carregados e limita nós/expansões, adequado para a execução em Zalith.
+- **Preservado:** fogo azul/pegadas da 0.7.15, voo CE, sons, teclas, câmera e explosões de última instância da 0.7.17.
+
+**Ainda precisa de teste no Minecraft:** corredores estreitos, bifurcações, caverna sem acesso, entrada obstruída e custo com várias cavernas. A busca considera piso sólido e passagens com ar, não atravessa pedra, água ou portas fechadas.
+
+---
+
 # Auren 0.7.17 — Corrigir sopro estacionário e perseguição em cavernas
 
 Relato da 0.7.16: corpo rodava enquanto lançava fogo sem mover-se, ficava pequeno sem andar, e queimava montanha com entrada de caverna.

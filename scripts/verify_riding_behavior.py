@@ -106,7 +106,7 @@ assert "DRAGON_DOWN.isDown()" in client
 assert "GLFW.GLFW_KEY_X" in client
 assert "event.register(DRAGON_DOWN)" in client
 assert "record AurenDragonControlPayload(int dragonId, byte controlState)" in packet
-assert "mod_version=0.7.17-cave-aim-fix-alpha" in version
+assert "mod_version=0.7.18-cave-route-navigation-alpha" in version
 assert "EMERGENCY_TELEPORT_DISTANCE = 50.0D" in follow
 assert "GROUND_WALK_BEFORE_FLIGHT_TICKS = 40" in follow
 assert "WAYPOINT_REEVALUATE_TICKS = 60" in (
