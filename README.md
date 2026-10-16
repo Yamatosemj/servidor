@@ -1,3 +1,19 @@
+# Auren Minecraft 0.7.16 — Caçada implacável (protótipo escalonado)
+
+**Inspirado em:** Ice and Fire CE `DragonBaseEntity.digWhenStuck/breakBlocks` (interação com obstáculos), e em mods de perseguição como Nightmare/Epic Siege, mas com controle de dano por estágio e guardas de servidor. Não importamos a IA deles integralmente.
+
+1. **Alvo visível:** preserva TACKLE/HOVER_BLAST/SCORCH_STREAM da 0.7.15.
+2. **Alvo se esconde:** primeiro procura uma posição aérea real com linha de visão. Se continuar encoberto por 65 ticks, tenta manter o **sopro azul em chamas** sobre o obstáculo que bloqueia o raio, incendiando madeira e acumulando calor sobre a rocha.
+3. **Cavernas:** após 110 ticks escondido, se o alvo estiver coberto por pelo menos 6 blocos de terreno e houver condições de aproximação, o Auren pousa, diminui temporariamente para a forma pequena **somente em solo firme** e testa um caminho terrestre com `Path.canReach()`. Ele segue a vítima e morde dentro da passagem. Sem rota, não finge que atravessa paredes; procura outra alternativa. A forma normal é restaurada quando cabe em um espaço carregado sem colisão, mesmo após cancelar a ordem ou recarregar um mundo salvo.
+4. **Montanha impenetrável:** só após pelo menos 260 ticks sem visão, **sem nenhum ponto aéreo com linha de visão**, com caverna sem acesso, `mobGriefing=true` e raio de fogo até 27 blocos, tenta uma pequena explosão de fogo na parede. Só rocha natural/magma/cobblestone/carbonizados, sem madeira, minerais, baús, blocos com dados ou aliados a até 5 blocos, e dono a pelo menos 8 blocos. São no máximo 5 cargas espaçadas por 95 ticks, nunca uma chuva instantânea de explosões.
+5. **Sem teleporte/cargas em chunks descarregados:** precisa de dono online, alvo vivo, dimensão compartilhada e ordem marcada. Mantém as guardas de alcance já existentes. `Shift+V` cancela a caça.
+
+**Proteções mantidas:** a rajada normal da 0.7.15 não explode e o bombardeio B não usa o novo ataque explosivo. O novo comportamento só existe para **criatura marcada inalcançável**. A transformação temporária não equivale a crescimento real; o sistema continua adaptado, não é o `DragonBaseEntity` completo.
+
+**Testes de jogo imprescindíveis:** presa em casa de madeira, caverna com entrada acessível de 1 bloco, caverna fechada, montanha de pedra, jogador/dono perto da parede, `/gamerule mobGriefing false`, cancelar quando pequeno, salvar/recarregar enquanto pequeno. Testes CI são estruturais, não validam navegação real.
+
+---
+
 # Auren Minecraft 0.7.15 — Rajada de FOGO com rastros irregulares e calor progressivo
 
 - **Fogo primeiro:** o sopro azul de chamas ficou mais denso, turbulento e volumoso; há um reforço de partículas flamejantes no impacto, além de vários **blocos de fogo reais** no terreno onde puderem permanecer. Superfícies já carbonizadas podem manter fogo azul (soul fire); outras superfícies usam fogo vanilla.
