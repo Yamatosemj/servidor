@@ -7,6 +7,7 @@
 package br.com.auren.minecraft.entity;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.GameRules;
@@ -38,39 +39,80 @@ public final class AurenScorchTerrain {
                 || !level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)
                 || !level.hasChunkAt(impact)) return;
         int destroyed = 0;
+        // A sustained sweep damages both the ground and the buildings over it.
         for (BlockPos pos : BlockPos.betweenClosed(
-                impact.offset(-2, -2, -2), impact.offset(2, 2, 2))) {
-            if (destroyed >= 14) break;
+                impact.offset(-3, -2, -3), impact.offset(3, 2, 3))) {
+            if (destroyed >= 20) break;
             double dx = pos.getX() - markedCenter.getX();
             double dz = pos.getZ() - markedCenter.getZ();
             if (dx * dx + dz * dz > radius * radius
-                    || impact.distSqr(pos) > 8.0D
+                    || impact.distSqr(pos) > 12.0D
                     || pos.getY() < level.getMinBuildHeight()
                     || pos.getY() >= level.getMaxBuildHeight()
                     || !level.hasChunkAt(pos)
                     || level.getBlockEntity(pos) != null
-                    || dragon.getRandom().nextFloat() > 0.70F) continue;
+                    || dragon.getRandom().nextFloat() > 0.85F) continue;
             BlockState state = level.getBlockState(pos);
             float hardness = state.getDestroySpeed(level, pos);
             if (state.isAir() || !state.getFluidState().isEmpty()
                     || hardness < 0 || hardness > 8.0F) continue;
-            // CE normally turns logs/planks into ash and deletes foliage.
-            // Area bombardment also breaks village roofs, walls, glass, hay.
+            // The old whitelist omitted most village foundations/ground.
+            // Respect hardness and block entities, but allow both structural
+            // and diggable terrain blocks in the marked destructible circle.
             boolean villageBlock = state.is(BlockTags.MINEABLE_WITH_AXE)
+                    || state.is(BlockTags.MINEABLE_WITH_PICKAXE)
+                    || state.is(BlockTags.MINEABLE_WITH_SHOVEL)
+                    || state.is(BlockTags.MINEABLE_WITH_HOE)
                     || state.is(BlockTags.LOGS) || state.is(BlockTags.PLANKS)
                     || state.is(BlockTags.LEAVES) || state.is(BlockTags.WOOL)
                     || state.is(BlockTags.FLOWERS) || state.is(BlockTags.CROPS)
                     || state.is(Blocks.GLASS) || state.is(Blocks.GLASS_PANE)
-                    || state.is(Blocks.HAY_BLOCK)
-                    || state.is(Blocks.COBBLESTONE) || state.is(Blocks.MOSSY_COBBLESTONE)
-                    || state.is(Blocks.COBBLESTONE_STAIRS)
-                    || state.is(Blocks.COBBLESTONE_SLAB)
-                    || state.is(Blocks.COBBLESTONE_WALL)
-                    || state.is(Blocks.STONE_BRICKS)
-                    || state.is(Blocks.STONE_BRICK_STAIRS)
-                    || state.is(Blocks.STONE_BRICK_SLAB)
-                    || state.is(Blocks.STONE_BRICK_WALL);
+                    || state.is(Blocks.HAY_BLOCK) || state.is(Blocks.DIRT)
+                    || state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.SAND)
+                    || state.is(Blocks.GRAVEL);
+
             if (villageBlock && level.destroyBlock(pos, false)) ++destroyed;
+        }
+    }
+
+    /**
+     * Only area bombing ignites ordinary flammable building materials.
+     * Soul fire cannot survive beside normal wood; a real vanilla FIRE block
+     * is needed for wooden walls/roofs to catch and spread flames.
+     * The blue breath PARTICLES are unaffected.
+     */
+    public static void igniteVillage(ServerLevel level, BlockPos impact, AurenDragon dragon,
+                                     BlockPos markedCenter, int radius) {
+        if (markedCenter == null || radius < 5 || radius > 30
+                || !level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)
+                || !level.hasChunkAt(impact)) return;
+        int lit = 0;
+        for (BlockPos wood : BlockPos.betweenClosed(
+                impact.offset(-3, -2, -3), impact.offset(3, 2, 3))) {
+            if (lit >= 8) break;
+            double dx = wood.getX() - markedCenter.getX();
+            double dz = wood.getZ() - markedCenter.getZ();
+            if (dx * dx + dz * dz > radius * radius
+                    || !level.hasChunkAt(wood) || level.getBlockEntity(wood) != null)
+                continue;
+            BlockState fuel = level.getBlockState(wood);
+            if (!(fuel.is(BlockTags.PLANKS) || fuel.is(BlockTags.LOGS)
+                    || fuel.is(BlockTags.WOOL) || fuel.is(BlockTags.LEAVES)
+                    || fuel.is(Blocks.HAY_BLOCK)) || dragon.getRandom().nextFloat() > 0.65F)
+                continue;
+            for (Direction face : Direction.values()) {
+                BlockPos firePos = wood.relative(face);
+                double fx = firePos.getX() - markedCenter.getX();
+                double fz = firePos.getZ() - markedCenter.getZ();
+                if (fx * fx + fz * fz > radius * radius
+                        || !level.hasChunkAt(firePos)
+                        || !level.isEmptyBlock(firePos)
+                        || !Blocks.FIRE.defaultBlockState().canSurvive(level, firePos))
+                    continue;
+                level.setBlockAndUpdate(firePos, Blocks.FIRE.defaultBlockState());
+                ++lit;
+                break;
+            }
         }
     }
 
