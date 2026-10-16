@@ -95,52 +95,68 @@ public final class AurenNaturalIdleGoal extends Goal {
         interestingAnimal = null;
         interestPoint = null;
         dragon.getNavigation().stop();
-        remainingTicks = MIN_REST_TICKS + dragon.getRandom()
-                .nextInt(MAX_REST_TICKS - MIN_REST_TICKS + 1);
+        remainingTicks = MIN_REST_TICKS + dragon.getRandom().nextInt(
+                MAX_REST_TICKS - MIN_REST_TICKS + 1);
 
-        // Distinct but not rigid clockwork behavior. Sleeping is more likely
-        // at night; daytime favours curiosity; rain favours dry shelter.
-        int choice = dragon.getRandom().nextInt(100);
-        if (exposedRain() && choice < 55) {
-            Path cover = chooseInterestPath(true);
-            if (cover != null && cover.canReach()
-                    && dragon.getNavigation().moveTo(cover, 0.72D)) {
-                routine = Routine.SEEK_SHELTER;
-                remainingTicks = 110 + dragon.getRandom().nextInt(100);
-                return;
-            }
-        }
-        if (!exposedRain() && choice < (night() ? 55 : 18)) {
-            routine = Routine.REST;
-            remainingTicks = night()
-                    ? 200 + dragon.getRandom().nextInt(280)
-                    : 95 + dragon.getRandom().nextInt(120);
-            // Real source CE sitting/sleeping Tabula keyframes are blended by
-            // the renderer. No fabricated angle animation or forced sit order.
-            dragon.setNaturalRestPose(night() ? 2 : 1);
-        } else if (choice < (night() ? 69 : 44)) {
-            interestingAnimal = chooseNearbyAnimal();
-            if (interestingAnimal != null) {
-                Path route = dragon.getNavigation().createPath(
-                        interestingAnimal.blockPosition(), 0);
-                if (route != null && route.canReach()
-                        && dragon.getNavigation().moveTo(route, 0.63D)) {
-                    routine = Routine.INVESTIGATE;
+        // The local brain ranks OPTIONS, not motor instructions. The
+        // existing safe native paths are still required before taking
+        // an action. Failed shelter/animal paths fall back to the next
+        // choice rather than freezing the Auren or forcing flight.
+        Animal nearby = chooseNearbyAnimal();
+        for (AurenLocalDecisionPolicy.Rated rated : dragon.getMind().rankIdle(
+                night(), exposedRain(), nearby != null)) {
+            switch (rated.activity()) {
+                case SEEK_SHELTER -> {
+                    Path cover = chooseInterestPath(true);
+                    if (cover != null && cover.canReach()
+                            && dragon.getNavigation().moveTo(cover, 0.72D)) {
+                        routine = Routine.SEEK_SHELTER;
+                        remainingTicks = 110 + dragon.getRandom().nextInt(100);
+                        dragon.getMind().accepted(rated.activity());
+                        return;
+                    }
+                }
+                case REST -> {
+                    if (exposedRain()) break; // resting in open rain looks wrong
+                    routine = Routine.REST;
+                    remainingTicks = night()
+                            ? 200 + dragon.getRandom().nextInt(280)
+                            : 95 + dragon.getRandom().nextInt(120);
+                    dragon.setNaturalRestPose(night() ? 2 : 1);
+                    dragon.getMind().accepted(rated.activity());
+                    return;
+                }
+                case INVESTIGATE -> {
+                    if (nearby == null) break;
+                    Path route = dragon.getNavigation().createPath(
+                            nearby.blockPosition(), 0);
+                    if (route != null && route.canReach()
+                            && dragon.getNavigation().moveTo(route, 0.63D)) {
+                        interestingAnimal = nearby;
+                        routine = Routine.INVESTIGATE;
+                        dragon.getMind().accepted(rated.activity());
+                        return;
+                    }
+                }
+                case EXPLORE -> {
+                    Path shortRoute = chooseInterestPath(false);
+                    if (shortRoute != null && shortRoute.canReach()
+                            && dragon.getNavigation().moveTo(shortRoute, 0.68D)) {
+                        routine = Routine.EXPLORE;
+                        dragon.getMind().accepted(rated.activity());
+                        return;
+                    }
+                }
+                case OBSERVE -> {
+                    routine = Routine.OBSERVE;
+                    dragon.getMind().accepted(rated.activity());
                     return;
                 }
             }
-            routine = Routine.OBSERVE;
-        } else if (choice < (night() ? 80 : 75)) {
-            Path shortRoute = chooseInterestPath(false);
-            if (shortRoute != null && shortRoute.canReach()
-                    && dragon.getNavigation().moveTo(shortRoute, 0.68D)) {
-                routine = Routine.EXPLORE;
-                return;
-            }
-            routine = Routine.OBSERVE;
-        } else {
-            routine = Routine.OBSERVE;
         }
+        // No unsafe or impossible action is ever forced.
+        routine = Routine.OBSERVE;
+        dragon.getMind().accepted(AurenLocalDecisionPolicy.Activity.OBSERVE);
     }
 
     private Animal chooseNearbyAnimal() {
