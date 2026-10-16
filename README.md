@@ -1,3 +1,13 @@
+# Auren Minecraft 0.7.10 — fogo direcional e bombardeio destrutivo
+
+- **Fogo autônomo:** respeita um arco horizontal de 35° à frente da cabeça (sem soprar para as costas). Auren carrega o sopro enquanto vira. Os controles do fogo montado (R) continuam como antes.
+- **Bombardeio (B + V):** agora mira o topo de construções à frente, não só um Y fixo no chão. Dentro do raio escolhido (5, 10, 15, 20, 25 ou 30), pode destruir até 14 blocos de madeira, vidro, vegetação, feno, lã e alvenaria por impacto. Mantém partículas azuis e solo carbonizado.
+- **Combate contra criaturas:** decide entre investidas, sopro à distância e passadas com fogo conforme distância e linha de visão, revendo escolhas mais rapidamente. Ainda é uma adaptação do CE, **não é a IA integral de DragonBaseEntity**.
+- **Segurança e perdas de mundo:** destruição de construções é **permanente**, inclusive as suas; teste num mundo descartável ou backup. `/gamerule mobGriefing false` desativa alterações no terreno. O bombardeio ignora chunks não carregados, blocos com inventário e indestrutíveis; não usa explosões, não gera drops por blocos quebrados.
+- **Teste:** compilação automática não garante que manobras e mira fiquem perfeitas dentro do jogo. A versão está numa PR separada, em cima da 0.7.9; não mesclar sem playtest.
+
+---
+
 # Auren Minecraft 0.7.9 — combate tático e interface discreta
 
 - **V:** marca qualquer criatura viva válida sob a mira (inclusive animais e jogadores em sobrevivência), ou uma área de bombardeio quando o modo aéreo está ligado
