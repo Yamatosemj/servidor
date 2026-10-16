@@ -164,10 +164,20 @@ public final class AurenAttackOverlay {
                              double x1, double y1, double z1,
                              double x2, double y2, double z2,
                              int red, int green, int blue, int alpha) {
+        // RenderType.lines expects a direction vector for each segment.
+        // A fixed upward normal can collapse horizontal/vertical line widths.
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double dz = z2 - z1;
+        double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (length < 1.0E-6D) return;
+        float nx = (float) (dx / length);
+        float ny = (float) (dy / length);
+        float nz = (float) (dz / length);
         lines.addVertex(pose.last().pose(), (float) x1, (float) y1, (float) z1)
-                .setColor(red, green, blue, alpha).setNormal(0.0F, 1.0F, 0.0F);
+                .setColor(red, green, blue, alpha).setNormal(nx, ny, nz);
         lines.addVertex(pose.last().pose(), (float) x2, (float) y2, (float) z2)
-                .setColor(red, green, blue, alpha).setNormal(0.0F, 1.0F, 0.0F);
+                .setColor(red, green, blue, alpha).setNormal(nx, ny, nz);
     }
 
     public static void renderHud(RenderGuiEvent.Post event) {
