@@ -1,6 +1,7 @@
 package br.com.auren.minecraft.entity;
 
 import java.util.ArrayDeque;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import net.minecraft.core.BlockPos;
@@ -142,10 +143,16 @@ public final class AurenWorldPerception {
         boolean danger = false;
         List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class,
                 owner.getBoundingBox().inflate(ENTITY_RADIUS),
-                living -> living.isAlive() && living != owner && living != dragon);
+                living -> living.isAlive() && living != owner && living != dragon
+                        && owner.distanceToSqr(living)
+                           <= ENTITY_RADIUS * ENTITY_RADIUS);
+        // A source-list iteration cap alone can silently ignore a zombie
+        // standing next to the owner when dozens of distant mobs are loaded.
+        // Always prioritize the nearest actual spherical-radius entities.
+        nearby.sort(Comparator.comparingDouble(owner::distanceToSqr));
         int seen = 0;
         for (LivingEntity entity : nearby) {
-            if (++seen > MAX_ENTITIES) break;
+            if (seen++ >= MAX_ENTITIES) break;
             if (entity instanceof Monster && !dragon.isAlliedTo(entity)) {
                 ++monsters;
                 double sq = owner.distanceToSqr(entity);
@@ -163,10 +170,14 @@ public final class AurenWorldPerception {
         boolean nearbyLava = owner.isInLava();
         boolean bell = false;
 
-        // Local block probes only; no full chunk search or world mutation.
-        for (int dx = -HAZARD_RADIUS; dx <= HAZARD_RADIUS; dx += 2) {
-            for (int dz = -HAZARD_RADIUS; dz <= HAZARD_RADIUS; dz += 2) {
-                for (int dy = -1; dy <= 2; ++dy) {
+        // Previously dx/dz started at -5 and advanced by 2: offset (0,0)
+        // was NEVER checked! Exhaustively scan a bounded five-block disc,
+        // including the owner's own column, odd/even offsets and floor.
+        // At most ~405 block checks per two-second scan per Auren.
+        for (int dx = -HAZARD_RADIUS; dx <= HAZARD_RADIUS; ++dx) {
+            for (int dz = -HAZARD_RADIUS; dz <= HAZARD_RADIUS; ++dz) {
+                if (dx * dx + dz * dz > HAZARD_RADIUS * HAZARD_RADIUS) continue;
+                for (int dy = -2; dy <= 2; ++dy) {
                     BlockPos pos = ownerPos.offset(dx, dy, dz);
                     if (!level.hasChunkAt(pos)) continue;
                     BlockState state = level.getBlockState(pos);
@@ -187,7 +198,14 @@ public final class AurenWorldPerception {
             if (!Objects.equals(lastAreaKey, areaKey))
                 remember("Ambiente mudou: " + environment + " em " + biome);
             if (!Objects.equals(lastDangerKey, dangerKey))
-                remember("Risco alterado: " + (observed.summary()));
+                remember("Risco alterado: " + observed.summary());
+            if (latest.villageClue() != bell)
+                remember(bell ? "Sino de vila detectado." : "Sino de vila fora do alcance.");
+            // Report notable hostile arrivals/departures once, rather than
+            // spamming every entity-count change in crowded environments.
+            if ((latest.monsters() == 0) != (monsters == 0))
+                remember(monsters == 0 ? "Monstros se afastaram."
+                        : "Monstros detectados nas proximidades.");
         }
         lastAreaKey = areaKey;
         lastDangerKey = dangerKey;
