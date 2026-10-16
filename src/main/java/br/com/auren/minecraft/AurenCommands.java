@@ -70,7 +70,7 @@ public final class AurenCommands {
         if (hit == null || !(hit.getEntity() instanceof LivingEntity target)
                 || !dragon.getAttackOrders().markEnemy(target)) {
             context.getSource().sendFailure(Component.literal(
-                    "Mire em uma criatura válida a até 48 blocos."));
+                    "Mire em uma criatura válida a até 48 blocos, que esteja a até 64 blocos do Auren."));
             return 0;
         }
         context.getSource().sendSuccess(() ->
@@ -98,7 +98,7 @@ public final class AurenCommands {
         }
         BlockPos center = hit.getBlockPos();
         if (!dragon.getAttackOrders().markArea(center, radius)) {
-            context.getSource().sendFailure(Component.literal("Não foi possível marcar a área."));
+            context.getSource().sendFailure(Component.literal("Área inválida ou centro a mais de 64 blocos do Auren."));
             return 0;
         }
         context.getSource().sendSuccess(() -> Component.literal(
@@ -192,7 +192,7 @@ public final class AurenCommands {
                     && dragon.getAttackOrders().markEnemy(mob)) {
                 player.displayClientMessage(Component.literal("Auren: inimigo marcado!"), true);
             } else {
-                player.displayClientMessage(Component.literal("Este alvo não pode ser marcado (dono/aliado/invulnerável)."), true);
+                player.displayClientMessage(Component.literal("Alvo inválido, aliado ou a mais de 64 blocos do Auren."), true);
             }
             return;
         }

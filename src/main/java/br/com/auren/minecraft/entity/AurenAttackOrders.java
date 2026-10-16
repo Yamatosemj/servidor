@@ -121,7 +121,11 @@ public final class AurenAttackOrders {
     }
 
     public boolean markEnemy(LivingEntity enemy) {
-        if (!canMarkTarget(enemy)) return false;
+        // Match the actual 64-block combat-operating radius at the time
+        // an order is accepted. The owner's 48-block crosshair is separate.
+        if (!canMarkTarget(enemy)
+                || dragon.distanceToSqr(enemy) > MAX_MARK_DISTANCE * MAX_MARK_DISTANCE)
+            return false;
         mode = ENEMY;
         markedEnemy = enemy.getUUID();
         recentlyResolvedEnemy = enemy;
@@ -133,7 +137,9 @@ public final class AurenAttackOrders {
 
     public boolean markArea(BlockPos center, int selectedRadius) {
         if (!areaEnabled || center == null || selectedRadius < 5 || selectedRadius > 30
-                || selectedRadius % 5 != 0 || !dragon.level().hasChunkAt(center)) return false;
+                || selectedRadius % 5 != 0 || !dragon.level().hasChunkAt(center)
+                || dragon.distanceToSqr(Vec3.atCenterOf(center))
+                        > MAX_MARK_DISTANCE * MAX_MARK_DISTANCE) return false;
         mode = AREA;
         areaCenter = center.immutable();
         markedEnemy = null;
