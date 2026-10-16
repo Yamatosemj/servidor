@@ -61,7 +61,7 @@ assert "new AurenAttackOrders(this)" in dragon
 assert "this.attackOrders.tick();" in dragon
 assert "this.attackOrders.save(tag);" in dragon
 assert "this.attackOrders.load(tag);" in dragon
-assert dragon.count("!AurenDragon.this.getAttackOrders().hasOrder()") == 2
+assert dragon.count("!AurenDragon.this.getAttackOrders().hasOrder()") == 4
 assert "&& !this.dragon.getAttackOrders().hasOrder()" in follow
 assert "if (!this.dragon.getAttackOrders().hasOrder())" in follow
 
