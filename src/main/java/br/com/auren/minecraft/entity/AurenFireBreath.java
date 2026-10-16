@@ -253,7 +253,10 @@ public final class AurenFireBreath {
                 && level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)
                 && dragon.getRandom().nextBoolean()) {
             BlockPos firePos = blockHit.getBlockPos().relative(blockHit.getDirection());
-            if (level.hasChunkAt(firePos) && level.isEmptyBlock(firePos)
+            // The hit face may be inside the selected circle while the
+            // adjacent placement block is outside it. Bound both positions.
+            if ((!areaOrder || withinArea(Vec3.atCenterOf(firePos)))
+                    && level.hasChunkAt(firePos) && level.isEmptyBlock(firePos)
                     && Blocks.SOUL_FIRE.defaultBlockState().canSurvive(level, firePos)) {
                 level.setBlockAndUpdate(firePos, Blocks.SOUL_FIRE.defaultBlockState());
             }
