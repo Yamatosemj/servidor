@@ -92,6 +92,9 @@ public final class AurenDragon extends TamableAnimal {
             SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Integer> WORLD_ALERT =
             SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT);
+    // Original CE sitting/sleeping selection: 0 normal, 1 sitting, 2 asleep.
+    private static final EntityDataAccessor<Integer> NATURAL_REST_POSE =
+            SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT);
 
     private static final EntityDataAccessor<Boolean> AREA_ATTACK_ENABLED =
             SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.BOOLEAN);
@@ -108,6 +111,9 @@ public final class AurenDragon extends TamableAnimal {
     private float flightProgress;
     private float previousBreathProgress;
     private float breathProgress;
+    private float previousNaturalRestProgress;
+    private float naturalRestProgress;
+    private int previousNaturalRestPose;
     private static final float BREATH_POSE_BLEND_TICKS = 10.0F;
     private final AurenFlightController flightController = new AurenFlightController(this);
     // Separate CE FireDragon.riderShootFire port; never affects auto-escort.
@@ -183,6 +189,7 @@ public final class AurenDragon extends TamableAnimal {
         builder.define(AREA_ATTACK_ENABLED, true);
         builder.define(WORLD_PERCEPTION, "AUREN • observando o ambiente");
         builder.define(WORLD_ALERT, 0);
+        builder.define(NATURAL_REST_POSE, 0);
     }
 
     public boolean isSmallForm() {
@@ -212,6 +219,27 @@ public final class AurenDragon extends TamableAnimal {
 
     public AurenWorldPerception getAwareness() {
         return this.awareness;
+    }
+
+    public int getNaturalRestPose() {
+        return this.entityData.get(NATURAL_REST_POSE);
+    }
+
+    /** Routine is server-authoritative; no client can command rest. */
+    void setNaturalRestPose(int pose) {
+        if (!this.level().isClientSide() && pose >= 0 && pose <= 2
+                && this.entityData.get(NATURAL_REST_POSE) != pose)
+            this.entityData.set(NATURAL_REST_POSE, pose);
+    }
+
+    public int getRestVisualPose() {
+        int current = this.getNaturalRestPose();
+        return current != 0 ? current : this.previousNaturalRestPose;
+    }
+
+    public float getNaturalRestBlend(float partialTick) {
+        return Mth.clamp(Mth.lerp(partialTick, this.previousNaturalRestProgress,
+                this.naturalRestProgress) / 18.0F, 0.0F, 1.0F);
     }
 
     public String getSyncedPerceptionBrief() {
@@ -881,6 +909,15 @@ public final class AurenDragon extends TamableAnimal {
                         + (wantedBreath > this.breathProgress ? 1.5F
                         : wantedBreath < this.breathProgress ? -1.5F : 0.0F),
                 0.0F, BREATH_POSE_BLEND_TICKS);
+        this.previousNaturalRestProgress = this.naturalRestProgress;
+        int requestedRest = this.getNaturalRestPose();
+        if (requestedRest != 0) this.previousNaturalRestPose = requestedRest;
+        boolean mayRest = requestedRest != 0 && !this.isVehicle()
+                && !this.isOnShoulder()
+                && this.getFlightMode() == AurenFlightController.GROUNDED
+                && this.getBreathAttackTicks() == 0 && this.getBiteAttackTicks() == 0;
+        this.naturalRestProgress = Mth.clamp(this.naturalRestProgress
+                + (mayRest ? 1.0F : -1.6F), 0.0F, 18.0F);
         this.previousFlightProgress = this.flightProgress;
         float flightDestination = this.getFlightMode() == AurenFlightController.GROUNDED
                 ? 0.0F : FLIGHT_ANIMATION_TICKS;
