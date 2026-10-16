@@ -33,7 +33,7 @@ public final class AurenNaturalIdleGoal extends Goal {
     private final AurenDragon dragon;
     private LivingEntity owner;
     private int remainingTicks;
-    private int cooldownTicks;
+    private long nextRoutineTick;
     private Routine routine = Routine.OBSERVE;
     private Vec3 interestPoint;
     private Animal interestingAnimal;
@@ -65,9 +65,12 @@ public final class AurenNaturalIdleGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (cooldownTicks > 0) {
-            --cooldownTicks;
-            dragon.getMind().idleUnready("pausa entre rotinas (" + cooldownTicks + " ticks)");
+        // GoalSelector does NOT invoke canUse every server tick. Count
+        // against game time rather than decrementing per canUse() call:
+        // otherwise a 100-230 tick break becomes 3x longer or more.
+        if (dragon.tickCount < nextRoutineTick) {
+            dragon.getMind().idleUnready("pausa entre rotinas ("
+                    + (nextRoutineTick - dragon.tickCount) + " ticks)");
             return false;
         }
         LivingEntity possible = dragon.getOwner();
@@ -330,7 +333,8 @@ public final class AurenNaturalIdleGoal extends Goal {
         interestPoint = null;
         remainingTicks = 0;
         routine = Routine.OBSERVE;
-        cooldownTicks = MIN_COOLDOWN_TICKS + dragon.getRandom()
-                .nextInt(MAX_COOLDOWN_TICKS - MIN_COOLDOWN_TICKS + 1);
+        nextRoutineTick = dragon.tickCount + MIN_COOLDOWN_TICKS
+                + dragon.getRandom().nextInt(
+                    MAX_COOLDOWN_TICKS - MIN_COOLDOWN_TICKS + 1);
     }
 }
