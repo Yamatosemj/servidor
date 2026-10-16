@@ -67,7 +67,7 @@ assert "AurenScorchedBlocks.register(modBus)" in main
 assert "ENTITIES.register(\"auren\"" in main
 assert "DeferredRegister.Items" not in main and "DeferredRegister.Items" not in registry
 assert "BlockItem(" not in registry and "BlockItem(" not in main
-assert "0.7.12-fire-ignition-alpha" in version
+assert "0.7.13-smart-creature-combat-alpha" in version
 
 names=["chared_grass","chared_dirt","chared_gravel",
        "chared_cobblestone","chared_stone","chared_dirt_path"]

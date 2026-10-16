@@ -1,3 +1,17 @@
+# Auren Minecraft 0.7.13 — inteligência de combate a criaturas
+
+## Melhorias focadas exclusivamente em alvos marcados
+
+- **Combate com os três padrões CE:** `TACKLE`, `HOVER_BLAST` e `SCORCH_STREAM` continuam sendo os tipos do Ice and Fire. A escolha agora depende da distância/visibilidade e do ataque anterior, sem sorteio aleatório de manobras durante uma luta.
+- **Posição de disparo:** `HOVER_BLAST` seleciona pontos no ar com linha de visão livre até a criatura (checagem server-side), evitando posições atrás de uma parede ou telhado. Só revisa o ponto com motivo ou intervalo limitado.
+- **Investida inteligente:** `TACKLE` prevê o movimento horizontal recente do inimigo em vez de seguir exclusivamente as coordenadas antigas, limitado a 5 blocos de antecipação.
+- **Passadas CE:** `SCORCH_STREAM` preserva a linha entre atacante e presa definida no começo da manobra e inverte o percurso só ao chegar ao outro lado.
+- **Recuperação:** se o dragão perder de vista a presa durante uma investida, muda para busca aérea. Se um destino não for seguro, tenta reposicionar antes de aterrissar.
+- **Sem regressão pretendida:** bombardeio de área, incêndio das construções, sopro sem ângulo máximo, animação de baixar a cabeça, V, Shift+V, B e montaria não foram alterados.
+- **Limitação:** usa o controlador de voo original do Ice and Fire CE e suas modalidades, mas a IA ainda é um adaptador para `TamableAnimal` — não reproduz todos os sistemas de `DragonBaseEntity`. Compilação não valida o comportamento visual em jogo; teste antes de mergear.
+
+---
+
 # Auren Minecraft 0.7.12 — incêndio, não demolição
 
 ## Correções após o teste da 0.7.11

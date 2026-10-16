@@ -17,6 +17,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.HitResult;
 
 /** Owner-only, server-authored persistent attack orders. */
 public final class AurenAttackOrders {
@@ -38,6 +40,7 @@ public final class AurenAttackOrders {
     private int nextWaypointTick;
     private int nextSweepTick;
     private int meleeCooldown;
+    private int sightLostTicks;
     private int areaLegs;
     private int areaPhase; // 0: plan approach, 1: approach, 2: committed attack pass
     private Vec3 areaRunDirection;
@@ -89,6 +92,7 @@ public final class AurenAttackOrders {
         nextWaypointTick = 0;
         nextSweepTick = 0;
         meleeCooldown = 0;
+        sightLostTicks = 0;
         areaLegs = 0;
         areaPhase = 0;
         areaRunDirection = null;
@@ -160,55 +164,78 @@ public final class AurenAttackOrders {
                         point.z - dragon.getZ()));
     }
 
-    /** CE HOVER_BLAST samples a new vantage around the prey, not a circle. */
+    /**
+     * CE HOVER_BLAST keeps a workable aerial firing position near the prey.
+     * Don't randomly pick an unreachable point behind a house: sample
+     * roof-clear positions with a real LOS ray from that prospective vantage.
+     */
     private Vec3 hoverPoint(ServerLevel level, LivingEntity enemy) {
-        for (int i = 0; i < 12; ++i) {
-            Vec3 point = new Vec3(enemy.getX() + dragon.getRandom().nextInt(21) - 10,
-                    enemy.getY() + 11.0D + dragon.getRandom().nextInt(5) - 2,
-                    enemy.getZ() + dragon.getRandom().nextInt(21) - 10);
-            if (canFlyTo(level, point)) return point;
+        for (int i = 0; i < 16; ++i) {
+            double angle = dragon.getRandom().nextDouble() * Math.PI * 2.0D;
+            double range = 7.0D + dragon.getRandom().nextDouble() * 8.0D;
+            Vec3 point = new Vec3(
+                    enemy.getX() + Math.cos(angle) * range,
+                    enemy.getY() + 10.0D + dragon.getRandom().nextDouble() * 6.0D,
+                    enemy.getZ() + Math.sin(angle) * range);
+            if (canFlyTo(level, point) && clearViewFrom(level, point, enemy))
+                return point;
         }
         return null;
     }
 
-    /** CE SCORCH_STREAM: capture starting alignment, then pass over the prey. */
+    /** A candidate vantage must see the victim before we commit to flying it. */
+    private boolean clearViewFrom(ServerLevel level, Vec3 vantage, LivingEntity enemy) {
+        BlockPos targetChunk = enemy.blockPosition();
+        if (!level.hasChunkAt(targetChunk)) return false;
+        return level.clip(new ClipContext(vantage, enemy.getEyePosition(),
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
+                dragon)).getType() == HitResult.Type.MISS;
+    }
+
+    /**
+     * CE SCORCH_STREAM records the prey/attacker starting positions and
+     * commits to one side of the prey before reversing on arrival.
+     * Reuse that directional relationship instead of selecting random points.
+     */
     private Vec3 streamPoint(ServerLevel level, LivingEntity enemy) {
         if (streamDirection == null) {
             Vec3 delta = enemy.position().subtract(dragon.position());
-            Vec3 horizontal = new Vec3(delta.x, 0, delta.z);
+            Vec3 horizontal = new Vec3(delta.x, 0.0D, delta.z);
             streamDirection = horizontal.lengthSqr() > 1.0E-4D
                     ? horizontal.normalize() : new Vec3(1, 0, 0);
         }
         double side = streamLeg % 2 == 0 ? 1.0D : -1.0D;
         Vec3 point = enemy.position().add(
-                streamDirection.x * 17.0D * side, 11.0D,
-                streamDirection.z * 17.0D * side);
-        if (canFlyTo(level, point)) return point;
-        return hoverPoint(level, enemy);
+                streamDirection.x * 17.0D * side,
+                11.0D, streamDirection.z * 17.0D * side);
+        return canFlyTo(level, point) && clearViewFrom(level, point, enemy)
+                ? point : hoverPoint(level, enemy);
     }
 
     /**
-     * Choose the original CE attack TYPES by tactical opportunity.
-     * This is still our TamableAnimal adapter, not DragonBaseEntity AI.
+     * Preserve CE's three original tactics while adapting the decision
+     * logic to a marked prey. Decisions are based on combat opportunity:
+     * reacquire sight, close distance, dive, then sweep or hover to breathe.
+     * No arbitrary random tactic switching mid-maneuver.
      */
     private void chooseTactic(LivingEntity enemy) {
         AirAttack previous = tactic;
         double distanceSq = dragon.distanceToSqr(enemy);
         if (!dragon.hasLineOfSight(enemy)) {
-            tactic = AirAttack.HOVER_BLAST; // Seek a new clear vantage.
-        } else if (distanceSq > 25.0D * 25.0D) {
-            tactic = AirAttack.TACKLE; // Close in when target is far away.
-        } else if (distanceSq < 7.0D * 7.0D) {
-            tactic = previous == AirAttack.TACKLE
-                    ? AirAttack.HOVER_BLAST : AirAttack.TACKLE;
-        } else if (distanceSq < 13.0D * 13.0D) {
-            tactic = dragon.getRandom().nextInt(3) == 0
-                    ? AirAttack.TACKLE : AirAttack.HOVER_BLAST;
+            tactic = AirAttack.HOVER_BLAST;
+        } else if (distanceSq > 28.0D * 28.0D) {
+            tactic = AirAttack.TACKLE;
+        } else if (distanceSq < 9.0D * 9.0D && previous != AirAttack.TACKLE) {
+            tactic = AirAttack.TACKLE;
+        } else if (previous == AirAttack.HOVER_BLAST
+                && distanceSq >= 9.0D * 9.0D) {
+            tactic = AirAttack.SCORCH_STREAM;
         } else {
-            tactic = dragon.getRandom().nextBoolean()
-                    ? AirAttack.SCORCH_STREAM : AirAttack.HOVER_BLAST;
+            tactic = AirAttack.HOVER_BLAST;
         }
-        nextTacticTick = combatTicks + 75 + dragon.getRandom().nextInt(75);
+        // Keep each CE maneuver alive long enough for a real fire stream,
+        // rather than swapping strategies faster than the breath wind-up.
+        nextTacticTick = combatTicks + 125 + dragon.getRandom().nextInt(45);
         nextWaypointTick = 0;
         waypoint = null;
         streamDirection = null;
@@ -218,13 +245,23 @@ public final class AurenAttackOrders {
     }
 
     private void tickEnemy(ServerLevel level, ServerPlayer owner, LivingEntity enemy) {
-        if (tactic == null || combatTicks >= nextTacticTick) chooseTactic(enemy);
+        sightLostTicks = dragon.hasLineOfSight(enemy) ? 0 : sightLostTicks + 1;
+        // If a wall hides the prey, stop a blind dive and search for a
+        // clear aerial vantage instead of circling uselessly.
+        if (tactic == null || combatTicks >= nextTacticTick
+                || (sightLostTicks == 20 && tactic != AirAttack.HOVER_BLAST))
+            chooseTactic(enemy);
         Vec3 center = enemy.getBoundingBox().getCenter();
         Vec3 next;
         switch (tactic) {
             case TACKLE -> {
                 // Original CE TACKLE homes directly to the prey and hits on contact.
-                next = center.add(0, enemy.getBbHeight() * 0.3D, 0);
+                // Small motion lead prevents the old chase-the-previous-
+                // coordinate effect on moving ground enemies.
+                Vec3 velocity = enemy.getDeltaMovement();
+                Vec3 lead = new Vec3(velocity.x, 0, velocity.z).scale(4.0D);
+                if (lead.lengthSqr() > 25.0D) lead = lead.normalize().scale(5.0D);
+                next = center.add(lead).add(0, enemy.getBbHeight() * 0.3D, 0);
                 fireAim = null;
                 if (meleeCooldown > 0) --meleeCooldown;
                 double reach = (dragon.getBbWidth() + enemy.getBbWidth() + 0.6D);
@@ -252,22 +289,30 @@ public final class AurenAttackOrders {
             }
             case HOVER_BLAST -> {
                 // CE picks a new overhead offset when too near or far from prey.
+                // Original CE HOVER_BLAST keeps its position until too
+                // close/far; avoid rerolling directions every few seconds.
+                double horizontalSq = dragon.distanceToSqr(
+                        enemy.getX(), dragon.getY(), enemy.getZ());
                 if (waypoint == null || combatTicks >= nextWaypointTick
-                        || dragon.position().distanceToSqr(waypoint) < 16.0D) {
+                        || horizontalSq < 16.0D || horizontalSq > 900.0D
+                        || !clearViewFrom(level, waypoint, enemy)) {
                     Vec3 chosen = hoverPoint(level, enemy);
                     if (chosen != null) waypoint = chosen;
-                    nextWaypointTick = combatTicks + 45 + dragon.getRandom().nextInt(30);
+                    nextWaypointTick = combatTicks + 80;
                 }
                 next = waypoint;
                 fireAim = dragon.hasLineOfSight(enemy) ? center : null;
             }
             case SCORCH_STREAM -> {
                 // CE reverses its streaming pass near the opposite side.
+                // CE reverses the scorch leg only at the far side of prey.
+                // Keep it for a full pass, but replan if line of sight is lost.
                 if (waypoint == null || dragon.position().distanceToSqr(waypoint) < 100.0D
                         || combatTicks >= nextWaypointTick) {
                     if (waypoint != null) ++streamLeg;
-                    waypoint = streamPoint(level, enemy);
-                    nextWaypointTick = combatTicks + 110;
+                    Vec3 chosen = streamPoint(level, enemy);
+                    if (chosen != null) waypoint = chosen;
+                    nextWaypointTick = combatTicks + 125;
                 }
                 next = waypoint;
                 fireAim = dragon.hasLineOfSight(enemy) ? center : null;
@@ -281,7 +326,16 @@ public final class AurenAttackOrders {
                     && level.hasChunkAt(BlockPos.containing(next))) {
                 dragon.getFlightController().patrolAttack(owner, next, true);
             } else {
-                dragon.getFlightController().land();
+                // An obstructed prey position is not a reason to land every
+                // tick. Recover to a safe CE HOVER_BLAST vantage instead.
+                Vec3 recovery = hoverPoint(level, enemy);
+                if (recovery != null) {
+                    waypoint = recovery;
+                    nextWaypointTick = combatTicks + 45;
+                    dragon.getFlightController().patrolAttack(owner, recovery, false);
+                } else {
+                    dragon.getFlightController().land();
+                }
             }
             fireAim = null;
             return;
