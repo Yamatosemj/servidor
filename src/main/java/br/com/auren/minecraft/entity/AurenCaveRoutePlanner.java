@@ -11,6 +11,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 
 /**
  * Small, bounded topological search THROUGH the cave's open floor cells.
@@ -24,6 +25,10 @@ final class AurenCaveRoutePlanner {
     private static final int MAX_EXPLORED = 1600;
     private static final int MAX_HORIZONTAL = 28;
     private static final int MAX_VERTICAL = 10;
+    // Exact small-form dimensions from AurenDragon.getDimensions():
+    // 0.50 blocks wide, 0.70 blocks high. Keep the entrance search honest.
+    private static final double SMALL_HALF_WIDTH = 0.25D;
+    private static final double SMALL_HEIGHT = 0.70D;
 
     private AurenCaveRoutePlanner() {}
 
@@ -36,9 +41,18 @@ final class AurenCaveRoutePlanner {
         // One-block-high tunnels ARE traversable to Auren's 0.7m child.
         // Do not require two air blocks above the floor: that would reject
         // the very caves the tiny shape is intended to access.
-        return feet.isAir() && floor.getFluidState().isEmpty()
-                && feet.getFluidState().isEmpty()
-                && !floor.getCollisionShape(level, position.below()).isEmpty();
+        if (!feet.isAir() || !floor.getFluidState().isEmpty()
+                || !feet.getFluidState().isEmpty()
+                || floor.getCollisionShape(level, position.below()).isEmpty())
+            return false;
+        // Air alone is insufficient: a wall, fence, slab or adjacent
+        // collision shape may still block the real small dragon hitbox.
+        double cx = position.getX() + 0.5D;
+        double cz = position.getZ() + 0.5D;
+        AABB childBox = new AABB(cx - SMALL_HALF_WIDTH, position.getY(),
+                cz - SMALL_HALF_WIDTH, cx + SMALL_HALF_WIDTH,
+                position.getY() + SMALL_HEIGHT, cz + SMALL_HALF_WIDTH);
+        return level.noCollision(null, childBox);
     }
 
     /**
