@@ -1,3 +1,59 @@
+# Auren Minecraft 0.7.7 — marcação de alvos e bombardeio autônomo
+
+## Marcar o que atacar (sem montar)
+
+Com seu **Auren adulto, domesticado e a até 64 blocos de você**, mire
+diretamente no alvo e use o comando de chat:
+
+- `/auren atacar inimigo` — mire em um monstro hostil visível a até 48 blocos.
+  O Auren persegue o alvo pelo ar com sopro azul, alternando voos circulares
+  superiores (*Hover Blast*) com investidas de passagem (*Scorch Stream*).
+  São adaptações das **estratégias de ataque** da CE, usando o **mesmo controlador
+  de física de voo do Auren**, não a entidade/IA de combate integral da CE.
+  Quando o monstro morre, a ordem é removida; se descarregar, aguarda.
+- `/auren atacar area 5` (ou `10`, `15`, `20`, `25`, `30`) —
+  mire em um **bloco** a até 48 blocos. O valor é o **raio horizontal** em blocos
+  a partir do centro marcado. Auren tenta voar em círculo nesse raio, cerca
+  de 9 blocos acima do centro, e distribui o sopro entre o centro e a área.
+- `/auren status` — mostra a ordem atual.
+- `/auren parar` — cancela a marcação e encerra o bombardeio.
+
+Uma marcação nova substitui a anterior. Não requer item extra, GUI ou
+comunicação de coordenadas do cliente: o servidor faz a seleção a partir
+da direção em que o jogador está olhando. **Não há limite de tempo no modo
+área**: a ordem sobrevive a salvar/reabrir o mundo e só é desmarcada pelo
+comando. Os ataques, porém, **pausam** quando o dono sai, está em outra
+dimensão, monta, transforma o dragão em filhote ou quando a área/chunks estão
+indisponíveis; não força o carregamento de áreas remotas. O monstro marcado
+é automaticamente desmarcado quando morre.
+
+O modo automático continua usando o sopro azul da v0.7.6, com preparação,
+alcance máximo de 30 blocos da cabeça e proteção de dono/animais aliados.
+O voo é controlado pela versão existente de `FlightMoveHelper` da CE;
+as trajetórias orbitais são novas e **precisam ser observadas dentro do jogo**.
+O raio controla movimento e limite de dano/terreno, não aumenta alcance
+do fogo ou o raio original de explosão do sopro.
+
+**Cuidado:** com `mobGriefing true`, blocos de pedra, terra ou pedregulho
+colocados por você também podem ficar carbonizados, inclusive dentro do
+círculo. Use `/gamerule mobGriefing false` para impedir mudanças em blocos
+(sem impedir o dano do sopro nas criaturas). Faça **backup do mundo** antes
+de testar uma versão experimental.
+
+## Playtest necessário
+
+1. Testar cada raio (5, 10, 15, 20, 25, 30) num mundo de backup e verificar
+   se o voo mantém uma órbita em áreas planas e com obstáculos.
+2. Verificar se o sopro percorre o interior do círculo, não atravessa paredes,
+   respeita raio, alcance e `mobGriefing`.
+3. Marcar um zumbi, observar perseguição aérea e cancelamento após morte.
+4. Usar `/auren parar` durante o ataque, testar troca de alvo, sair e voltar
+   ao mundo, trocar de dimensão, montar/desmontar, ombro e forma filhote.
+5. Confirmar desempenho no Zalith/Android e multiplayer. Compilação e
+   verificações estáticas **não** substituem teste de jogo.
+
+---
+
 # Auren Minecraft 0.7.6 — proteção do dono, mordida filhote e terreno queimado
 
 ## Novidades

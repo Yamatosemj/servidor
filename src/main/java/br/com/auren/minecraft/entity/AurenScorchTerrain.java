@@ -24,12 +24,23 @@ public final class AurenScorchTerrain {
      * Player-placed dirt, stone and cobblestone are indistinguishable from natural blocks.
      */
     public static void scorch(ServerLevel level, BlockPos impact, AurenDragon dragon) {
+        scorch(level, impact, dragon, null, 0);
+    }
+
+    /** Restrict autonomous area-order terrain changes to its selected radius. */
+    public static void scorch(ServerLevel level, BlockPos impact, AurenDragon dragon,
+                              BlockPos markedCenter, int radius) {
         if (!level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)) return;
         if (!level.hasChunkAt(impact)) return;
         BlockPos.betweenClosedStream(impact.offset(-1, -1, -1), impact.offset(1, 1, 1))
                 .forEach(pos -> {
                     if (!level.hasChunkAt(pos) || level.getBlockEntity(pos) != null
                             || !dragon.getRandom().nextBoolean()) return;
+                    if (markedCenter != null) {
+                        double dx = pos.getX() - markedCenter.getX();
+                        double dz = pos.getZ() - markedCenter.getZ();
+                        if (dx * dx + dz * dz > radius * radius) return;
+                    }
                     BlockState before = level.getBlockState(pos);
                     BlockState after = convertNaturalBlock(before);
                     if (after != null && !after.is(before.getBlock())) {
