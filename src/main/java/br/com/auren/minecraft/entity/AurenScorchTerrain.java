@@ -48,7 +48,7 @@ public final class AurenScorchTerrain {
 
     private static final class HeatTracker {
         final Map<BlockPos, HeatCell> cells = new HashMap<>();
-        long lastCleanup = Long.MIN_VALUE;
+        long lastCleanup = -1000L;
     }
 
     private AurenScorchTerrain() {}
