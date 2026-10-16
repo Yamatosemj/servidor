@@ -39,11 +39,12 @@ public final class AurenAttackOrders {
     private int nextSweepTick;
     private int meleeCooldown;
     private int areaLegs;
-    private int nextHeadingFlipLeg;
+    private int areaPhase; // 0: plan approach, 1: approach, 2: committed attack pass
+    private Vec3 areaRunDirection;
+    private boolean areaFiringPass;
     private int tackleBreakawayUntil;
     private Vec3 tackleBreakaway;
     private int streamLeg;
-    private boolean clockwise = true;
     private AirAttack tactic;
     private Vec3 waypoint;
     private Vec3 streamDirection;
@@ -89,7 +90,9 @@ public final class AurenAttackOrders {
         nextSweepTick = 0;
         meleeCooldown = 0;
         areaLegs = 0;
-        nextHeadingFlipLeg = 4 + dragon.getRandom().nextInt(4);
+        areaPhase = 0;
+        areaRunDirection = null;
+        areaFiringPass = false;
         tackleBreakawayUntil = 0;
         tackleBreakaway = null;
         streamLeg = 0;
@@ -289,57 +292,56 @@ public final class AurenAttackOrders {
     }
 
     /**
-     * Attack AREA uses distinct flight legs, not a continuously rotating
-     * fixed-radius ring: banked turns, a pass across the center, low sweeps
-     * and high repositioning. The original CE FlightMoveHelper steers each
-     * leg, while the server picks safe, loaded destinations.
+     * Structured bombing sortie: approach a rim, fly a straight committed
+     * attack pass across the mark, then bank/reposition for another pass.
+     * Decisions happen at leg boundaries, NEVER randomly while breathing.
+     * The CE FlightMoveHelper still owns acceleration, turning and collision.
      */
     private void tickArea(ServerLevel level, ServerPlayer owner, Vec3 center) {
         if (waypoint == null || combatTicks >= nextWaypointTick
-                || dragon.position().distanceToSqr(waypoint) < 30.0D) {
+                || dragon.position().distanceToSqr(waypoint) < 36.0D) {
             Vec3 candidate = null;
-            double bearing = Math.atan2(dragon.getZ() - center.z,
-                    dragon.getX() - center.x);
-            if (areaLegs >= nextHeadingFlipLeg) {
-                clockwise = !clockwise;
-                nextHeadingFlipLeg = areaLegs + 4 + dragon.getRandom().nextInt(4);
-            }
-            int legStyle = areaLegs % 5;
-            for (int i = 0; i < 12; ++i) {
-                double angle;
-                double range;
-                double height;
-                if (legStyle == 2) {
-                    // CROSS_PASS: head through the center toward the far edge.
-                    angle = bearing + Math.PI
-                            + (dragon.getRandom().nextDouble() - 0.5D) * 0.7D;
-                    range = radius * (0.65D + dragon.getRandom().nextDouble() * 0.28D);
-                    height = 8.0D + dragon.getRandom().nextDouble() * 4.0D;
-                } else if (legStyle == 3) {
-                    // LOW_SWEEP: an inner, descending arc; fire crosses the ring.
-                    angle = bearing + (clockwise ? 1.0D : -1.0D);
-                    range = radius * (0.25D + dragon.getRandom().nextDouble() * 0.35D);
-                    height = 5.5D + dragon.getRandom().nextDouble() * 3.0D;
-                } else if (legStyle == 4) {
-                    // CLIMB: recover altitude and set up a new attack pass.
-                    angle = bearing + (clockwise ? 1.5D : -1.5D);
-                    range = radius * (0.60D + dragon.getRandom().nextDouble() * 0.33D);
-                    height = 11.0D + dragon.getRandom().nextDouble() * 4.0D;
-                } else {
-                    // BANKED_ARC: lateral leg with bounded, varied turn angle.
-                    double step = 0.55D + dragon.getRandom().nextDouble() * 0.65D;
-                    angle = bearing + (clockwise ? step : -step);
-                    range = radius * (0.55D + dragon.getRandom().nextDouble() * 0.40D);
-                    height = 7.5D + dragon.getRandom().nextDouble() * 4.5D;
+            int nextPhase = areaPhase;
+            Vec3 direction = areaRunDirection;
+            if (areaPhase == 0 || areaPhase == 2) {
+                Vec3 towardCenter = center.subtract(dragon.position());
+                direction = new Vec3(towardCenter.x, 0, towardCenter.z);
+                if (direction.lengthSqr() < 1.0D) {
+                    double yaw = Math.toRadians(dragon.getYRot());
+                    direction = new Vec3(-Math.sin(yaw), 0, Math.cos(yaw));
                 }
-                Vec3 point = center.add(Math.cos(angle) * range, height,
-                        Math.sin(angle) * range);
-                if (canFlyTo(level, point)) { candidate = point; break; }
+                direction = direction.normalize();
+                // Make the next route recognizably different without a
+                // sudden random yaw change in the middle of firing.
+                double side = areaLegs % 2 == 0 ? 0.38D : -0.38D;
+                double dx = direction.x * Math.cos(side) - direction.z * Math.sin(side);
+                double dz = direction.x * Math.sin(side) + direction.z * Math.cos(side);
+                direction = new Vec3(dx, 0, dz);
+                // The muzzle is several blocks in front of the torso. Start far
+                // enough outside even a five-block circle to allow a real
+                // continuous forward stream before passing the mark.
+                Vec3 start = center.subtract(direction.scale(radius + 12.0D));
+                candidate = safeAreaWaypoint(level, center, start, 10.0D);
+                nextPhase = 1;
+            } else if (areaPhase == 1 && direction != null) {
+                Vec3 finish = center.add(direction.scale(radius * 0.98D));
+                candidate = safeAreaWaypoint(level, center, finish, 10.0D);
+                nextPhase = 2;
             }
             if (candidate != null) {
+                areaRunDirection = direction;
+                areaPhase = nextPhase;
+                areaFiringPass = areaPhase == 2;
                 waypoint = candidate;
-                ++areaLegs;
-                nextWaypointTick = combatTicks + 65 + dragon.getRandom().nextInt(50);
+                nextWaypointTick = combatTicks + (areaFiringPass ? 180 : 120);
+                if (areaFiringPass) ++areaLegs;
+                fireAim = null;
+                nextSweepTick = combatTicks;
+            } else {
+                // Failed path samples do not send a big dragon into a wall.
+                fireAim = null;
+                dragon.getFlightController().land();
+                return;
             }
         }
         if (waypoint == null || !level.hasChunkAt(BlockPos.containing(waypoint))
@@ -349,30 +351,45 @@ public final class AurenAttackOrders {
             return;
         }
 
-        // Target rooflines and ground AHEAD of the muzzle. A random point
-        // behind Auren would force the breath to bend in mid-air.
-        if (fireAim == null || combatTicks >= nextSweepTick) {
+        // No flame during turn/approach. Commit to the long forward strafing
+        // run; steering and target selection now agree on the same heading.
+        if (!areaFiringPass) {
+            fireAim = null;
+        } else if (combatTicks >= nextSweepTick || fireAim == null) {
             fireAim = findForwardAreaImpact(level, center);
-            nextSweepTick = combatTicks + (fireAim == null ? 8
-                    : 18 + dragon.getRandom().nextInt(12));
+            nextSweepTick = combatTicks + 3;
         }
     }
 
+    /** Air above the local roof/terrain, not inside an unsuspected building. */
+    private Vec3 safeAreaWaypoint(ServerLevel level, Vec3 center,
+                                  Vec3 horizontal, double rise) {
+        BlockPos pos = BlockPos.containing(horizontal);
+        if (!level.hasChunkAt(pos)) return null;
+        int roof = level.getHeightmapPos(
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, pos).getY();
+        BlockPos middle = BlockPos.containing(center);
+        if (!level.hasChunkAt(middle)) return null;
+        int centralRoof = level.getHeightmapPos(
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, middle).getY();
+        double height = Math.max(Math.max(roof, centralRoof) + rise,
+                center.y + rise);
+        Vec3 candidate = new Vec3(horizontal.x, height, horizontal.z);
+        return canFlyTo(level, candidate) ? candidate : null;
+    }
+
     /**
-     * Ray targets are selected server-side on the surface of roofs, trees,
-     * or terrain. Heightmap avoids blindly choosing the flat marker Y when
-     * bombing tall buildings. No unloaded chunks are touched.
+     * A stable three-second-plus fire stream sweeps forward over actual roof
+     * surfaces. No randomized block coordinate is selected each frame.
+     * The moving dragon and a slow lateral sinusoid create the sweep.
      */
     private Vec3 findForwardAreaImpact(ServerLevel level, Vec3 markedCenter) {
         Vec3 muzzle = dragon.getFireBreathHeadPosition();
         double yaw = Math.toRadians(dragon.getYRot());
         double forwardX = -Math.sin(yaw);
         double forwardZ = Math.cos(yaw);
-        for (int i = 0; i < 14; ++i) {
-            double distance = 3.0D + dragon.getRandom().nextDouble()
-                    * Math.min(20.0D, 5.0D + radius * 0.8D);
-            double lateral = (dragon.getRandom().nextDouble() - 0.5D)
-                    * Math.min(8.0D, radius * 0.7D);
+        double lateral = Math.sin(combatTicks * 0.06D) * 1.7D;
+        for (int distance = 22; distance >= 2; distance -= 2) {
             double x = muzzle.x + forwardX * distance - forwardZ * lateral;
             double z = muzzle.z + forwardZ * distance + forwardX * lateral;
             double dx = x - markedCenter.x;
@@ -380,10 +397,10 @@ public final class AurenAttackOrders {
             if (dx * dx + dz * dz > radius * radius) continue;
             BlockPos sample = BlockPos.containing(x, muzzle.y, z);
             if (!level.hasChunkAt(sample)) continue;
-            BlockPos surface = level.getHeightmapPos(
+            BlockPos roof = level.getHeightmapPos(
                     Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, sample);
-            if (surface.getY() >= muzzle.y - 1.0D) continue;
-            Vec3 aim = new Vec3(x, surface.getY() - 0.25D, z);
+            if (roof.getY() >= muzzle.y - 1.0D) continue;
+            Vec3 aim = new Vec3(x, roof.getY() - 0.25D, z);
             if (muzzle.distanceToSqr(aim) <= 28.0D * 28.0D) return aim;
         }
         return null;

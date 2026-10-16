@@ -26,7 +26,7 @@ for token in (
     "Blocks.SOUL_FIRE.defaultBlockState().canSurvive(level, firePos)",
     "level.setBlockAndUpdate(firePos, Blocks.SOUL_FIRE.defaultBlockState())",
     "double plumeLength = head.distanceTo(streamEnd)",
-    "double width = Math.min(1.6D,",
+    "double width = Math.min(2.0D,",
     "level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME",
     "CE_REACH = 10.0D * CE_STAGE",
     "CE_IMPACT_RADIUS = 3.5D",
@@ -71,7 +71,7 @@ assert "AurenOriginalAnimations.instance().applyBreathPose(model, dragon, partia
 assert "AurenOriginalAnimations.instance().apply(model, dragon, limbSwing, limbSwingAmount, age);" in renderer
 assert "new AurenRiderFeatureRenderer(this)" in renderer
 assert "this.lightningRenderer.render(partialTick, pose, buffer)" in renderer
-assert "mod_version=0.7.10-directional-bombardment-alpha" in version
+assert "mod_version=0.7.11-sustained-fire-alpha" in version
 
 original = {
     "attack_stream_charge1": "7865c66437438b74307df427d2febcac474426f9",

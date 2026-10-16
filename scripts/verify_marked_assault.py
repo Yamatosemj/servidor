@@ -50,10 +50,11 @@ assert "toggleAreaEnabled()" in orders
 assert "areaEnabled = !tag.contains" in orders
 assert "target == dragon.getOwner()" in orders
 assert "canFlyTo(ServerLevel level, Vec3 point)" in orders
-assert "dragon.getRandom().nextDouble()" in orders
-# Changing direction alone still produces an orbit; enforce crossing legs.
-for pattern in ("int legStyle = areaLegs % 5", "angle = bearing + Math.PI",
-                "nextHeadingFlipLeg", "height = 5.5D", "height = 11.0D",
+# Aerial bombing is a committed attack leg, not random orbit waypoints.
+for pattern in ("areaPhase = 0", "areaPhase == 1", "nextPhase = 2",
+                "areaFiringPass = areaPhase == 2", "radius * 0.98D",
+                "nextWaypointTick = combatTicks + (areaFiringPass ? 180 : 120)",
+                "Math.sin(combatTicks * 0.06D)", "nextSweepTick = combatTicks + 3",
                 "tackleBreakawayUntil", "boolean landedHit = dragon.doHurtTarget(enemy)"):
     assert pattern in orders, pattern
 assert "new AurenAttackOrders(this)" in dragon
@@ -89,7 +90,7 @@ assert "withinArea(Vec3.atCenterOf(firePos))" in fire
 assert 4.5**2 <= 5**2 and not (5.5**2 <= 5**2)
 assert "BlockPos markedCenter, int radius" in terrain
 assert "dx * dx + dz * dz > radius * radius" in terrain
-assert "mod_version=0.7.10-directional-bombardment-alpha" in version
+assert "mod_version=0.7.11-sustained-fire-alpha" in version
 
 # Pure numerical radius and sweep sanity (no engine/AI claim).
 for r in range(5, 31, 5):

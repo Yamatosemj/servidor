@@ -46,11 +46,12 @@ public final class AurenFireBreath {
     private static final int CE_IGNITE_SECONDS = 5 + CE_STAGE * 5;
     private static final float CE_RENDER_SIZE = 3.25F / 0.35F;
     // Autonomous attacks must respect where the actual dragon muzzle faces.
-    private static final double MIN_FORWARD_DOT = Math.cos(Math.toRadians(35.0D));
+    private static final double MIN_FORWARD_DOT = Math.cos(Math.toRadians(55.0D));
 
     private final AurenDragon dragon;
     private int fireBreathTicks;
     private int burnProgress;
+    private int aimGraceTicks;
 
     public AurenFireBreath(AurenDragon dragon) {
         this.dragon = dragon;
@@ -64,6 +65,7 @@ public final class AurenFireBreath {
     public void reset() {
         this.fireBreathTicks = 0;
         this.burnProgress = 0;
+        this.aimGraceTicks = 0;
     }
 
     public void tick() {
@@ -78,19 +80,35 @@ public final class AurenFireBreath {
                 && owner.isAlive() && owner.level() == dragon.level()
                 && autoAim != null && dragon.getFlightMode() == AurenFlightController.FLYING;
         if (!(dragon.level() instanceof ServerLevel level)
-                || !dragon.isAlive() || dragon.isSmallForm() || dragon.isOnShoulder()
-                || (!riddenFire && !autonomousFire)) {
+                || !dragon.isAlive() || dragon.isSmallForm() || dragon.isOnShoulder()) {
+            reset();
+            return;
+        }
+        if (!riddenFire && !autonomousFire) {
+            // The previous implementation reset the long stream during every
+            // brief roof/heading gap. Keep its charge for a short air-run grace
+            // period; only the stream pauses, not the preparation animation.
+            boolean briefAreaGap = !dragon.isVehicle() && owner != null
+                    && dragon.getAttackOrders().isAreaOrder()
+                    && dragon.getFlightMode() == AurenFlightController.FLYING
+                    && aimGraceTicks++ < 16;
+            if (briefAreaGap) {
+                this.fireBreathTicks = Math.max(CE_WARMUP_TICKS, this.fireBreathTicks);
+                this.burnProgress = Math.max(0, this.burnProgress - 1);
+                return;
+            }
             reset();
             return;
         }
 
-        // Charge while turning, but do not emit fire outside the muzzle's
-        // forward arc. Mounted R retains the original rider-view behavior.
+        // Aiming and flight now share a forward strafing run. A temporary
+        // loss of alignment pauses fire without throwing away all warmup.
         if (autonomousFire && !canAimForward(getHeadPosition(), autoAim)) {
-            this.fireBreathTicks = Math.min(CE_WARMUP_TICKS, this.fireBreathTicks + 1);
-            this.burnProgress = 0;
+            this.fireBreathTicks = Math.max(CE_WARMUP_TICKS, this.fireBreathTicks);
+            this.burnProgress = Math.max(0, this.burnProgress - 1);
             return;
         }
+        this.aimGraceTicks = 0;
 
         // CE DragonBaseEntity.isActuallyBreathingFire = fireBreathTicks > 20.
         this.fireBreathTicks++;
@@ -108,7 +126,7 @@ public final class AurenFireBreath {
         // CE stage-3 reach is 30 blocks. Do not artificially extend it for
         // distant order waypoints: orbit until within range before firing.
         if (autonomousFire && eye.distanceToSqr(endpoint) > CE_REACH * CE_REACH) {
-            reset();
+            this.burnProgress = Math.max(0, this.burnProgress - 1);
             return;
         }
         BlockHitResult blockHit = level.clip(new ClipContext(
@@ -162,11 +180,11 @@ public final class AurenFireBreath {
             double t = (i - 0.35D + dragon.getRandom().nextDouble() * 0.35D) / segments;
             Vec3 center = head.lerp(streamEnd, Mth.clamp(t, 0.0D, 1.0D));
             if (!level.hasChunkAt(BlockPos.containing(center))) break;
-            double width = Math.min(1.6D, 0.13D + plumeLength * t * 0.07D);
+            double width = Math.min(2.0D, 0.17D + plumeLength * t * 0.085D);
             // sendParticles' positive count scatters each blue flame inside the
             // widening cross-section, creating a moving plume, not a ray.
             level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,
-                    center.x, center.y, center.z, 5,
+                    center.x, center.y, center.z, 7,
                     width, width * 0.75D, width, 0.035D);
             // Light wisps emphasize heat and motion without orange fire.
             if (i % 3 == 0) {
@@ -265,6 +283,9 @@ public final class AurenFireBreath {
                     dragon.getAttackOrders().getAreaCenter(),
                     dragon.getAttackOrders().getRadius());
             AurenScorchTerrain.scorch(level, scorchCenter, dragon,
+                    dragon.getAttackOrders().getAreaCenter(),
+                    dragon.getAttackOrders().getRadius());
+            AurenScorchTerrain.igniteVillage(level, scorchCenter, dragon,
                     dragon.getAttackOrders().getAreaCenter(),
                     dragon.getAttackOrders().getRadius());
         } else {

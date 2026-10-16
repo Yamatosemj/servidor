@@ -1,3 +1,15 @@
+# Auren Minecraft 0.7.11 — rajada contínua e bombardeio coordenado
+
+## Correção do teste 0.7.10
+
+- **Passadas aéreas coordenadas:** aproximação pela borda, voo em direção ao outro lado do raio e reposicionamento. O plano de voo não é alterado aleatoriamente no meio da rajada; o FlightMoveHelper do Ice and Fire CE continua responsável por mover o dragão.
+- **Rajada azul prolongada:** alvo acompanha a direção do dragão, varrendo telhados à frente; 180 ticks máximos por passada (aproximadamente 9 segundos a 20 TPS, não garantia de sopro contínuo se houver obstáculos). O jato conserva o aquecimento durante falhas breves de mira e mantém proteção contra disparos para trás: cone de 55° frontal em vez de 35°. Pluma visual um pouco mais volumétrica.
+- **Destruição real de construções e solo:** ampliação para blocos mineráveis com ferramentas, limite de até 20 blocos quebrados por impacto, apenas dentro da área e respeitando `mobGriefing`. Acende **fogo comum** em madeira/lã/feno e folhas próximos ao impacto — chamas do sopro continuam azuis, mas o fogo que se propaga pela casa é o fogo vanilla (laranja), porque soul fire não pega em madeira.
+- **Segurança:** não destrói blocos com block entities, imunes (dureza negativa), dureza acima de 8, nem chunks descarregados. Proteção do dono e pets, controles e ataques montados preservados.
+- **Importante:** destruição permanente de qualquer construção dentro do círculo, inclusive casas próprias. Testar somente em mundo descartável/backup, com `mobGriefing true` e `doFireTick true` para propagação vanilla. Nenhum teste de build substitui playtest de voo, ataque e incêndio. PR empilhada sobre a 0.7.10.
+
+---
+
 # Auren Minecraft 0.7.10 — fogo direcional e bombardeio destrutivo
 
 - **Fogo autônomo:** respeita um arco horizontal de 35° à frente da cabeça (sem soprar para as costas). Auren carrega o sopro enquanto vira. Os controles do fogo montado (R) continuam como antes.
