@@ -1,8 +1,8 @@
 /*
- * Autonomous marked attacks for the one Auren entity.
- * The CE combat flight patterns HOVER_BLAST and SCORCH_STREAM are used as
- * navigation references; the CE FlightMoveHelper still performs ALL steering.
  * SPDX-License-Identifier: LGPL-3.0-or-later
+ * The tactical patterns mirror IceAndFire CE IafDragonFlightManager:
+ * TACKLE, HOVER_BLAST, SCORCH_STREAM. The existing CE FlightMoveHelper
+ * remains the ONLY movement controller.
  */
 package br.com.auren.minecraft.entity;
 
@@ -13,42 +13,51 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
-/**
- * Server-authored orders. No client-supplied positions or entity IDs.
- *
- * AREA remains ordered until /auren parar, even through save/reload. It pauses
- * when owner / required chunks are unavailable. ENEMY pauses if unloaded and
- * automatically clears when the marked mob dies.
- */
+/** Owner-only, server-authored persistent attack orders. */
 public final class AurenAttackOrders {
     private static final int NONE = 0;
     private static final int ENEMY = 1;
     private static final int AREA = 2;
     private static final int MAX_MARK_DISTANCE = 64;
+    private enum AirAttack { TACKLE, HOVER_BLAST, SCORCH_STREAM }
+
     private final AurenDragon dragon;
     private int mode;
+    private boolean areaEnabled = true;
     private UUID markedEnemy;
     private LivingEntity recentlyResolvedEnemy;
     private BlockPos areaCenter;
     private int radius;
-    private double orbitAngle;
     private int combatTicks;
+    private int nextTacticTick;
+    private int nextWaypointTick;
+    private int nextSweepTick;
+    private int meleeCooldown;
+    private int areaLegs;
+    private int streamLeg;
+    private boolean clockwise = true;
+    private AirAttack tactic;
+    private Vec3 waypoint;
+    private Vec3 streamDirection;
     private Vec3 fireAim;
 
     AurenAttackOrders(AurenDragon dragon) {
         this.dragon = dragon;
     }
 
-    public boolean hasOrder() {
-        return this.mode != NONE;
-    }
+    public boolean hasOrder() { return mode != NONE; }
+    public int getMode() { return mode; }
+    public boolean isAreaEnabled() { return areaEnabled; }
 
-    /** Server state, copied into tracked entity data for the owner's preview. */
-    public int getMode() {
-        return mode;
+    /** The button B toggles bombing only; creature tactics remain available. */
+    public boolean toggleAreaEnabled() {
+        areaEnabled = !areaEnabled;
+        if (!areaEnabled && mode == AREA) clear();
+        return areaEnabled;
     }
 
     public int getMarkedEnemyEntityId() {
@@ -57,85 +66,232 @@ public final class AurenAttackOrders {
         return recentlyResolvedEnemy.getId();
     }
 
-    public boolean isAreaOrder() {
-        return this.mode == AREA;
-    }
-
-    public BlockPos getAreaCenter() {
-        return this.areaCenter;
-    }
-
-    public int getRadius() {
-        return this.radius;
-    }
-
-    public Vec3 getFireAim() {
-        return this.fireAim;
-    }
+    public boolean isAreaOrder() { return mode == AREA; }
+    public BlockPos getAreaCenter() { return areaCenter; }
+    public int getRadius() { return radius; }
+    public Vec3 getFireAim() { return fireAim; }
 
     public String description() {
         if (mode == AREA && areaCenter != null)
-            return "Bombardeio de área (" + radius + " blocos), centro "
-                    + areaCenter.toShortString();
-        if (mode == ENEMY) return "Caçando inimigo marcado";
-        return "Sem ordem de ataque";
+            return "Bombardeio livre (" + radius + " blocos), centro " + areaCenter.toShortString();
+        if (mode == ENEMY) return "Combatendo alvo marcado";
+        return "Sem ordem; bombardeio " + (areaEnabled ? "ligado" : "desligado");
     }
 
     private void begin() {
-        this.combatTicks = 0;
-        this.orbitAngle = 0.0D;
-        this.fireAim = null;
-        this.dragon.setTarget(null);
-        this.dragon.getNavigation().stop();
+        combatTicks = 0;
+        nextTacticTick = 0;
+        nextWaypointTick = 0;
+        nextSweepTick = 0;
+        meleeCooldown = 0;
+        areaLegs = 0;
+        streamLeg = 0;
+        tactic = null;
+        waypoint = null;
+        streamDirection = null;
+        fireAim = null;
+        dragon.setTarget(null);
+        dragon.getNavigation().stop();
+    }
+
+    /** Allow passive mobs and survival players, never the owner or allied pets. */
+    public boolean canMarkTarget(LivingEntity target) {
+        if (target == null || !target.isAlive() || target.isRemoved()
+                || target == dragon || target == dragon.getOwner()
+                || target.level() != dragon.level() || dragon.isAlliedTo(target)) return false;
+        if (target instanceof Player player && (player.isCreative() || player.isSpectator()))
+            return false;
+        return !(target instanceof TamableAnimal tame && tame.isTame()
+                && dragon.getOwnerUUID() != null
+                && dragon.getOwnerUUID().equals(tame.getOwnerUUID()));
     }
 
     public boolean markEnemy(LivingEntity enemy) {
-        if (!(enemy instanceof Enemy) || !enemy.isAlive()
-                || enemy.level() != dragon.level() || dragon.isAlliedTo(enemy))
-            return false;
-        this.mode = ENEMY;
-        this.markedEnemy = enemy.getUUID();
-        this.recentlyResolvedEnemy = enemy;
-        this.areaCenter = null;
-        this.radius = 0;
+        if (!canMarkTarget(enemy)) return false;
+        mode = ENEMY;
+        markedEnemy = enemy.getUUID();
+        recentlyResolvedEnemy = enemy;
+        areaCenter = null;
+        radius = 0;
         begin();
         return true;
     }
 
     public boolean markArea(BlockPos center, int selectedRadius) {
-        if (center == null || selectedRadius < 5 || selectedRadius > 30
-                || selectedRadius % 5 != 0 || !dragon.level().hasChunkAt(center))
-            return false;
-        this.mode = AREA;
-        this.areaCenter = center.immutable();
-        this.markedEnemy = null;
-        this.recentlyResolvedEnemy = null;
-        this.radius = selectedRadius;
+        if (!areaEnabled || center == null || selectedRadius < 5 || selectedRadius > 30
+                || selectedRadius % 5 != 0 || !dragon.level().hasChunkAt(center)) return false;
+        mode = AREA;
+        areaCenter = center.immutable();
+        markedEnemy = null;
+        recentlyResolvedEnemy = null;
+        radius = selectedRadius;
         begin();
         return true;
     }
 
     public void clear() {
-        this.mode = NONE;
-        this.markedEnemy = null;
-        this.recentlyResolvedEnemy = null;
-        this.areaCenter = null;
-        this.radius = 0;
-        this.fireAim = null;
-        this.combatTicks = 0;
-        if (!dragon.level().isClientSide() && !dragon.isVehicle()) {
+        mode = NONE;
+        markedEnemy = null;
+        recentlyResolvedEnemy = null;
+        areaCenter = null;
+        radius = 0;
+        begin();
+        if (!dragon.level().isClientSide() && !dragon.isVehicle())
             dragon.getFlightController().land();
+    }
+
+    private boolean canFlyTo(ServerLevel level, Vec3 point) {
+        BlockPos pos = BlockPos.containing(point);
+        return pos.getY() > level.getMinBuildHeight() + 2
+                && pos.getY() < level.getMaxBuildHeight() - 3
+                && level.hasChunkAt(pos)
+                && level.noCollision(dragon, dragon.getBoundingBox().move(
+                        point.x - dragon.getX(), point.y - dragon.getY(),
+                        point.z - dragon.getZ()));
+    }
+
+    /** CE HOVER_BLAST samples a new vantage around the prey, not a circle. */
+    private Vec3 hoverPoint(ServerLevel level, LivingEntity enemy) {
+        for (int i = 0; i < 12; ++i) {
+            Vec3 point = new Vec3(enemy.getX() + dragon.getRandom().nextInt(21) - 10,
+                    enemy.getY() + 11.0D + dragon.getRandom().nextInt(5) - 2,
+                    enemy.getZ() + dragon.getRandom().nextInt(21) - 10);
+            if (canFlyTo(level, point)) return point;
+        }
+        return null;
+    }
+
+    /** CE SCORCH_STREAM: capture starting alignment, then pass over the prey. */
+    private Vec3 streamPoint(ServerLevel level, LivingEntity enemy) {
+        if (streamDirection == null) {
+            Vec3 delta = enemy.position().subtract(dragon.position());
+            Vec3 horizontal = new Vec3(delta.x, 0, delta.z);
+            streamDirection = horizontal.lengthSqr() > 1.0E-4D
+                    ? horizontal.normalize() : new Vec3(1, 0, 0);
+        }
+        double side = streamLeg % 2 == 0 ? 1.0D : -1.0D;
+        Vec3 point = enemy.position().add(
+                streamDirection.x * 17.0D * side, 11.0D,
+                streamDirection.z * 17.0D * side);
+        if (canFlyTo(level, point)) return point;
+        return hoverPoint(level, enemy);
+    }
+
+    private void chooseTactic(LivingEntity enemy) {
+        AirAttack previous = tactic;
+        AirAttack[] choices = AirAttack.values();
+        // CE randomizeAttacks() chooses from these same three air attacks.
+        // Avoid repeating a maneuver back-to-back for more varied combat.
+        tactic = choices[dragon.getRandom().nextInt(choices.length)];
+        if (tactic == previous) tactic = choices[(tactic.ordinal() + 1) % choices.length];
+        nextTacticTick = combatTicks + 140 + dragon.getRandom().nextInt(100);
+        nextWaypointTick = 0;
+        waypoint = null;
+        streamDirection = null;
+        streamLeg = 0;
+    }
+
+    private void tickEnemy(ServerLevel level, ServerPlayer owner, LivingEntity enemy) {
+        if (tactic == null || combatTicks >= nextTacticTick) chooseTactic(enemy);
+        Vec3 center = enemy.getBoundingBox().getCenter();
+        Vec3 next;
+        switch (tactic) {
+            case TACKLE -> {
+                // Original CE TACKLE homes directly to the prey and hits on contact.
+                next = center.add(0, enemy.getBbHeight() * 0.3D, 0);
+                fireAim = null;
+                if (meleeCooldown > 0) --meleeCooldown;
+                double reach = (dragon.getBbWidth() + enemy.getBbWidth() + 0.6D);
+                if (meleeCooldown == 0 && dragon.distanceToSqr(enemy) <= reach * reach
+                        && dragon.hasLineOfSight(enemy) && canMarkTarget(enemy)) {
+                    dragon.doHurtTarget(enemy);
+                    meleeCooldown = 20;
+                }
+            }
+            case HOVER_BLAST -> {
+                // CE picks a new overhead offset when too near or far from prey.
+                if (waypoint == null || combatTicks >= nextWaypointTick
+                        || dragon.position().distanceToSqr(waypoint) < 16.0D) {
+                    Vec3 chosen = hoverPoint(level, enemy);
+                    if (chosen != null) waypoint = chosen;
+                    nextWaypointTick = combatTicks + 45 + dragon.getRandom().nextInt(30);
+                }
+                next = waypoint;
+                fireAim = center;
+            }
+            case SCORCH_STREAM -> {
+                // CE reverses its streaming pass near the opposite side.
+                if (waypoint == null || dragon.position().distanceToSqr(waypoint) < 100.0D
+                        || combatTicks >= nextWaypointTick) {
+                    if (waypoint != null) ++streamLeg;
+                    waypoint = streamPoint(level, enemy);
+                    nextWaypointTick = combatTicks + 110;
+                }
+                next = waypoint;
+                fireAim = center;
+            }
+            default -> { return; }
+        }
+        if (next == null || !canFlyTo(level, next)) {
+            // If the target is standing inside terrain, CE can still aim
+            // towards it for tackle, but avoid pushing unloaded waypoints.
+            if (tactic == AirAttack.TACKLE && level.hasChunkAt(BlockPos.containing(next))) {
+                dragon.getFlightController().patrolAttack(owner, next, true);
+            } else {
+                dragon.getFlightController().land();
+            }
+            fireAim = null;
+            return;
+        }
+        if (!dragon.getFlightController().patrolAttack(
+                owner, next, tactic == AirAttack.TACKLE)) fireAim = null;
+    }
+
+    /** Natural patrol legs: variable length, heading, altitude and turn cadence. */
+    private void tickArea(ServerLevel level, ServerPlayer owner, Vec3 center) {
+        if (waypoint == null || combatTicks >= nextWaypointTick
+                || dragon.position().distanceToSqr(waypoint) < 30.0D) {
+            Vec3 candidate = null;
+            // Use current bearing as the starting point: smooth arcs with the
+            // CE move helper, instead of teleporting angular targets each tick.
+            double bearing = Math.atan2(dragon.getZ() - center.z, dragon.getX() - center.x);
+            if (areaLegs > 0 && areaLegs % (4 + dragon.getRandom().nextInt(4)) == 0)
+                clockwise = !clockwise;
+            ++areaLegs;
+            for (int i = 0; i < 12; ++i) {
+                double step = 0.65D + dragon.getRandom().nextDouble() * 0.75D;
+                double angle = bearing + (clockwise ? step : -step);
+                double range = radius * (0.68D + dragon.getRandom().nextDouble() * 0.28D);
+                double height = 7.0D + dragon.getRandom().nextDouble() * 6.0D;
+                Vec3 point = center.add(Math.cos(angle) * range, height,
+                        Math.sin(angle) * range);
+                if (canFlyTo(level, point)) { candidate = point; break; }
+            }
+            if (candidate != null) {
+                waypoint = candidate;
+                nextWaypointTick = combatTicks + 75 + dragon.getRandom().nextInt(55);
+            }
+        }
+        if (waypoint == null || !level.hasChunkAt(BlockPos.containing(waypoint))
+                || !dragon.getFlightController().patrol(owner, waypoint)) {
+            dragon.getFlightController().land();
+            return;
+        }
+
+        // Distinct sweeping impacts stay inside the marked circle.
+        if (fireAim == null || combatTicks >= nextSweepTick) {
+            double angle = dragon.getRandom().nextDouble() * 2.0D * Math.PI;
+            double distance = radius * 0.80D * Math.sqrt(dragon.getRandom().nextDouble());
+            fireAim = center.add(Math.cos(angle) * distance, 0,
+                    Math.sin(angle) * distance);
+            nextSweepTick = combatTicks + 35 + dragon.getRandom().nextInt(35);
         }
     }
 
-    /** Only online owner and loaded chunks may authorize an active strike. */
     public void tick() {
-        this.fireAim = null;
+        fireAim = null;
         if (mode == NONE || !(dragon.level() instanceof ServerLevel level)) return;
-        // Keep vanilla owner-hurt goal from redirecting a manually marked attack.
         dragon.setTarget(null);
-        // Autonomous orders pause during mounted flight without changing
-        // the rider's existing CE gravity/flight mode.
         if (dragon.isVehicle()) return;
         if (!(dragon.getOwner() instanceof ServerPlayer owner)
                 || !owner.isAlive() || owner.isSpectator() || owner.level() != level
@@ -145,40 +301,32 @@ public final class AurenAttackOrders {
             return;
         }
 
-        Vec3 center;
         LivingEntity enemy = null;
+        Vec3 center;
         if (mode == ENEMY) {
             Entity found = markedEnemy == null ? null : level.getEntity(markedEnemy);
             if (found == null) {
-                // Entity can disappear from ServerLevel after dying; do not
-                // mistake that for a temporarily unloaded living enemy.
-                if (recentlyResolvedEnemy != null && !recentlyResolvedEnemy.isAlive()) {
+                if (recentlyResolvedEnemy != null && !recentlyResolvedEnemy.isAlive())
                     clear();
-                } else {
-                    dragon.getFlightController().land(); // Unloaded: keep order.
-                }
+                else dragon.getFlightController().land();
                 return;
             }
-            if (!(found instanceof LivingEntity living) || !living.isAlive()) {
-                clear();
-                return;
-            }
-            if (!(living instanceof Enemy) || dragon.isAlliedTo(living)) {
+            if (!(found instanceof LivingEntity living) || !canMarkTarget(living)) {
                 clear();
                 return;
             }
             enemy = living;
-            this.recentlyResolvedEnemy = living;
+            recentlyResolvedEnemy = living;
             center = living.getBoundingBox().getCenter();
         } else {
-            if (areaCenter == null || !level.hasChunkAt(areaCenter)) {
+            if (!areaEnabled || areaCenter == null || !level.hasChunkAt(areaCenter)) {
                 dragon.getFlightController().land();
                 return;
             }
             center = Vec3.atCenterOf(areaCenter);
         }
 
-        // The order does not force-load chunks. Far-away orders pause safely.
+        // Preserve v0.7.7 chunk/range safety; no remote force-loading.
         if (dragon.position().distanceToSqr(center) > MAX_MARK_DISTANCE * MAX_MARK_DISTANCE
                 || !level.hasChunkAt(BlockPos.containing(center))) {
             dragon.getFlightController().land();
@@ -186,53 +334,12 @@ public final class AurenAttackOrders {
         }
 
         ++combatTicks;
-        if (combatTicks == 1) {
-            orbitAngle = Math.atan2(dragon.getZ() - center.z, dragon.getX() - center.x);
-        }
-        // Constant tangential speed, independent of the selected circle radius.
-        int orbitRadius = mode == AREA ? radius : 11;
-        orbitAngle += 0.27D / orbitRadius;
-        double ahead = orbitAngle + 0.55D;
-        double altitude = mode == AREA ? 9.0D : 11.0D; // CE stage 3: 5 + 3*2
-        Vec3 waypoint = new Vec3(
-                center.x + Math.cos(ahead) * orbitRadius,
-                Math.min(level.getMaxBuildHeight() - 4, center.y + altitude),
-                center.z + Math.sin(ahead) * orbitRadius);
-
-        if (!level.hasChunkAt(BlockPos.containing(waypoint))) {
-            dragon.getFlightController().land();
-            return;
-        }
-
-        if (!dragon.getFlightController().patrol(owner, waypoint)) return;
-
-        if (enemy != null) {
-            // CE HOVER_BLAST attacks from above, SCORCH_STREAM passes along
-            // the prey. Alternate the two instead of falling back to bite.
-            if ((combatTicks / 120) % 2 == 1) {
-                double side = ((combatTicks / 60) % 2 == 0) ? 1.0D : -1.0D;
-                Vec3 strafe = center.add(
-                        Math.cos(ahead) * 12.0D * side, 9.0D,
-                        Math.sin(ahead) * 12.0D * side);
-                if (level.hasChunkAt(BlockPos.containing(strafe)))
-                    dragon.getFlightController().patrol(owner, strafe);
-            }
-            this.fireAim = center;
-        } else {
-            // Sweep center/inner/outer rings instead of burning only one spot.
-            double coverage = switch ((combatTicks / 60) % 3) {
-                case 0 -> 0.0D;
-                case 1 -> 0.45D;
-                default -> 0.80D;
-            };
-            Vec3 aim = center.add(
-                    Math.cos(orbitAngle - 0.30D) * radius * coverage, 0.0D,
-                    Math.sin(orbitAngle - 0.30D) * radius * coverage);
-            if (level.hasChunkAt(BlockPos.containing(aim))) this.fireAim = aim;
-        }
+        if (enemy != null) tickEnemy(level, owner, enemy);
+        else tickArea(level, owner, center);
     }
 
     public void save(CompoundTag tag) {
+        tag.putBoolean("AurenAreaAttackEnabled", areaEnabled);
         tag.putInt("AurenAttackMode", mode);
         if (mode == ENEMY && markedEnemy != null)
             tag.putUUID("AurenMarkedEnemy", markedEnemy);
@@ -245,26 +352,26 @@ public final class AurenAttackOrders {
     }
 
     public void load(CompoundTag tag) {
-        // No active fire or stale navigation survives a world reload.
-        this.mode = NONE;
-        this.markedEnemy = null;
-        this.recentlyResolvedEnemy = null;
-        this.areaCenter = null;
-        this.fireAim = null;
-        this.combatTicks = 0;
-        this.radius = 0;
+        mode = NONE;
+        areaEnabled = !tag.contains("AurenAreaAttackEnabled")
+                || tag.getBoolean("AurenAreaAttackEnabled");
+        markedEnemy = null;
+        recentlyResolvedEnemy = null;
+        areaCenter = null;
+        radius = 0;
+        begin();
         int storedMode = tag.getInt("AurenAttackMode");
         if (storedMode == ENEMY && tag.hasUUID("AurenMarkedEnemy")) {
-            this.mode = ENEMY;
-            this.markedEnemy = tag.getUUID("AurenMarkedEnemy");
-        } else if (storedMode == AREA && tag.contains("AurenAttackRadius")
+            mode = ENEMY;
+            markedEnemy = tag.getUUID("AurenMarkedEnemy");
+        } else if (storedMode == AREA && areaEnabled && tag.contains("AurenAttackRadius")
                 && tag.contains("AurenAttackX")
                 && tag.contains("AurenAttackY") && tag.contains("AurenAttackZ")) {
             int storedRadius = tag.getInt("AurenAttackRadius");
             if (storedRadius >= 5 && storedRadius <= 30 && storedRadius % 5 == 0) {
-                this.mode = AREA;
-                this.radius = storedRadius;
-                this.areaCenter = new BlockPos(tag.getInt("AurenAttackX"),
+                mode = AREA;
+                radius = storedRadius;
+                areaCenter = new BlockPos(tag.getInt("AurenAttackX"),
                         tag.getInt("AurenAttackY"), tag.getInt("AurenAttackZ"));
             }
         }

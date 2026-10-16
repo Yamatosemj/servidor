@@ -84,6 +84,9 @@ public final class AurenDragon extends TamableAnimal {
     private static final EntityDataAccessor<Integer> MARK_ENEMY_ID =
             SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT);
 
+    private static final EntityDataAccessor<Boolean> AREA_ATTACK_ENABLED =
+            SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.BOOLEAN);
+
     // Client-side animation progress, mirroring CE ridingProgress 0..20 ticks.
     // The desired state is synced by SHOULDER, never by sending every frame.
     private static final float SHOULDER_ANIMATION_TICKS = 20.0F;
@@ -167,6 +170,7 @@ public final class AurenDragon extends TamableAnimal {
         builder.define(MARK_Z, 0);
         builder.define(MARK_RADIUS, 0);
         builder.define(MARK_ENEMY_ID, -1);
+        builder.define(AREA_ATTACK_ENABLED, true);
     }
 
     public boolean isSmallForm() {
@@ -198,6 +202,10 @@ public final class AurenDragon extends TamableAnimal {
         return this.entityData.get(MARK_MODE);
     }
 
+    public boolean isSyncedAreaAttackEnabled() {
+        return this.entityData.get(AREA_ATTACK_ENABLED);
+    }
+
     public BlockPos getSyncedMarkCenter() {
         return new BlockPos(this.entityData.get(MARK_X), this.entityData.get(MARK_Y),
                 this.entityData.get(MARK_Z));
@@ -213,6 +221,9 @@ public final class AurenDragon extends TamableAnimal {
 
     private void syncAttackMark() {
         if (this.level().isClientSide()) return;
+        boolean enabled = this.attackOrders.isAreaEnabled();
+        if (this.entityData.get(AREA_ATTACK_ENABLED) != enabled)
+            this.entityData.set(AREA_ATTACK_ENABLED, enabled);
         int mode = this.attackOrders.getMode();
         BlockPos center = mode == 2 ? this.attackOrders.getAreaCenter() : null;
         int x = center != null ? center.getX() : 0;

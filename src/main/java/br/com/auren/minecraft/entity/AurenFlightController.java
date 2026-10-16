@@ -91,6 +91,14 @@ public final class AurenFlightController {
         if (!follow(targetOwner)) return false;
         this.patrolPoint = waypoint;
         this.iafFlightManager.setFlightTarget(waypoint);
+        this.iafFlightManager.setTacklePursuit(false);
+        return true;
+    }
+
+    /** Use the CE TACKLE 10-degree turn rate only for a prey dive. */
+    public boolean patrolAttack(LivingEntity owner, Vec3 waypoint, boolean tackle) {
+        if (!patrol(owner, waypoint)) return false;
+        this.iafFlightManager.setTacklePursuit(tackle);
         return true;
     }
 

@@ -9,7 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
@@ -65,12 +65,12 @@ public final class AurenCommands {
         if (obstacle.getType() == HitResult.Type.BLOCK) end = obstacle.getLocation();
         EntityHitResult hit = ProjectileUtil.getEntityHitResult(
                 player.level(), player, eye, end, new AABB(eye, end).inflate(1.0D),
-                entity -> entity instanceof LivingEntity living && entity instanceof Enemy
-                        && living.isAlive() && !dragon.isAlliedTo(living));
+                entity -> entity instanceof LivingEntity living
+                        && dragon.getAttackOrders().canMarkTarget(living));
         if (hit == null || !(hit.getEntity() instanceof LivingEntity target)
                 || !dragon.getAttackOrders().markEnemy(target)) {
             context.getSource().sendFailure(Component.literal(
-                    "Mire em um monstro visível a até 48 blocos."));
+                    "Mire em uma criatura válida a até 48 blocos."));
             return 0;
         }
         context.getSource().sendSuccess(() ->
@@ -165,6 +165,14 @@ public final class AurenCommands {
             player.displayClientMessage(Component.literal("Auren: ataque cancelado."), true);
             return;
         }
+        // A reserved action (radius zero) toggles the persistent aerial area mode.
+        // No position or entity ID ever crosses the client/server boundary.
+        if (radius == 0) {
+            boolean enabled = dragon.getAttackOrders().toggleAreaEnabled();
+            player.displayClientMessage(Component.literal("Auren: bombardeio "
+                    + (enabled ? "ativado." : "desativado.")), true);
+            return;
+        }
         if (radius < 5 || radius > 30 || radius % 5 != 0) return;
         if (dragon.isVehicle() || dragon.isSmallForm() || dragon.isOnShoulder()) {
             player.displayClientMessage(Component.literal("Use a forma adulta e desmonte para marcar."), true);
@@ -180,12 +188,17 @@ public final class AurenCommands {
                 candidate -> candidate instanceof LivingEntity living
                         && living.isAlive() && candidate != player && candidate != dragon);
         if (entity != null) {
-            if (entity.getEntity() instanceof LivingEntity mob && mob instanceof Enemy
-                    && !dragon.isAlliedTo(mob) && dragon.getAttackOrders().markEnemy(mob)) {
+            if (entity.getEntity() instanceof LivingEntity mob
+                    && dragon.getAttackOrders().markEnemy(mob)) {
                 player.displayClientMessage(Component.literal("Auren: inimigo marcado!"), true);
             } else {
-                player.displayClientMessage(Component.literal("Este alvo não é um inimigo hostil."), true);
+                player.displayClientMessage(Component.literal("Este alvo não pode ser marcado (dono/aliado/invulnerável)."), true);
             }
+            return;
+        }
+        if (!dragon.getAttackOrders().isAreaEnabled()) {
+            player.displayClientMessage(Component.literal(
+                    "Bombardeio desligado. Aperte B para ativar."), true);
             return;
         }
         if (block.getType() == HitResult.Type.BLOCK
@@ -194,7 +207,7 @@ public final class AurenCommands {
                     "Auren: bombardeio marcado, raio " + radius + " blocos."), true);
         } else {
             player.displayClientMessage(Component.literal(
-                    "Mire em um inimigo ou bloco a até 48 blocos."), true);
+                    "Mire em uma criatura ou bloco a até 48 blocos."), true);
         }
     }
 
