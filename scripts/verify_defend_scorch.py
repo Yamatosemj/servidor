@@ -60,7 +60,11 @@ for token in (
     "original.is(Blocks.DIRT_PATH)",
 ):
     assert token in terrain, f"CE terrain conversion invariant missing: {token}"
-assert "AurenScorchTerrain.scorch(level, scorchCenter, dragon);" in fire
+assert "AurenScorchTerrain.scorchFace(level, scorchCenter," in fire
+assert "AurenScorchTerrain.scorch(level, scorchCenter, dragon," in fire
+assert "new HurtByTargetGoal(this)" in dragon
+assert "source.getEntity() instanceof LivingEntity attacker" in dragon
+assert ".fireImmune()" in main
 assert "Blocks.SOUL_FIRE.defaultBlockState()" in fire
 assert "ParticleTypes.SOUL_FIRE_FLAME" in fire
 assert "randomTick(" in scorched
@@ -70,7 +74,7 @@ assert "AurenScorchedBlocks.register(modBus)" in main
 assert "ENTITIES.register(\"auren\"" in main
 assert "DeferredRegister.Items" not in main and "DeferredRegister.Items" not in registry
 assert "BlockItem(" not in registry and "BlockItem(" not in main
-assert "0.7.20-reliability-review-alpha" in version
+assert "0.7.21-defense-flame-hunt-alpha" in version
 
 names=["chared_grass","chared_dirt","chared_gravel",
        "chared_cobblestone","chared_stone","chared_dirt_path"]

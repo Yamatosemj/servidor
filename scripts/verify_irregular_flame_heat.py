@@ -31,7 +31,7 @@ for token in (
     "MAX_HEAT_POSITIONS = 4096",
     "SCORCH_HEAT = 28",
     "MAGMA_HEAT = 135",
-    "GRASS_BREAK_HEAT = 195",
+    "GRASS_BREAK_HEAT = 115",
     "MAGMA_BREAK_HEAT = 330",
     "if (cell.heat >= MAGMA_HEAT)",
     "if (cell.heat >= MAGMA_BREAK_HEAT)",
@@ -95,7 +95,7 @@ for _ in range(120):
     shapes.add(frozenset(tiles))
 assert len(shapes)>110, len(shapes)
 assert 0<28<135<330 and 28<195<330
-assert "mod_version=0.7.20-reliability-review-alpha" in (root/"gradle.properties").read_text()
+assert "mod_version=0.7.21-defense-flame-hunt-alpha" in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars
 with ZipFile(jars[0]) as jar:
