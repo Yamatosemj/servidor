@@ -235,7 +235,8 @@ public final class AurenAttackOrders {
         if (next == null || !canFlyTo(level, next)) {
             // If the target is standing inside terrain, CE can still aim
             // towards it for tackle, but avoid pushing unloaded waypoints.
-            if (tactic == AirAttack.TACKLE && level.hasChunkAt(BlockPos.containing(next))) {
+            if (tactic == AirAttack.TACKLE && next != null
+                    && level.hasChunkAt(BlockPos.containing(next))) {
                 dragon.getFlightController().patrolAttack(owner, next, true);
             } else {
                 dragon.getFlightController().land();
@@ -289,14 +290,20 @@ public final class AurenAttackOrders {
     }
 
     public void tick() {
-        fireAim = null;
-        if (mode == NONE || !(dragon.level() instanceof ServerLevel level)) return;
+        if (mode == NONE || !(dragon.level() instanceof ServerLevel level)) {
+            fireAim = null;
+            return;
+        }
         dragon.setTarget(null);
-        if (dragon.isVehicle()) return;
+        if (dragon.isVehicle()) {
+            fireAim = null;
+            return;
+        }
         if (!(dragon.getOwner() instanceof ServerPlayer owner)
                 || !owner.isAlive() || owner.isSpectator() || owner.level() != level
                 || !dragon.isAlive() || dragon.isSmallForm()
                 || dragon.isOnShoulder() || dragon.isOrderedToSit()) {
+            fireAim = null;
             dragon.getFlightController().land();
             return;
         }
@@ -329,6 +336,7 @@ public final class AurenAttackOrders {
         // Preserve v0.7.7 chunk/range safety; no remote force-loading.
         if (dragon.position().distanceToSqr(center) > MAX_MARK_DISTANCE * MAX_MARK_DISTANCE
                 || !level.hasChunkAt(BlockPos.containing(center))) {
+            fireAim = null;
             dragon.getFlightController().land();
             return;
         }
