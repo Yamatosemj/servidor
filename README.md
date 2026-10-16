@@ -1,3 +1,37 @@
+# Auren Minecraft 0.7.19 — Percepção do Mundo
+
+Primeira camada de percepção ambiental server-side do Auren, planejada para integrar futuramente com a IA Auren desktop. **Não existe ainda conexão com modelo de linguagem, voz ou memórias da IA do computador.**
+
+## O que percebe
+- Até 24 blocos do dono: monstros, animais, outros jogadores, espécie e distância aproximada do monstro mais próximo.
+- Bioma, dia/noite, clima e céu aberto/abrigo/caverna; sinais próximos de fogo, lava ou sino de vila.
+- Riscos: monstro a menos de dez blocos do dono, vida abaixo de 35%, fogo e lava próximos.
+- Pequeno histórico (até 8 mudanças relevantes) apenas durante a sessão; não é memória persistente.
+
+## Interação discreta
+- **H** (remapeável): resumo azul por 7 segundos no topo da tela. Não fica aparecendo permanentemente e não envia comandos de combate.
+- **/auren ambiente** ou **/auren perceber**: relatório detalhado no chat, validado pelo servidor.
+- **/auren lembrar**: últimas mudanças registradas pelo Auren.
+- **/auren status** continua informando apenas as ordens.
+
+## Limites de desempenho/segurança
+- No máximo uma leitura a cada 40 ticks, apenas se o dono do Auren domesticado estiver online na mesma dimensão.
+- Até 96 entidades processadas em raio 24; cerca de 144 amostras de blocos perto do dono, somente em chunks já carregados.
+- Sincroniza somente resumo e nível de alerta quando mudam. Um jogador não pode consultar percepção de Auren de outra pessoa via comando.
+- **Não ataca automaticamente.** Só coleta observações, não seleciona alvos nem move o dragão.
+- Fire Breath, voo/combate, percepção visual de marcação V/B, navegação em cavernas e montaria estão preservados.
+
+## Testes em jogo
+1. Aperte H ao ar livre. A linha azul aparece por 7 segundos e some.
+2. Traga zumbi perto do dono. Teste /auren ambiente e afaste-o: contagem/alerta devem mudar em 2 segundos.
+3. Entre em caverna / volte à superfície, mude chuva e dia/noite. /auren lembrar apresenta transições.
+4. Perda/restauração de vida deve alterar aviso de risco; dono sem permissão não vê relatório do Auren de outro usuário.
+5. Marque inimigo, voo e sopro funcionam exatamente como antes, sem ataques decorrentes de percepção.
+
+**CI compila e inspeciona invariantes; não substitui jogo.**
+
+---
+
 # Auren Minecraft 0.7.18 — Navegação real em cavernas
 
 **Problema observado na 0.7.17:** o Auren pequeno ainda se dirigia aproximadamente para a presa, sem seguir corretamente a entrada da caverna; ele também abandonava desvios válidos quando se afastava inicialmente do inimigo.
