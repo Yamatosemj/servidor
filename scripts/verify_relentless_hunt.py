@@ -65,7 +65,7 @@ assert "AurenRelentlessHunt" not in fire and "AurenRelentlessHunt" not in terrai
 assert "level.explode(" not in fire and "level.explode(" not in terrain
 assert "this.burnProgress == CE_BURN_PROGRESS_MAX" in fire
 assert "MAX_HEAT_POSITIONS = 4096" in terrain
-assert 'mod_version=0.7.26-offline-mind-alpha' in (root/"gradle.properties").read_text()
+assert 'mod_version=0.7.27-visible-offline-routine-alpha' in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars
 with ZipFile(jars[0]) as jar:

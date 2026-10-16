@@ -49,7 +49,7 @@ for token in ("PERCEPTION_TICKS = 140", "perceptionActive(Minecraft mc)",
 for forbidden in ("setTarget(", "markEnemy(", "markArea(", "destroyBlock(",
                   "level.explode(", "setBlock(", "getFlightController()."):
     assert forbidden not in sensor,forbidden
-assert "mod_version=0.7.26-offline-mind-alpha" in (root/"gradle.properties").read_text()
+assert "mod_version=0.7.27-visible-offline-routine-alpha" in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars
 with ZipFile(jars[0]) as jar:

@@ -49,7 +49,7 @@ assert "if (++nextNavigationCheck >= 15)" not in hunt
 assert "new AurenCaveRoutePlanner" not in fire
 assert "new AdvancedPathNavigate(this, this.level()," in dragon
 assert "this.navigation = this.savedGroundNavigation;" in dragon
-assert "mod_version=0.7.26-offline-mind-alpha" in (root/"gradle.properties").read_text()
+assert "mod_version=0.7.27-visible-offline-routine-alpha" in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars
 with ZipFile(jars[0]) as jar:
