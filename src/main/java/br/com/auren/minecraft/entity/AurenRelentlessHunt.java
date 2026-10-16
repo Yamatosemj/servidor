@@ -63,6 +63,7 @@ final class AurenRelentlessHunt {
     private int compactLastMotionTick;
     private int compactStartTick;
     private int nextEntranceSearchTick;
+    private int nextGroundMouthPathTick;
     private Vec3 caveLanding;
     private Vec3 caveMouthVantage;
     private int mouthVantageRefreshTick;
@@ -136,6 +137,7 @@ final class AurenRelentlessHunt {
         caveLanding = null;
         landingRefreshTick = 0;
         nextEntranceSearchTick = 0;
+        nextGroundMouthPathTick = 0;
         fireAim = null;
         tryRestore();
     }
@@ -382,6 +384,37 @@ final class AurenRelentlessHunt {
         return roof >= target.getEyeY() + 2.0D;
     }
 
+    /**
+     * Unlike the previous hunter, do not become small while still far outside
+     * the cave. Walk the adult to a reachable staging tile near the real
+     * cave mouth, then switch to compact A* pathfinding.
+     */
+    private Path groundCaveApproach(ServerLevel level) {
+        if (caveEntrance == null) return null;
+        Path chosen = null;
+        double bestCost = Double.POSITIVE_INFINITY;
+        for (int dist : new int[] {3, 5, 8, 11}) {
+            for (int i = 0; i < 8; i++) {
+                double angle = i * Math.PI / 4.0D;
+                int x = (int) Math.floor(caveEntrance.getX() + Math.cos(angle) * dist);
+                int z = (int) Math.floor(caveEntrance.getZ() + Math.sin(angle) * dist);
+                for (int dy : new int[] {0, 1, -1}) {
+                    BlockPos test = new BlockPos(x, caveEntrance.getY() + dy, z);
+                    if (!safeAdultGround(level, test)) continue;
+                    Path path = dragon.getNavigation().createPath(test, 0);
+                    if (path == null || !path.canReach()) continue;
+                    double score = dragon.blockPosition().distSqr(test) * 0.25D
+                            + test.distSqr(caveEntrance);
+                    if (score < bestCost) {
+                        bestCost = score;
+                        chosen = path;
+                    }
+                }
+            }
+        }
+        return chosen;
+    }
+
     private boolean startCavePursuit(ServerLevel level, ServerPlayer owner,
                                      LivingEntity enemy) {
         if (compact || attemptedCave || dragon.isSmallForm()
@@ -422,6 +455,23 @@ final class AurenRelentlessHunt {
         }
         if (mode == AurenFlightController.LANDING || !dragon.onGround())
             return true;
+
+        if (dragon.position().distanceToSqr(Vec3.atCenterOf(caveEntrance))
+                > 11.0D * 11.0D) {
+            if (!dragon.getNavigation().isDone()
+                    && dragon.tickCount < nextGroundMouthPathTick) return true;
+            if (dragon.tickCount >= nextGroundMouthPathTick) {
+                nextGroundMouthPathTick = dragon.tickCount + 55;
+                Path approach = groundCaveApproach(level);
+                if (approach != null && approach.canReach()) {
+                    dragon.getNavigation().moveTo(approach, 1.10D);
+                    return true;
+                }
+            }
+            // Ground approach genuinely impossible: only then retry aerial
+            // cave-mouth positioning, rather than transforming prematurely.
+            return false;
+        }
 
         attemptedCave = true;
         lastCaveAttempt = enemy.blockPosition();
@@ -569,6 +619,7 @@ final class AurenRelentlessHunt {
             caveEntrance = null;
             compactRouteGoal = null;
             nextEntranceSearchTick = 0;
+        nextGroundMouthPathTick = 0;
             lastCaveAttempt = null;
         }
         if (blockedTicks < COVER_BREATH_DELAY) return false;
