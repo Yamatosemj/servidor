@@ -32,7 +32,7 @@ for token in (
     "SCORCH_HEAT = 28",
     "MAGMA_HEAT = 135",
     "GRASS_BREAK_HEAT = 115",
-    "DIRT_BREAK_HEAT = 165",,
+    "DIRT_BREAK_HEAT = 165",
     "MAGMA_BREAK_HEAT = 330",
     "if (cell.heat >= MAGMA_HEAT)",
     "if (cell.heat >= MAGMA_BREAK_HEAT)",
