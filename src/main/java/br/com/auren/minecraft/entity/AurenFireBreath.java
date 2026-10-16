@@ -80,7 +80,10 @@ public final class AurenFireBreath {
                 && dragon.isRiderFiring() && !dragon.isRiderLightning();
         boolean autonomousFire = !dragon.isVehicle() && owner != null
                 && owner.isAlive() && owner.level() == dragon.level()
-                && autoAim != null && dragon.getFlightMode() == AurenFlightController.FLYING;
+                && autoAim != null
+                && (dragon.getFlightMode() == AurenFlightController.FLYING
+                    || (dragon.getFlightMode() == AurenFlightController.GROUNDED
+                        && !dragon.getAttackOrders().isAreaOrder()));
         if (!(dragon.level() instanceof ServerLevel level)
                 || !dragon.isAlive() || dragon.isSmallForm() || dragon.isOnShoulder()) {
             reset();
@@ -214,6 +217,10 @@ public final class AurenFireBreath {
      * The muzzle can be calibrated against the animated head in playtests.
      */
     Vec3 getHeadPosition() {
+        // Small-form electric breath needs an actual compact muzzle, not
+        // the 3.25-scale adult CE offsets several blocks outside its body.
+        if (dragon.isSmallForm())
+            return dragon.getEyePosition().add(dragon.getLookAngle().scale(0.32D));
         float flyProg = dragon.getFlightBlend(1.0F) * 0.1F;
         float hoverProg = dragon.getFlightMode() == AurenFlightController.TAKING_OFF
                 ? dragon.getFlightBlend(1.0F) * 0.03F : 0.0F;
