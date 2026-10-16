@@ -18,6 +18,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -783,6 +784,25 @@ public final class AurenDragon extends TamableAnimal {
         });
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
+    }
+
+    /**
+     * Retaliate only after the DRAGON itself takes hostile damage. An
+     * unrelated attack by the owner still does not mark an enemy.
+     * The small dragon retaliates with its HurtByTargetGoal/vanilla melee.
+     */
+    @Override
+    public boolean hurt(DamageSource source, float damage) {
+        boolean tookDamage = super.hurt(source, damage);
+        if (tookDamage && !this.level().isClientSide() && this.isAlive()
+                && this.isTame() && !this.isSmallForm()
+                && !this.isOnShoulder() && !this.isVehicle()
+                && !this.getAttackOrders().hasOrder()
+                && source.getEntity() instanceof LivingEntity attacker
+                && this.getAttackOrders().canMarkTarget(attacker)) {
+            this.getAttackOrders().markEnemy(attacker);
+        }
+        return tookDamage;
     }
 
     /**
