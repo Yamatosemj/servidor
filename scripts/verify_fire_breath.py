@@ -72,7 +72,7 @@ assert "dragon.isAlliedTo(target)" in fire
 assert "dragon.hasLineOfSight(target)" in fire
 assert "level.hasChunkAt(BlockPos.containing(burnTarget))" in fire
 assert "if (this.burnProgress == CE_BURN_PROGRESS_MAX && dragon.tickCount % 5 == 0)" in fire
-assert "mod_version=0.7.11-sustained-fire-alpha" in version
+assert "mod_version=0.7.12-fire-ignition-alpha" in version
 
 # Never expose a client-selectable target vector nor copy mod-specific block
 # destruction, random explosive charge or sound registries into the port.
