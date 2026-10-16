@@ -317,7 +317,10 @@ public final class AurenAttackOrders {
                 double dx = direction.x * Math.cos(side) - direction.z * Math.sin(side);
                 double dz = direction.x * Math.sin(side) + direction.z * Math.cos(side);
                 direction = new Vec3(dx, 0, dz);
-                Vec3 start = center.subtract(direction.scale(radius * 0.92D));
+                // The muzzle is several blocks in front of the torso. Start far
+                // enough outside even a five-block circle to allow a real
+                // continuous forward stream before passing the mark.
+                Vec3 start = center.subtract(direction.scale(radius + 12.0D));
                 candidate = safeAreaWaypoint(level, center, start, 10.0D);
                 nextPhase = 1;
             } else if (areaPhase == 1 && direction != null) {
@@ -386,7 +389,7 @@ public final class AurenAttackOrders {
         double forwardX = -Math.sin(yaw);
         double forwardZ = Math.cos(yaw);
         double lateral = Math.sin(combatTicks * 0.06D) * 1.7D;
-        for (int distance = 22; distance >= 7; distance -= 3) {
+        for (int distance = 22; distance >= 2; distance -= 2) {
             double x = muzzle.x + forwardX * distance - forwardZ * lateral;
             double z = muzzle.z + forwardZ * distance + forwardX * lateral;
             double dx = x - markedCenter.x;
