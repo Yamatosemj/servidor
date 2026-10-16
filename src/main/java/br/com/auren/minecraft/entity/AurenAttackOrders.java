@@ -38,6 +38,9 @@ public final class AurenAttackOrders {
     private int nextSweepTick;
     private int meleeCooldown;
     private int areaLegs;
+    private int nextHeadingFlipLeg;
+    private int tackleBreakawayUntil;
+    private Vec3 tackleBreakaway;
     private int streamLeg;
     private boolean clockwise = true;
     private AirAttack tactic;
@@ -85,6 +88,9 @@ public final class AurenAttackOrders {
         nextSweepTick = 0;
         meleeCooldown = 0;
         areaLegs = 0;
+        nextHeadingFlipLeg = 4 + dragon.getRandom().nextInt(4);
+        tackleBreakawayUntil = 0;
+        tackleBreakaway = null;
         streamLeg = 0;
         tactic = null;
         waypoint = null;
@@ -189,6 +195,8 @@ public final class AurenAttackOrders {
         waypoint = null;
         streamDirection = null;
         streamLeg = 0;
+        tackleBreakaway = null;
+        tackleBreakawayUntil = 0;
     }
 
     private void tickEnemy(ServerLevel level, ServerPlayer owner, LivingEntity enemy) {
@@ -204,9 +212,25 @@ public final class AurenAttackOrders {
                 double reach = (dragon.getBbWidth() + enemy.getBbWidth() + 0.6D);
                 if (meleeCooldown == 0 && dragon.distanceToSqr(enemy) <= reach * reach
                         && dragon.hasLineOfSight(enemy) && canMarkTarget(enemy)) {
-                    dragon.doHurtTarget(enemy);
+                    // CE TACKLE must complete a physical contact hit, then
+                    // create space for another dive instead of circling in place.
+                    boolean landedHit = dragon.doHurtTarget(enemy);
                     meleeCooldown = 20;
+                    if (landedHit) {
+                        Vec3 delta = dragon.position().subtract(enemy.position());
+                        Vec3 retreat = new Vec3(delta.x, 0, delta.z);
+                        if (retreat.lengthSqr() < 1.0E-4D) retreat = new Vec3(1, 0, 0);
+                        Vec3 candidate = dragon.position().add(
+                                retreat.normalize().scale(10.0D)).add(0, 6.0D, 0);
+                        if (canFlyTo(level, candidate)) {
+                            tackleBreakaway = candidate;
+                            tackleBreakawayUntil = combatTicks + 40;
+                        }
+                    }
                 }
+                if (tackleBreakaway != null && combatTicks < tackleBreakawayUntil)
+                    next = tackleBreakaway;
+                else tackleBreakaway = null;
             }
             case HOVER_BLAST -> {
                 // CE picks a new overhead offset when too near or far from prey.
@@ -245,32 +269,62 @@ public final class AurenAttackOrders {
             return;
         }
         if (!dragon.getFlightController().patrolAttack(
-                owner, next, tactic == AirAttack.TACKLE)) fireAim = null;
+                owner, next, tactic == AirAttack.TACKLE
+                        && tackleBreakaway == null)) fireAim = null;
     }
 
-    /** Natural patrol legs: variable length, heading, altitude and turn cadence. */
+    /**
+     * Attack AREA uses distinct flight legs, not a continuously rotating
+     * fixed-radius ring: banked turns, a pass across the center, low sweeps
+     * and high repositioning. The original CE FlightMoveHelper steers each
+     * leg, while the server picks safe, loaded destinations.
+     */
     private void tickArea(ServerLevel level, ServerPlayer owner, Vec3 center) {
         if (waypoint == null || combatTicks >= nextWaypointTick
                 || dragon.position().distanceToSqr(waypoint) < 30.0D) {
             Vec3 candidate = null;
-            // Use current bearing as the starting point: smooth arcs with the
-            // CE move helper, instead of teleporting angular targets each tick.
-            double bearing = Math.atan2(dragon.getZ() - center.z, dragon.getX() - center.x);
-            if (areaLegs > 0 && areaLegs % (4 + dragon.getRandom().nextInt(4)) == 0)
+            double bearing = Math.atan2(dragon.getZ() - center.z,
+                    dragon.getX() - center.x);
+            if (areaLegs >= nextHeadingFlipLeg) {
                 clockwise = !clockwise;
-            ++areaLegs;
+                nextHeadingFlipLeg = areaLegs + 4 + dragon.getRandom().nextInt(4);
+            }
+            int legStyle = areaLegs % 5;
             for (int i = 0; i < 12; ++i) {
-                double step = 0.65D + dragon.getRandom().nextDouble() * 0.75D;
-                double angle = bearing + (clockwise ? step : -step);
-                double range = radius * (0.68D + dragon.getRandom().nextDouble() * 0.28D);
-                double height = 7.0D + dragon.getRandom().nextDouble() * 6.0D;
+                double angle;
+                double range;
+                double height;
+                if (legStyle == 2) {
+                    // CROSS_PASS: head through the center toward the far edge.
+                    angle = bearing + Math.PI
+                            + (dragon.getRandom().nextDouble() - 0.5D) * 0.7D;
+                    range = radius * (0.65D + dragon.getRandom().nextDouble() * 0.28D);
+                    height = 8.0D + dragon.getRandom().nextDouble() * 4.0D;
+                } else if (legStyle == 3) {
+                    // LOW_SWEEP: an inner, descending arc; fire crosses the ring.
+                    angle = bearing + (clockwise ? 1.0D : -1.0D);
+                    range = radius * (0.25D + dragon.getRandom().nextDouble() * 0.35D);
+                    height = 5.5D + dragon.getRandom().nextDouble() * 3.0D;
+                } else if (legStyle == 4) {
+                    // CLIMB: recover altitude and set up a new attack pass.
+                    angle = bearing + (clockwise ? 1.5D : -1.5D);
+                    range = radius * (0.60D + dragon.getRandom().nextDouble() * 0.33D);
+                    height = 11.0D + dragon.getRandom().nextDouble() * 4.0D;
+                } else {
+                    // BANKED_ARC: lateral leg with bounded, varied turn angle.
+                    double step = 0.55D + dragon.getRandom().nextDouble() * 0.65D;
+                    angle = bearing + (clockwise ? step : -step);
+                    range = radius * (0.55D + dragon.getRandom().nextDouble() * 0.40D);
+                    height = 7.5D + dragon.getRandom().nextDouble() * 4.5D;
+                }
                 Vec3 point = center.add(Math.cos(angle) * range, height,
                         Math.sin(angle) * range);
                 if (canFlyTo(level, point)) { candidate = point; break; }
             }
             if (candidate != null) {
                 waypoint = candidate;
-                nextWaypointTick = combatTicks + 75 + dragon.getRandom().nextInt(55);
+                ++areaLegs;
+                nextWaypointTick = combatTicks + 65 + dragon.getRandom().nextInt(50);
             }
         }
         if (waypoint == null || !level.hasChunkAt(BlockPos.containing(waypoint))
@@ -280,7 +334,8 @@ public final class AurenAttackOrders {
             return;
         }
 
-        // Distinct sweeping impacts stay inside the marked circle.
+        // Distinct fire impacts stay inside the marked circle; the dragon
+        // may pass through the interior but does not target outside it.
         if (fireAim == null || combatTicks >= nextSweepTick) {
             double angle = dragon.getRandom().nextDouble() * 2.0D * Math.PI;
             double distance = radius * 0.80D * Math.sqrt(dragon.getRandom().nextDouble());

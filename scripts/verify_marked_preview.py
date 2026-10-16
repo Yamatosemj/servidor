@@ -47,6 +47,9 @@ assert 'new AurenMarkPayload(0, false)' in client
 assert 'isSyncedAreaAttackEnabled()' in overlay
 assert 'graphics.fill(' not in overlay
 assert 'PREVIEW_TICKS = 80' in overlay
+assert 'mc.level == previewLevel' in overlay
+assert 'living instanceof TamableAnimal pet' in overlay
+assert 'dragon.getOwnerUUID().equals(pet.getOwnerUUID())' in overlay
 assert 'isAreaEnabled()' in orders
 assert 'getMarkedEnemyEntityId()' in orders
 assert 'DRAGON_BREATH.isDown()' in client and 'DRAGON_LIGHTNING.isDown()' in client

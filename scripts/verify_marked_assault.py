@@ -51,6 +51,11 @@ assert "areaEnabled = !tag.contains" in orders
 assert "target == dragon.getOwner()" in orders
 assert "canFlyTo(ServerLevel level, Vec3 point)" in orders
 assert "dragon.getRandom().nextDouble()" in orders
+# Changing direction alone still produces an orbit; enforce crossing legs.
+for pattern in ("int legStyle = areaLegs % 5", "angle = bearing + Math.PI",
+                "nextHeadingFlipLeg", "height = 5.5D", "height = 11.0D",
+                "tackleBreakawayUntil", "boolean landedHit = dragon.doHurtTarget(enemy)"):
+    assert pattern in orders, pattern
 assert "new AurenAttackOrders(this)" in dragon
 assert "this.attackOrders.tick();" in dragon
 assert "this.attackOrders.save(tag);" in dragon

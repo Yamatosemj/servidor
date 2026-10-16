@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
@@ -34,18 +35,24 @@ public final class AurenAttackOverlay {
     private static final int SEGMENTS = 64;
     private static final int PREVIEW_TICKS = 80;
     private static long previewUntil = Long.MIN_VALUE;
+    private static net.minecraft.client.multiplayer.ClientLevel previewLevel;
 
     /** Preview is temporary; gameplay never leaves permanent rings in the world. */
     public static void revealForTicks(Minecraft mc) {
-        if (mc.level != null) previewUntil = mc.level.getGameTime() + PREVIEW_TICKS;
+        if (mc.level != null) {
+            previewLevel = mc.level;
+            previewUntil = mc.level.getGameTime() + PREVIEW_TICKS;
+        }
     }
 
     public static void resetTransient() {
         previewUntil = Long.MIN_VALUE;
+        previewLevel = null;
     }
 
     private static boolean previewActive(Minecraft mc) {
-        return mc.level != null && mc.level.getGameTime() < previewUntil;
+        return mc.level != null && mc.level == previewLevel
+                && mc.level.getGameTime() < previewUntil;
     }
 
     private AurenAttackOverlay() {}
@@ -83,7 +90,10 @@ public final class AurenAttackOverlay {
             Entity found = entity.getEntity();
             if (found instanceof LivingEntity living && !dragon.isAlliedTo(living)
                     && living != dragon.getOwner()
-                    && !(living instanceof Player p && (p.isCreative() || p.isSpectator())))
+                    && !(living instanceof Player p && (p.isCreative() || p.isSpectator()))
+                    && !(living instanceof TamableAnimal pet && pet.isTame()
+                        && dragon.getOwnerUUID() != null
+                        && dragon.getOwnerUUID().equals(pet.getOwnerUUID())))
                 return new Preview(null, living, false);
             return new Preview(null, null, true);
         }

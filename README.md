@@ -5,7 +5,8 @@
 - **B:** ativa/desativa o **bombardeio aéreo**; quando desligado, cancela a ordem de área, mas a marcação de criaturas continua funcionando
 - **HUD:** só texto azul no topo durante uma ordem. Sem ordem desaparece; dicas e marcadores aparecem por ~4 segundos após V/B
 - **Combate a criaturas:** padrões do Ice and Fire CE `TACKLE` (investida/mordida), `HOVER_BLAST` (fogo aéreo à distância) e `SCORCH_STREAM` (passadas com fogo), trocados periodicamente. Não é IA idêntica à entidade CE: Auren é TamableAnimal com IA própria, mas mantém o controlador de voo CE portado
-- **Bombardeio:** manobras por pontos com rumos, altitudes, distâncias e tempos variados em vez de órbita fixa. Fogo varre pontos dentro do raio
+- **Bombardeio:** cinco trechos alternando curvas, passadas cruzando o centro, varridas baixas e subida para reposicionar; não fica preso a uma órbita circular. Fogo mira apenas dentro do raio
+- **Investida em criaturas:** após uma mordida acertada, Auren tenta se afastar e preparar a próxima investida, mantendo o voo pelo controlador CE
 
 **Segurança:** só o dono marca; posições e entidades não vêm do cliente; dono, Auren, aliados, animais do dono e jogadores invulneráveis são protegidos. As ordens pausam quando necessário por distância/chunks. O modo do botão B persiste no mundo; o raio do HUD volta a 5 após reiniciar o cliente.
 
