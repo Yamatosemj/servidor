@@ -41,6 +41,9 @@ public final class AurenAttackOrders {
     private int nextSweepTick;
     private int meleeCooldown;
     private int sightLostTicks;
+    private int nextRecoveryTick;
+    private int recoveryFailureTicks;
+    private boolean lastTackleConnected;
     private int areaLegs;
     private int areaPhase; // 0: plan approach, 1: approach, 2: committed attack pass
     private Vec3 areaRunDirection;
@@ -93,6 +96,9 @@ public final class AurenAttackOrders {
         nextSweepTick = 0;
         meleeCooldown = 0;
         sightLostTicks = 0;
+        nextRecoveryTick = 0;
+        recoveryFailureTicks = 0;
+        lastTackleConnected = false;
         areaLegs = 0;
         areaPhase = 0;
         areaRunDirection = null;
@@ -121,7 +127,11 @@ public final class AurenAttackOrders {
     }
 
     public boolean markEnemy(LivingEntity enemy) {
-        if (!canMarkTarget(enemy)) return false;
+        // Match the actual 64-block combat-operating radius at the time
+        // an order is accepted. The owner's 48-block crosshair is separate.
+        if (!canMarkTarget(enemy)
+                || dragon.distanceToSqr(enemy) > MAX_MARK_DISTANCE * MAX_MARK_DISTANCE)
+            return false;
         mode = ENEMY;
         markedEnemy = enemy.getUUID();
         recentlyResolvedEnemy = enemy;
@@ -133,7 +143,9 @@ public final class AurenAttackOrders {
 
     public boolean markArea(BlockPos center, int selectedRadius) {
         if (!areaEnabled || center == null || selectedRadius < 5 || selectedRadius > 30
-                || selectedRadius % 5 != 0 || !dragon.level().hasChunkAt(center)) return false;
+                || selectedRadius % 5 != 0 || !dragon.level().hasChunkAt(center)
+                || dragon.distanceToSqr(Vec3.atCenterOf(center))
+                        > MAX_MARK_DISTANCE * MAX_MARK_DISTANCE) return false;
         mode = AREA;
         areaCenter = center.immutable();
         markedEnemy = null;
@@ -177,7 +189,8 @@ public final class AurenAttackOrders {
                     enemy.getX() + Math.cos(angle) * range,
                     enemy.getY() + 10.0D + dragon.getRandom().nextDouble() * 6.0D,
                     enemy.getZ() + Math.sin(angle) * range);
-            if (canFlyTo(level, point) && clearViewFrom(level, point, enemy))
+            if (canFlyTo(level, point) && clearFlightCorridor(level, point)
+                    && clearViewFrom(level, point, enemy))
                 return point;
         }
         return null;
@@ -213,6 +226,58 @@ public final class AurenAttackOrders {
     }
 
     /**
+     * TACKLE still follows CE's direct-prey concept, but ground entities may
+     * occupy a point too low for Auren's large body. Approach their side at
+     * mouth height instead of sending a full-sized dragon through a wall.
+     * Every sampled destination must pass collision and block-ray checks.
+     */
+    private Vec3 safeTacklePoint(ServerLevel level, LivingEntity enemy, Vec3 desired) {
+        if (canFlyTo(level, desired) && clearFlightCorridor(level, desired))
+            return desired;
+        Vec3 retreat = dragon.position().subtract(enemy.position());
+        Vec3 horizontal = new Vec3(retreat.x, 0.0D, retreat.z);
+        if (horizontal.lengthSqr() < 1.0E-4D)
+            horizontal = new Vec3(0.0D, 0.0D, 1.0D);
+        Vec3 away = horizontal.normalize().scale(
+                (dragon.getBbWidth() + enemy.getBbWidth()) * 0.5D + 0.6D);
+        for (double height : new double[] { 1.0D, 2.5D, 4.5D }) {
+            Vec3 candidate = new Vec3(desired.x + away.x,
+                    enemy.getY() + enemy.getBbHeight() + height,
+                    desired.z + away.z);
+            if (canFlyTo(level, candidate) && clearFlightCorridor(level, candidate))
+                return candidate;
+        }
+        return null;
+    }
+
+    /** Do not call the CE flight mover towards a point behind solid terrain. */
+    private boolean clearFlightCorridor(ServerLevel level, Vec3 point) {
+        return level.clip(new ClipContext(dragon.getEyePosition(), point,
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
+                dragon)).getType() == HitResult.Type.MISS;
+    }
+
+    /**
+     * Losing line of sight isn't the same as losing the enemy. CE-style
+     * hovering first looks for a clear firing position, then ascends/repositions
+     * near Auren without forcing new chunks or trying to fly inside blocks.
+     */
+    private Vec3 recoveryPoint(ServerLevel level, LivingEntity enemy) {
+        Vec3 openFire = hoverPoint(level, enemy);
+        if (openFire != null && clearFlightCorridor(level, openFire))
+            return openFire;
+        Vec3 here = dragon.position();
+        for (int i = 0; i < 8; ++i) {
+            double angle = (i + (combatTicks / 40) % 8) * Math.PI / 4.0D;
+            Vec3 candidate = here.add(Math.cos(angle) * 7.0D,
+                    3.0D + i % 2 * 3.0D, Math.sin(angle) * 7.0D);
+            if (canFlyTo(level, candidate) && clearFlightCorridor(level, candidate))
+                return candidate;
+        }
+        return null;
+    }
+
+    /**
      * Preserve CE's three original tactics while adapting the decision
      * logic to a marked prey. Decisions are based on combat opportunity:
      * reacquire sight, close distance, dive, then sweep or hover to breathe.
@@ -222,6 +287,10 @@ public final class AurenAttackOrders {
         AirAttack previous = tactic;
         double distanceSq = dragon.distanceToSqr(enemy);
         if (!dragon.hasLineOfSight(enemy)) {
+            tactic = AirAttack.HOVER_BLAST;
+        } else if (lastTackleConnected && distanceSq <= 28.0D * 28.0D) {
+            // Complete the physical bite and retreat, then use fire rather
+            // than immediately repeating the same tackle by a timer.
             tactic = AirAttack.HOVER_BLAST;
         } else if (distanceSq > 28.0D * 28.0D) {
             tactic = AirAttack.TACKLE;
@@ -236,6 +305,9 @@ public final class AurenAttackOrders {
         // Keep each CE maneuver alive long enough for a real fire stream,
         // rather than swapping strategies faster than the breath wind-up.
         nextTacticTick = combatTicks + 125 + dragon.getRandom().nextInt(45);
+        lastTackleConnected = false;
+        recoveryFailureTicks = 0;
+        nextRecoveryTick = 0;
         nextWaypointTick = 0;
         waypoint = null;
         streamDirection = null;
@@ -261,17 +333,22 @@ public final class AurenAttackOrders {
                 Vec3 velocity = enemy.getDeltaMovement();
                 Vec3 lead = new Vec3(velocity.x, 0, velocity.z).scale(4.0D);
                 if (lead.lengthSqr() > 25.0D) lead = lead.normalize().scale(5.0D);
-                next = center.add(lead).add(0, enemy.getBbHeight() * 0.3D, 0);
+                Vec3 desired = center.add(lead).add(0, enemy.getBbHeight() * 0.3D, 0);
+                next = safeTacklePoint(level, enemy, desired);
                 fireAim = null;
                 if (meleeCooldown > 0) --meleeCooldown;
                 double reach = (dragon.getBbWidth() + enemy.getBbWidth() + 0.6D);
                 if (meleeCooldown == 0 && dragon.distanceToSqr(enemy) <= reach * reach
+                        && dragon.getBoundingBox().inflate(0.65D)
+                                .intersects(enemy.getBoundingBox())
                         && dragon.hasLineOfSight(enemy) && canMarkTarget(enemy)) {
                     // CE TACKLE must complete a physical contact hit, then
                     // create space for another dive instead of circling in place.
                     boolean landedHit = dragon.doHurtTarget(enemy);
                     meleeCooldown = 20;
                     if (landedHit) {
+                        lastTackleConnected = true;
+                        nextTacticTick = Math.min(nextTacticTick, combatTicks + 50);
                         Vec3 delta = dragon.position().subtract(enemy.position());
                         Vec3 retreat = new Vec3(delta.x, 0, delta.z);
                         if (retreat.lengthSqr() < 1.0E-4D) retreat = new Vec3(1, 0, 0);
@@ -293,13 +370,17 @@ public final class AurenAttackOrders {
                 // close/far; avoid rerolling directions every few seconds.
                 double horizontalSq = dragon.distanceToSqr(
                         enemy.getX(), dragon.getY(), enemy.getZ());
-                if (waypoint == null || combatTicks >= nextWaypointTick
-                        || horizontalSq < 16.0D || horizontalSq > 900.0D
-                        || !clearViewFrom(level, waypoint, enemy)) {
+                // Replan on cadence or an unsafe arrival, not every tick
+                // while close to the prey. Failure waits before another scan.
+                boolean unsafeWaypoint = waypoint != null && !canFlyTo(level, waypoint);
+                if (waypoint == null || unsafeWaypoint || combatTicks >= nextWaypointTick) {
                     Vec3 chosen = hoverPoint(level, enemy);
                     if (chosen != null) waypoint = chosen;
-                    nextWaypointTick = combatTicks + 80;
+                    else if (unsafeWaypoint) waypoint = null;
+                    nextWaypointTick = combatTicks + (chosen == null ? 20 : 80);
                 }
+                if (horizontalSq > 900.0D && combatTicks + 25 < nextTacticTick)
+                    nextTacticTick = combatTicks + 25;
                 next = waypoint;
                 fireAim = dragon.hasLineOfSight(enemy) ? center : null;
             }
@@ -319,27 +400,27 @@ public final class AurenAttackOrders {
             }
             default -> { return; }
         }
-        if (next == null || !canFlyTo(level, next)) {
-            // If the target is standing inside terrain, CE can still aim
-            // towards it for tackle, but avoid pushing unloaded waypoints.
-            if (tactic == AirAttack.TACKLE && next != null
-                    && level.hasChunkAt(BlockPos.containing(next))) {
-                dragon.getFlightController().patrolAttack(owner, next, true);
-            } else {
-                // An obstructed prey position is not a reason to land every
-                // tick. Recover to a safe CE HOVER_BLAST vantage instead.
-                Vec3 recovery = hoverPoint(level, enemy);
-                if (recovery != null) {
-                    waypoint = recovery;
-                    nextWaypointTick = combatTicks + 45;
-                    dragon.getFlightController().patrolAttack(owner, recovery, false);
-                } else {
-                    dragon.getFlightController().land();
-                }
-            }
+        if (next == null || !canFlyTo(level, next)
+                || !clearFlightCorridor(level, next)) {
             fireAim = null;
+            // Never bypass canFlyTo for a diving target embedded in terrain.
+            // Reuse the same recovery destination for a short interval.
+            if (combatTicks >= nextRecoveryTick) {
+                waypoint = recoveryPoint(level, enemy);
+                nextRecoveryTick = combatTicks + 25;
+            }
+            if (waypoint != null && canFlyTo(level, waypoint)
+                    && clearFlightCorridor(level, waypoint)
+                    && dragon.getFlightController().patrolAttack(owner, waypoint, false)) {
+                recoveryFailureTicks = 0;
+            } else if (++recoveryFailureTicks >= 80) {
+                // A truly blocked dragon eventually lands safely rather than
+                // staying forever in gravity-free flight with no waypoint.
+                dragon.getFlightController().land();
+            }
             return;
         }
+        recoveryFailureTicks = 0;
         if (!dragon.getFlightController().patrolAttack(
                 owner, next, tactic == AirAttack.TACKLE
                         && tackleBreakaway == null)) fireAim = null;
