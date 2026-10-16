@@ -22,6 +22,13 @@ jobs:
           gradle-version: '9.2.1'
       - name: Build standalone Auren without CE dependency
         run: gradle build --no-daemon --stacktrace
+      - name: Unit-test pure Java local intention policy without Minecraft or network
+        run: |
+          mkdir -p build/local-mind-test
+          javac -d build/local-mind-test src/main/java/br/com/auren/minecraft/entity/AurenLocalDecisionPolicy.java scripts/LocalDecisionPolicyTest.java
+          java -cp build/local-mind-test LocalDecisionPolicyTest
+      - name: Verify offline local mind save/load, owner-only diagnostics and safe intent API
+        run: python3 scripts/verify_local_mind.py
       - name: Verify Uranus library embedded (no CE/Jupiter)
         run: python3 scripts/verify_bundle.py
       - name: Verify exactly one custom dragon, zero IceAndFire gameplay registries or items
@@ -79,6 +86,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: auren-0725-DAILY-ROUTINE
+          name: auren-0726-OFFLINE-MIND
           path: build/libs/*.jar
           if-no-files-found: error

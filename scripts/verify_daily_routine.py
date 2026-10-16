@@ -77,7 +77,7 @@ assert "this.iafFlightManager" not in routine
 assert "getNavigation().createPath(this.owner, 0)" in follow
 assert "findDistributedAreaImpact(" in orders
 assert "AurenScorchTerrain.scorchFace(" in fire
-assert "mod_version=0.7.25-contextual-daily-routine-alpha" in (
+assert "mod_version=0.7.26-offline-mind-alpha" in (
     root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars
