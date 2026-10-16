@@ -14,7 +14,7 @@ follow=(entity/"AurenAdultFollowOwnerGoal.java").read_text()
 orders=(entity/"AurenAttackOrders.java").read_text()
 fire=(entity/"AurenFireBreath.java").read_text()
 for expected in (
-  "private enum Routine { OBSERVE, EXPLORE, INVESTIGATE, REST, SEEK_SHELTER }",
+  "private enum Routine { OBSERVE, EXPLORE, INVESTIGATE, REST, SEEK_SHELTER, APPROACH_OWNER }",
   "MIN_COOLDOWN_TICKS = 100",
   "MAX_COOLDOWN_TICKS = 230",
   "MAX_SEARCH_ATTEMPTS = 12",
