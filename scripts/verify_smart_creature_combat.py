@@ -38,7 +38,11 @@ assert "Blocks.FIRE.defaultBlockState()" in terrain
 # against the ground-wandering goal; marked orders are achievable on receipt.
 dragon=(j/"AurenDragon.java").read_text()
 commands=(root/"src/main/java/br/com/auren/minecraft/AurenCommands.java").read_text()
-assert "AurenDragon.this.getFlightMode() == AurenFlightController.GROUNDED" in dragon
+assert "new AurenNaturalIdleGoal(this)" in dragon
+assert "new WaterAvoidingRandomStrollGoal" not in dragon
+idle=(root/"src/main/java/br/com/auren/minecraft/entity/AurenNaturalIdleGoal.java").read_text()
+assert "dragon.getFlightMode() == AurenFlightController.GROUNDED" in idle
+assert "dragon.getAttackOrders().hasOrder()" in idle
 assert dragon.count("&& !AurenDragon.this.getAttackOrders().hasOrder()") >= 2
 assert "&& waypoint != null && combatTicks < nextWaypointTick" in orders
 assert "tackleApproachPoint(level, enemy)" in orders
