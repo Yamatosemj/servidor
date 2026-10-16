@@ -36,7 +36,7 @@ for token in ("public static void igniteVillage(", "GameRules.RULE_MOBGRIEFING",
 for token in ("findForwardAreaImpact(", "areaFiringPass = areaPhase == 2",
               "safeAreaWaypoint(", "nextSweepTick = combatTicks + 3"):
     assert token in orders, token
-assert "0.7.19-environment-perception-alpha" in (root/"gradle.properties").read_text()
+assert "0.7.20-reliability-review-alpha" in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1, jars
 with ZipFile(jars[0]) as jar:
