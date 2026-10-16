@@ -88,6 +88,7 @@ public final class AurenDragon extends TamableAnimal {
     // Separate CE FireDragon.riderShootFire port; never affects auto-escort.
     private final AurenFireBreath fireBreath = new AurenFireBreath(this);
     private final AurenLightningBreath lightningBreath = new AurenLightningBreath(this);
+    private final AurenAttackOrders attackOrders = new AurenAttackOrders(this);
 
     // IceAndFire CE's CONTROL_STATE bits: 0 = jump/climb, 1 = descend.
     // Client sets its local value and forwards it only to the owning server.
@@ -168,6 +169,10 @@ public final class AurenDragon extends TamableAnimal {
 
     public AurenFlightController getFlightController() {
         return this.flightController;
+    }
+
+    public AurenAttackOrders getAttackOrders() {
+        return this.attackOrders;
     }
 
     /** Port of CE DragonBaseEntity.getControllingPassenger: only the owner pilots. */
@@ -630,12 +635,14 @@ public final class AurenDragon extends TamableAnimal {
         // mob first and resume following when it dies or leaves range.
         this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.15D, true) {
             @Override public boolean canUse() {
-                return !AurenDragon.this.isOnShoulder()
+                return !AurenDragon.this.getAttackOrders().hasOrder()
+                        && !AurenDragon.this.isOnShoulder()
                         && !AurenDragon.this.isVehicle() && AurenDragon.this.isTame()
                         && super.canUse();
             }
             @Override public boolean canContinueToUse() {
-                return !AurenDragon.this.isOnShoulder()
+                return !AurenDragon.this.getAttackOrders().hasOrder()
+                        && !AurenDragon.this.isOnShoulder()
                         && !AurenDragon.this.isVehicle() && AurenDragon.this.isTame()
                         && super.canContinueToUse();
             }
@@ -788,6 +795,7 @@ public final class AurenDragon extends TamableAnimal {
         }
         super.tick();
         if (!this.level().isClientSide()) {
+            this.attackOrders.tick();
             this.flightController.tick();
             this.fireBreath.tick();
             this.lightningBreath.tick();
@@ -844,6 +852,7 @@ public final class AurenDragon extends TamableAnimal {
         super.addAdditionalSaveData(tag);
         tag.putBoolean("SmallForm", this.isSmallForm());
         tag.putBoolean("OnShoulder", this.isOnShoulder());
+        this.attackOrders.save(tag);
     }
 
     @Override
@@ -870,6 +879,7 @@ public final class AurenDragon extends TamableAnimal {
         this.entityData.set(RIDER_BODY_PITCH, 0.0F);
         this.setSmallForm(tag.getBoolean("SmallForm"));
         this.setOnShoulder(tag.getBoolean("OnShoulder"));
+        this.attackOrders.load(tag);
     }
 
     @Override
