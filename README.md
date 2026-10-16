@@ -1,3 +1,16 @@
+# Auren Minecraft 0.7.15 — Rajada de FOGO com rastros irregulares e calor progressivo
+
+- **Fogo primeiro:** o sopro azul de chamas ficou mais denso, turbulento e volumoso; há um reforço de partículas flamejantes no impacto, além de vários **blocos de fogo reais** no terreno onde puderem permanecer. Superfícies já carbonizadas podem manter fogo azul (soul fire); outras superfícies usam fogo vanilla.
+- **Nada de quadrado 4×4:** cada impacto gera uma mancha oval de aproximadamente 5–7 blocos com pequenas variações de centro/raios, probabilidade maior de atingir o meio e bordas com lacunas. O formato varia entre rajadas.
+- **Rastro em movimento:** impactos consecutivos e próximos são conectados por pequenos trechos, desenhando uma faixa de fogo quando o Auren faz uma passada aérea.
+- **Calor progressivo:** pedra/cobblestone → pedra escurecida → magma após repetidas rajadas → pode desaparecer somente após aquecimento bem mais prolongado; grama → solo queimado → pode desaparecer com calor extremo. Não há explosão nem destruição instantânea do terreno.
+- **Madeira:** só pega fogo vanilla e queima naturalmente. Nenhuma rotina de dano térmico quebra madeira/portas/baús diretamente.
+- **Segurança:** alterações requerem `mobGriefing=true`, respeitam o raio de bombardeio marcado, não carregam chunks distantes nem modificam entidades de bloco. O calor é limitado em memória, esfria/expira e não persiste após reiniciar o mundo. O espalhamento natural do fogo depende da regra `doFireTick`.
+- **Preservado:** IA/combate corrigido da 0.7.14, teclas V/Shift+V/B, o controlador de voo e as animações. A direção e o dano do sopro continuam decididos pelo servidor.
+- **Validação:** compilação e testes estáticos não substituem teste visual ou de destruição gradual no Minecraft.
+
+---
+
 # Auren Minecraft 0.7.14 — Correção da auditoria de combate
 
 - **Correção prioritária 1:** caminhada aleatória desativada sempre que há uma ordem de ataque ou voo ativo; não disputa navegação com o voo de combate.
