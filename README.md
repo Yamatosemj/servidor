@@ -1,3 +1,18 @@
+# Auren Minecraft 0.7.14 — correções da auditoria de combate
+
+**Versão experimental sobre a 0.7.13. A 0.7.12 continua referência aprovada em jogo.**
+
+- Bloqueia o objetivo vanilla de passear aleatoriamente enquanto houver ordem de ataque marcada. O seguimento e o corpo-a-corpo normal já possuíam essa proteção.
+- Investida CE não ignora mais a rejeição do destino por colisão: tenta pontos de aproximação seguros na lateral/sobre a presa, verifica caminho livre e exige maior proximidade física para mordida.
+- Se o inimigo estiver atrás de uma parede, procura posição aérea visível e tenta contornar. Faz uma busca limitada a cada 25 ticks; somente após 80 ticks sem nenhum destino seguro desiste e aterrissa.
+- Mordida acertada antecipa a próxima mudança para um ataque aéreo, após a manobra de recuo, em vez de simplesmente esperar o temporizador de estratégia.
+- Não aceita marcação de criatura ou centro de área mais longe de 64 blocos **do Auren**; o limite de mira do jogador continua 48 blocos. Mostra mensagem quando inválido.
+- Corrige seleção de posições aéreas para evitar uma rota direta atravessando parede.
+- **Sem alterações nos arquivos** `AurenFireBreath`, `AurenScorchTerrain`, animações e controlador de voo. Conserva fogo incendiário sem quebra direta de blocos, sem limite de ângulo, modo B, V, Shift+V e montaria.
+- Testes automatizados verificam as restrições, mas não comprovam a trajetória real. Testar em mundo de backup antes de mergear.
+
+---
+
 # Auren Minecraft 0.7.13 — inteligência de combate a criaturas
 
 ## Melhorias focadas exclusivamente em alvos marcados
