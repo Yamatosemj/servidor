@@ -275,6 +275,7 @@ public final class AurenAttackOrders {
         }
         if (waypoint == null || !level.hasChunkAt(BlockPos.containing(waypoint))
                 || !dragon.getFlightController().patrol(owner, waypoint)) {
+            fireAim = null;
             dragon.getFlightController().land();
             return;
         }
@@ -316,6 +317,7 @@ public final class AurenAttackOrders {
                 if (recentlyResolvedEnemy != null && !recentlyResolvedEnemy.isAlive())
                     clear();
                 else dragon.getFlightController().land();
+                fireAim = null;
                 return;
             }
             if (!(found instanceof LivingEntity living) || !canMarkTarget(living)) {
@@ -327,6 +329,7 @@ public final class AurenAttackOrders {
             center = living.getBoundingBox().getCenter();
         } else {
             if (!areaEnabled || areaCenter == null || !level.hasChunkAt(areaCenter)) {
+                fireAim = null;
                 dragon.getFlightController().land();
                 return;
             }
