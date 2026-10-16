@@ -34,8 +34,9 @@ for token in ("public static void igniteVillage(", "GameRules.RULE_MOBGRIEFING",
               "Blocks.FIRE.defaultBlockState().canSurvive(level, firePos)",
               "level.setBlockAndUpdate(firePos, Blocks.FIRE.defaultBlockState())"):
     assert token in terrain, token
-for token in ("findForwardAreaImpact(", "areaFiringPass = areaPhase == 2",
-              "safeAreaWaypoint(", "nextSweepTick = combatTicks + 3"):
+for token in ("findDistributedAreaImpact(",
+              "areaFiringPass = areaPhase == 2 || areaPhase == 3",
+              "safeAreaWaypoint(", "nextSweepTick = combatTicks + 6"):
     assert token in orders, token
 assert "0.7.22-organic-area-bombing-alpha" in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
