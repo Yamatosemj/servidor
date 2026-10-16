@@ -1,4 +1,6 @@
-"""Regression gate: fire ignites wood, NEVER directly destroys blocks.
+"""Regression: wood burns only by vanilla fire, terrain erodes only with heat.
+Short fire puffs never demolish anything; prolonged grass/magma heat can
+remove those whitelisted terrain blocks without generic destroyBlock calls.
 
 Static checks complement NeoForge compilation, not a substitute for playtest.
 """
@@ -34,11 +36,11 @@ for token in ("public static void igniteVillage(", "GameRules.RULE_MOBGRIEFING",
 for token in ("findForwardAreaImpact(", "areaFiringPass = areaPhase == 2",
               "safeAreaWaypoint(", "nextSweepTick = combatTicks + 3"):
     assert token in orders, token
-assert "0.7.14-combat-safety-alpha" in (root/"gradle.properties").read_text()
+assert "0.7.15-irregular-flame-heat-alpha" in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1, jars
 with ZipFile(jars[0]) as jar:
     assert jar.testzip() is None
     for cls in ("AurenAttackOrders", "AurenScorchTerrain", "AurenFireBreath"):
         assert "br/com/auren/minecraft/entity/"+cls+".class" in jar.namelist()
-print("PASS: no direct demolition or angle gate, real fire ignition, lowered CE breath pose")
+print("PASS: fire ignition, no instant wooden demolition, bounded heat damage, CE breath pose")

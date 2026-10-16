@@ -40,12 +40,15 @@ assert 'loadSeries("bite", 3)' in animations
 assert '"BodyUpper", "Neck1", "Neck2", "Neck3", "Head", "Jaw"' in animations
 assert "applyBitePose(model, dragon)" in renderer
 
-# Faithful CE stage-3 3x3x3 natural terrain conversion, reversible,
-# respects griefing, no modification of chunk-unloaded tile entities.
+# CE original terrain materials retained, but 0.7.15 uses an Auren-specific
+# irregular fire footprint and gradual temperature, not a fixed 3x3x3 cube.
+# Verify griefing/chunk/block-entity protection and registry stability.
 for token in (
     "IafDragonDestructionManager.transformBlockFire",
     "GameRules.RULE_MOBGRIEFING",
-    "impact.offset(-1, -1, -1), impact.offset(1, 1, 1)",
+    "for (int dx = -3; dx <= 3; ++dx)",
+    "for (int dz = -3; dz <= 3; ++dz)",
+    "applyHeat(level, pos, tracker, time, gain)",
     "level.getBlockEntity(pos) != null",
     "level.hasChunkAt(pos)",
     "level.setBlockAndUpdate(pos, after)",
@@ -67,7 +70,7 @@ assert "AurenScorchedBlocks.register(modBus)" in main
 assert "ENTITIES.register(\"auren\"" in main
 assert "DeferredRegister.Items" not in main and "DeferredRegister.Items" not in registry
 assert "BlockItem(" not in registry and "BlockItem(" not in main
-assert "0.7.14-combat-safety-alpha" in version
+assert "0.7.15-irregular-flame-heat-alpha" in version
 
 names=["chared_grass","chared_dirt","chared_gravel",
        "chared_cobblestone","chared_stone","chared_dirt_path"]
