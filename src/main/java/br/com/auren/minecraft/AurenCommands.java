@@ -131,6 +131,27 @@ public final class AurenCommands {
         return Command.SINGLE_SUCCESS;
     }
 
+    private static int environment(CommandContext<CommandSourceStack> context)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = context.getSource().getPlayerOrException();
+        AurenDragon dragon = getDragon(context);
+        if (dragon == null) return 0;
+        if (player.level() instanceof net.minecraft.server.level.ServerLevel level)
+            dragon.getAwareness().refresh(level, player);
+        context.getSource().sendSuccess(() -> Component.literal(
+                "Auren percebe: " + dragon.getAwareness().describe()), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int memories(CommandContext<CommandSourceStack> context)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        AurenDragon dragon = getDragon(context);
+        if (dragon == null) return 0;
+        context.getSource().sendSuccess(() -> Component.literal(
+                "Auren observou: " + dragon.getAwareness().recentEvents()), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
     private static int shoulder(CommandContext<CommandSourceStack> context)
             throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayer player = context.getSource().getPlayerOrException();
@@ -233,6 +254,9 @@ public final class AurenCommands {
                                 .then(areas))
                         .then(Commands.literal("parar").executes(AurenCommands::stop))
                         .then(Commands.literal("status").executes(AurenCommands::status))
+                        .then(Commands.literal("ambiente").executes(AurenCommands::environment))
+                        .then(Commands.literal("perceber").executes(AurenCommands::environment))
+                        .then(Commands.literal("lembrar").executes(AurenCommands::memories))
         );
     }
 }
