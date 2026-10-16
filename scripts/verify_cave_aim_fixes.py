@@ -52,7 +52,7 @@ for token in (
 assert "hunter.tick(level, owner, enemy, directSight)" in orders
 assert "level.explode(" not in fire
 assert "MAX_HEAT_POSITIONS = 4096" in terrain
-assert "mod_version=0.7.25-contextual-daily-routine-alpha" in (root/"gradle.properties").read_text()
+assert "mod_version=0.7.26-offline-mind-alpha" in (root/"gradle.properties").read_text()
 jar=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jar)==1, jar
 with ZipFile(jar[0]) as z:
