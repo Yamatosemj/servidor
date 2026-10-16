@@ -97,6 +97,12 @@ public final class AurenAttackOrders {
      * automatic attack on unrelated hostiles. Sight and distance are checked
      * every tick on the server, while a real ground path is still followed.
      */
+    public boolean isMarkedEnemy(LivingEntity candidate) {
+        return mode == ENEMY && candidate != null
+                && markedEnemy != null && markedEnemy.equals(candidate.getUUID())
+                && canMarkTarget(candidate);
+    }
+
     public Vec3 getCompactLightningAim() {
         if (mode != ENEMY || !hunter.isCompact() || !dragon.isSmallForm()
                 || dragon.isOnShoulder() || dragon.isVehicle()
