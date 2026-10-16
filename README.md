@@ -1,3 +1,37 @@
+# Auren Minecraft 0.7.24 — Companhia e movimentos naturais
+
+Sem poderes novos e **sem integração com a IA desktop**. Esta versão melhora apenas as decisões de andar, voar e agir tranquilamente ao lado do dono.
+
+### Seguir pelo chão sem parecer perdido
+- O Auren adulto já priorizava andar, mas agora deixa o **A* concluir desvios reais** sem reiniciar a rota em intervalos de 10 ticks.
+- Recalcula a cada 25 ticks só quando a navegação terminou ou o dono se deslocou mais de 3,5 blocos.
+- Detecta travamento pelo **movimento real do dragão**, não por aproximação em linha reta: afastar-se do dono para contornar uma parede não o obriga a voar.
+- Voo de acompanhamento permanece do Ice and Fire CE, como alternativa após 80 ticks de travamento ou viagem longa ao ar livre (120 ticks; distâncias de 44 blocos adulto / 26 bebê).
+- **Não tenta decolar automaticamente em caverna nem debaixo de telhado** quando ambos estiverem cobertos. Teleporte de emergência de 50 blocos mantém as proteções antigas.
+- As distâncias de conforto permanecem: adulto começa a seguir após 15 blocos e para perto de 8; pequeno 4,5/1,7.
+
+### Comportamento calmo
+- Novo `AurenNaturalIdleGoal`: em estado seguro, observa o dono e arredores durante pequenos períodos, com ocasionais explorações de poucos blocos.
+- Passeios limitados a área próxima do dono, piso firme, volume de colisão livre, chunks carregados e caminho A* completo. Nenhum teleporte nem movimentação empurrada por velocidade artificial.
+- Nunca funciona enquanto o dragão está em combate, montado, no ombro, sentado por ordem, voando, nadando, sem dono ou quando o dono está se movendo.
+- Pausas de 100–230 ticks entre sessões para evitar agitação constante; exploração ocorre em aproximadamente um terço das sessões.
+- A pose/modelo e as animações permanecem inalterados: **não há animação de deitar/dormir** nesta versão.
+
+### Preservado
+Fogo, raios, defesa, caça terrestre/caverna, bombardeio orgânico da 0.7.22, montaria, tamanho, renderização e HUD H. Não mexemos no `FlightMoveHelper` CE nem no `AurenCeGroundMoveControl`.
+
+### Como testar no jogo
+1. Ande 15–25 blocos em terreno aberto e veja se acompanha pelo chão, seguindo curvas reais em vez de decolar.
+2. Faça um trajeto em L atrás de uma casa, mas com passagem lateral. O Auren deve **contornar andando**.
+3. Caminhe dentro de uma caverna; ele não deve bater nas paredes tentando decolar. A mais de 50 blocos de separação, teste o teleporte apenas para destino seguro.
+4. Afaste-se por 50+ blocos em campo aberto: voo CE e teleporte de emergência continuam sendo opções.
+5. Fique parado perto do Auren por alguns minutos: ele deve olhar ao redor, às vezes caminhar poucos blocos, sem se afastar indefinidamente.
+6. Marque um inimigo, monte, ordene sentar e use o ombro: nenhuma rotina ociosa deve disputar os controles.
+
+CI verifica compilação, classes/guardas e invariantes do controle de movimento. **Testes reais no mundo ainda são necessários**.
+
+---
+
 # Auren Minecraft 0.7.23 — Caça terrestre, raio pequeno e terreno aquecido
 
 Pedido: o Auren adulto deve poder **caminhar para alcançar o inimigo e usar o sopro azul no chão**, em vez de decolar automaticamente; o pequeno pode atacar uma presa **marcada** com raios elétricos nas cavernas; o alcance da queimadura deve corresponder melhor à extensão do fogo; terra sem grama deve aquecer e sumir após exposição continuada.

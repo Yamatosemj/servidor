@@ -765,23 +765,10 @@ public final class AurenDragon extends TamableAnimal {
         // Both use real aerial motion; teleport is a 50+ block last resort.
         this.goalSelector.addGoal(2, new AurenAdultFollowOwnerGoal(this, true));
         this.goalSelector.addGoal(2, new AurenAdultFollowOwnerGoal(this));
-        this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.65D) {
-            @Override
-            public boolean canUse() {
-                return !AurenDragon.this.isVehicle()
-                        && !AurenDragon.this.getAttackOrders().hasOrder()
-                        && AurenDragon.this.getFlightMode() == AurenFlightController.GROUNDED
-                        && super.canUse();
-            }
-
-            @Override
-            public boolean canContinueToUse() {
-                return !AurenDragon.this.isVehicle()
-                        && !AurenDragon.this.getAttackOrders().hasOrder()
-                        && AurenDragon.this.getFlightMode() == AurenFlightController.GROUNDED
-                        && super.canContinueToUse();
-            }
-        });
+        // Short, deliberate owner-centered curiosity, alternating with calm
+        // observation. Replaces unbounded random strolling; follow/attack
+        // priorities remain higher and override idle immediately.
+        this.goalSelector.addGoal(5, new AurenNaturalIdleGoal(this));
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
     }

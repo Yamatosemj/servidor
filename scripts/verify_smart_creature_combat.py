@@ -38,8 +38,13 @@ assert "Blocks.FIRE.defaultBlockState()" in terrain
 # against the ground-wandering goal; marked orders are achievable on receipt.
 dragon=(j/"AurenDragon.java").read_text()
 commands=(root/"src/main/java/br/com/auren/minecraft/AurenCommands.java").read_text()
-assert "AurenDragon.this.getFlightMode() == AurenFlightController.GROUNDED" in dragon
-assert dragon.count("&& !AurenDragon.this.getAttackOrders().hasOrder()") >= 2
+assert "new AurenNaturalIdleGoal(this)" in dragon
+assert "new WaterAvoidingRandomStrollGoal" not in dragon
+idle=(root/"src/main/java/br/com/auren/minecraft/entity/AurenNaturalIdleGoal.java").read_text()
+assert "dragon.getFlightMode() == AurenFlightController.GROUNDED" in idle
+assert "dragon.getAttackOrders().hasOrder()" in idle
+assert dragon.count("!AurenDragon.this.getAttackOrders().hasOrder()") >= 3
+assert "dragon.getAttackOrders().hasOrder()" in idle
 assert "&& waypoint != null && combatTicks < nextWaypointTick" in orders
 assert "tackleApproachPoint(level, enemy)" in orders
 assert "recoveryPoint(level, enemy)" in orders
@@ -50,7 +55,7 @@ assert "Vec3.atCenterOf(center)" in orders
 assert "Alvo inválido ou além de 64 blocos" in commands
 assert "patrolAttack(owner, next, true)" not in orders
 assert "level.hasChunkAt(BlockPos.containing(next))) {" not in orders
-assert "mod_version=0.7.23-ground-hunt-electric-alpha" in (root/"gradle.properties").read_text()
+assert "mod_version=0.7.24-natural-companion-alpha" in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1, jars
 with ZipFile(jars[0]) as f:
