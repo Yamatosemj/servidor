@@ -87,7 +87,7 @@ assert "new LightningBoltData(" in renderer
 assert ".lifespan(4)" in renderer and ".spawn(LightningBoltData.SpawnFunction.NO_DELAY)" in renderer
 assert "this.lightningRenderer.render(" in renderer
 
-assert "mod_version=0.7.21-defense-flame-hunt-alpha" in version
+assert "mod_version=0.7.22-organic-area-bombing-alpha" in version
 jar=list((ROOT/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jar)==1,jar
 with ZipFile(jar[0]) as z:

@@ -25,10 +25,10 @@ for token in (
   "dragon.getFlightController().patrolAttack(owner, recovery, false)",
 ):
     assert token in orders, token
-for token in ("areaFiringPass = areaPhase == 2",
-              "nextSweepTick = combatTicks + 3",
-              "findForwardAreaImpact(", "safeAreaWaypoint(",
-              "nextWaypointTick = combatTicks + (areaFiringPass ? 180 : 120)"):
+for token in ("areaFiringPass = areaPhase == 2 || areaPhase == 3",
+              "nextSweepTick = combatTicks + 6",
+              "findDistributedAreaImpact(", "safeAreaWaypoint(",
+              "nextWaypointTick = combatTicks + (areaFiringPass ? 115 : 130)"):
     assert token in orders, token
 assert "canAimForward(" not in fire
 assert "AurenScorchTerrain.bombard(" not in fire
@@ -50,7 +50,7 @@ assert "Vec3.atCenterOf(center)" in orders
 assert "Alvo inválido ou além de 64 blocos" in commands
 assert "patrolAttack(owner, next, true)" not in orders
 assert "level.hasChunkAt(BlockPos.containing(next))) {" not in orders
-assert "mod_version=0.7.21-defense-flame-hunt-alpha" in (root/"gradle.properties").read_text()
+assert "mod_version=0.7.22-organic-area-bombing-alpha" in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1, jars
 with ZipFile(jars[0]) as f:

@@ -1,3 +1,24 @@
+# Auren Minecraft 0.7.22 — Bombardeio orgânico e cobertura variada
+
+Correção do modo área observada em jogo na 0.7.21: passadas muito retas, simétricas e concentradas nos mesmos blocos.
+
+- **Movimentos mais naturais:** cada saída escolhe direção diferente da anterior, um ponto de interesse, uma entrada, uma curva intermediária e uma saída em outro ângulo. Continua usando o FlightMoveHelper original CE, sem inventar física nova.
+- **Alvos variados:** memória de cobertura 5x5 usada *apenas internamente* para lembrar áreas recém-atacadas. Escolhe chamas dentro do círculo marcado e evita atingir sempre os mesmos setores; não cria marcas quadradas.
+- **Fogo coerente:** só seleciona pontos à frente da cabeça, até 27,5 blocos, com linha de visão real e dentro do raio marcado. A rajada segue azul, volumosa e com calor.
+- **Escopo:** apenas bombardeio de ÁREA (B + V), sem alterações ao combate contra criaturas, caverna, autodefesa, montagem, IA externa, materiais ou animações.
+- **Segurança:** preserva limite 5/10/15/20/25/30, regras de griefing, chunks, alinhamento do dragão e cancelamento Shift+V. A memória de cobertura é zerada ao reiniciar a ordem.
+
+## Teste
+1. Marque uma aldeia com 20 ou 30 blocos; acompanhe **4 passadas completas**.
+2. O dragão precisa mudar orientação e curvar entre passadas; as manchas não devem formar duas retas repetidas.
+3. Teste raio 5 e 30; nenhum impacto intencional pode ser selecionado fora do círculo.
+4. Cancele com Shift+V e marque outra área; a cobertura começa do zero.
+5. Ataque uma criatura com V e monte no dragão; esses comportamentos não devem mudar.
+
+Verificações de fonte/CI são **estruturais**, não substituem gameplay.
+
+---
+
 # Auren Minecraft 0.7.21 — Defesa, fogo lateral e caça pela entrada
 
 Correções guiadas pelo teste em jogo da v0.7.20. Não há integração com IA externa.

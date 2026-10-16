@@ -71,7 +71,7 @@ assert "createExplosion" not in terrain and "createExplosion" not in fire
 assert terrain.count("after = Blocks.AIR.defaultBlockState()") == 2
 assert "if (!eligible(original)" in terrain
 assert "level.getBlockEntity(wood) != null" in terrain
-assert "areaFiringPass = areaPhase == 2" in orders
+assert "areaFiringPass = areaPhase == 2 || areaPhase == 3" in orders
 
 # Numeric smoke test of the footprint recipe. This mirrors the documented
 # shape probabilistically but does not execute Minecraft Java.
@@ -95,7 +95,7 @@ for _ in range(120):
     shapes.add(frozenset(tiles))
 assert len(shapes)>110, len(shapes)
 assert 0<28<135<330 and 28<195<330
-assert "mod_version=0.7.21-defense-flame-hunt-alpha" in (root/"gradle.properties").read_text()
+assert "mod_version=0.7.22-organic-area-bombing-alpha" in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars
 with ZipFile(jars[0]) as jar:
