@@ -21,7 +21,7 @@ for token in (
     "MAX_SIEGE_CHARGES = 5",
     "CHARGE_REACH = 27.0D",
     "shelteredUnderground(ServerLevel level, LivingEntity target)",
-    "startCavePursuit(ServerLevel level, LivingEntity enemy)",
+    "startCavePursuit(ServerLevel level, ServerPlayer owner,",
     "dragon.getFlightController().land()",
     "dragon.setSmallForm(true)",
     "dragon.getNavigation().createPath(enemy, 0)",
@@ -65,7 +65,7 @@ assert "AurenRelentlessHunt" not in fire and "AurenRelentlessHunt" not in terrai
 assert "level.explode(" not in fire and "level.explode(" not in terrain
 assert "this.burnProgress == CE_BURN_PROGRESS_MAX" in fire
 assert "MAX_HEAT_POSITIONS = 4096" in terrain
-assert 'mod_version=0.7.16-relentless-hunt-alpha' in (root/"gradle.properties").read_text()
+assert 'mod_version=0.7.17-cave-aim-fix-alpha' in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars
 with ZipFile(jars[0]) as jar:

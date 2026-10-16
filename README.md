@@ -1,3 +1,18 @@
+# Auren 0.7.17 — Corrigir sopro estacionário e perseguição em cavernas
+
+Relato da 0.7.16: corpo rodava enquanto lançava fogo sem mover-se, ficava pequeno sem andar, e queimava montanha com entrada de caverna.
+
+- **Sopro estacionário:** `AurenFlightController.holdFacing` desativa o waypoint fictício `posição + (0,0.12,0)` que fazia o FlightMoveHelper forçar orientação enquanto estava parado. Mantém voo estabilizado, reduz impulso e gira até 3° por tick em direção ao ponto real de impacto. O FlightMoveHelper também não executa giro 180° por colisão quando não tem alvo de movimento.
+- **Entrada da caverna primeiro:** se a presa está coberta, procura um ponto de aterrissagem com espaço para a forma adulta, chão sólido, iluminação do céu e altura próxima da presa, num raio de 5–15 blocos. Aproxima-se voando até a entrada, pousa e só então encolhe; não pousa arbitrariamente sobre o topo da montanha para se transformar.
+- **Perseguição pequena:** tenta caminho real até a presa. Quando não consegue rota direta, tenta caminhos parciais até pontos próximos à entrada e reavalia a cada 15 ticks.
+- **Não fica parado esperando crescer:** quando não cabe na forma adulta, procura um caminho de volta ao local seguro de pouso; se não for possível, varre pisos próximos com espaço para crescer. Ao cancelar ou recarregar, continua tentando sair ao invés de perder toda navegação.
+- **Explosões apenas como último recurso:** se existe entrada acessível localizada (`caveLanding != null`), não dispara cargas explosivas sobre a montanha. Preserva limite de 5 cargas, `mobGriefing`, aliados/owner, raio e whitelist de rochas quando não existir nenhuma entrada.
+- **Preservado:** fogo azul e marcas irregulares da 0.7.15, combat mode, atalhos, sons, modelo e piloto. Os testes são automatizados de *fonte + compilação*, não reproduzem visual nem caminho real no Minecraft.
+
+**QA:** marque um creeper dentro de uma caverna com entrada lateral, observe se aterrissa perto da abertura e entra pequeno; bloqueie a passagem e observe se tenta outra rota ou consegue voltar ao tamanho normal; examine se o corpo mantém yaw estável enquanto lança fogo parado.
+
+---
+
 # Auren Minecraft 0.7.16 — Caçada implacável (protótipo escalonado)
 
 **Inspirado em:** Ice and Fire CE `DragonBaseEntity.digWhenStuck/breakBlocks` (interação com obstáculos), e em mods de perseguição como Nightmare/Epic Siege, mas com controle de dano por estágio e guardas de servidor. Não importamos a IA deles integralmente.
