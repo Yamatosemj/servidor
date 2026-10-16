@@ -55,6 +55,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: auren-0710-DIRECTIONAL-VILLAGE-BOMBARDMENT
+          name: auren-0711-SUSTAINED-DRAGONFIRE-AND-BOMBARDMENT
           path: build/libs/*.jar
           if-no-files-found: error
