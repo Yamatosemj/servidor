@@ -219,7 +219,7 @@ public final class AurenFireBreath {
         // Blue SOUL_FIRE persists only where vanilla soul fire can survive.
         // Do not place ordinary red fire or bypass block survival. On other
         // blocks, blue particles + entity burn still work as before.
-        // No CE-specific ash/charred blocks or terrain destruction.
+        // Whitelisted terrain may temporarily turn into CE-textured scorched blocks.
         if (blockHit != null && blockHit.getType() == HitResult.Type.BLOCK
                 && level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)
                 && dragon.getRandom().nextBoolean()) {
