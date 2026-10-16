@@ -27,6 +27,53 @@ public final class AurenScorchTerrain {
         scorch(level, impact, dragon, null, 0);
     }
 
+    /**
+     * Bounded stage-3 CE charge-style destruction for AREA orders only.
+     * No explosions, drops, block entities, unloaded chunks, or unbreakables.
+     * Unlike terrain scorching, village facades actually lose blocks.
+     */
+    public static void bombard(ServerLevel level, BlockPos impact, AurenDragon dragon,
+                               BlockPos markedCenter, int radius) {
+        if (markedCenter == null || radius < 5 || radius > 30
+                || !level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)
+                || !level.hasChunkAt(impact)) return;
+        int destroyed = 0;
+        for (BlockPos pos : BlockPos.betweenClosed(
+                impact.offset(-2, -2, -2), impact.offset(2, 2, 2))) {
+            if (destroyed >= 14) break;
+            double dx = pos.getX() - markedCenter.getX();
+            double dz = pos.getZ() - markedCenter.getZ();
+            if (dx * dx + dz * dz > radius * radius
+                    || impact.distSqr(pos) > 8.0D
+                    || pos.getY() < level.getMinBuildHeight()
+                    || pos.getY() >= level.getMaxBuildHeight()
+                    || !level.hasChunkAt(pos)
+                    || level.getBlockEntity(pos) != null
+                    || dragon.getRandom().nextFloat() > 0.70F) continue;
+            BlockState state = level.getBlockState(pos);
+            float hardness = state.getDestroySpeed(level, pos);
+            if (state.isAir() || !state.getFluidState().isEmpty()
+                    || hardness < 0 || hardness > 8.0F) continue;
+            // CE normally turns logs/planks into ash and deletes foliage.
+            // Area bombardment also breaks village roofs, walls, glass, hay.
+            boolean villageBlock = state.is(BlockTags.MINEABLE_WITH_AXE)
+                    || state.is(BlockTags.LOGS) || state.is(BlockTags.PLANKS)
+                    || state.is(BlockTags.LEAVES) || state.is(BlockTags.WOOL)
+                    || state.is(BlockTags.FLOWERS) || state.is(BlockTags.CROPS)
+                    || state.is(Blocks.GLASS) || state.is(Blocks.GLASS_PANE)
+                    || state.is(Blocks.HAY_BLOCK)
+                    || state.is(Blocks.COBBLESTONE) || state.is(Blocks.MOSSY_COBBLESTONE)
+                    || state.is(Blocks.COBBLESTONE_STAIRS)
+                    || state.is(Blocks.COBBLESTONE_SLAB)
+                    || state.is(Blocks.COBBLESTONE_WALL)
+                    || state.is(Blocks.STONE_BRICKS)
+                    || state.is(Blocks.STONE_BRICK_STAIRS)
+                    || state.is(Blocks.STONE_BRICK_SLAB)
+                    || state.is(Blocks.STONE_BRICK_WALL);
+            if (villageBlock && level.destroyBlock(pos, false)) ++destroyed;
+        }
+    }
+
     /** Restrict autonomous area-order terrain changes to its selected radius. */
     public static void scorch(ServerLevel level, BlockPos impact, AurenDragon dragon,
                               BlockPos markedCenter, int radius) {
