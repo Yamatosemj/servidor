@@ -388,11 +388,17 @@ public final class AurenAttackOrders {
             // TACKLE must never bypass collision checks. Approach near the
             // prey only through free space; otherwise seek a rally waypoint.
             Vec3 recovery = tactic == AirAttack.TACKLE
-                    ? tackleApproachPoint(level, enemy) : null;
+                    && waypoint != null && combatTicks < nextWaypointTick
+                    && canFlyTo(level, waypoint) ? waypoint : null;
+            if (recovery == null && tactic == AirAttack.TACKLE)
+                recovery = tackleApproachPoint(level, enemy);
             if (recovery == null) recovery = recoveryPoint(level, enemy);
             if (recovery != null) {
-                waypoint = recovery;
-                nextWaypointTick = combatTicks + 45;
+                if (waypoint == null || !waypoint.equals(recovery)
+                        || combatTicks >= nextWaypointTick) {
+                    waypoint = recovery;
+                    nextWaypointTick = combatTicks + 45;
+                }
                 dragon.getFlightController().patrolAttack(owner, recovery, false);
             } else {
                 // No verified free location: do not fly into solid blocks.
