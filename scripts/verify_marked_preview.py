@@ -5,14 +5,22 @@ root = Path(__file__).resolve().parents[1]
 src = root / "src/main/java/br/com/auren/minecraft"
 read = lambda p: (src / p).read_text()
 client, overlay = read("client/ClientEvents.java"), read("client/AurenAttackOverlay.java")
+client_mod = read("client/ClientModEvents.java")
 server, payload = read("AurenCommands.java"), read("network/AurenMarkPayload.java")
 network, dragon = read("network/AurenRiderNetwork.java"), read("entity/AurenDragon.java")
 orders = read("entity/AurenAttackOrders.java")
 for string in ('GLFW.GLFW_KEY_V', 'event.register(MARK_TARGET)', 'MARK_TARGET.consumeClick()',
-               'mc.options.keyShift.isDown()', 'new AurenMarkPayload(0, true)',
+               'InputConstants.isKeyDown(window, GLFW.GLFW_KEY_LEFT_SHIFT)',
+               'InputConstants.isKeyDown(window, GLFW.GLFW_KEY_RIGHT_SHIFT)', 'new AurenMarkPayload(0, true)',
                'new AurenMarkPayload(AurenAttackOverlay.selectedRadius(), false)',
                'mc.screen == null', 'RenderGuiEvent.Post', 'RenderLevelStageEvent'):
     assert string in client, string
+assert 'bus = EventBusSubscriber.Bus.GAME' in client
+assert 'bus = EventBusSubscriber.Bus.MOD' in client_mod
+assert 'ClientEvents.registerKeyMappings(event)' in client_mod
+assert 'ClientEvents.registerRenderers(event)' in client_mod
+assert '@SubscribeEvent\n    public static void registerKeyMappings' not in client
+assert '@SubscribeEvent\n    public static void registerRenderers' not in client
 assert 'record AurenMarkPayload(int radius, boolean clear)' in payload
 assert not any(x in payload for x in ('BlockPos', 'Vec3', 'entityId', 'dragonId'))
 assert 'registrar.playToServer(AurenMarkPayload.ID' in network
@@ -43,6 +51,7 @@ assert len(jars) == 1, jars
 with ZipFile(jars[0]) as jar:
     assert jar.testzip() is None
     for name in ('br/com/auren/minecraft/client/AurenAttackOverlay.class',
+                 'br/com/auren/minecraft/client/ClientModEvents.class',
                  'br/com/auren/minecraft/network/AurenMarkPayload.class',
                  'assets/aurenminecraft/lang/pt_br.json'):
         assert name in jar.namelist(), name

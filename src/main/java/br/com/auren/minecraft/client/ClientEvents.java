@@ -1,6 +1,7 @@
 package br.com.auren.minecraft.client;
 
 import br.com.auren.minecraft.AurenMinecraft;
+import com.mojang.blaze3d.platform.InputConstants;
 import br.com.auren.minecraft.entity.AurenDragon;
 import br.com.auren.minecraft.network.AurenDragonControlPayload;
 import br.com.auren.minecraft.network.AurenMarkPayload;
@@ -19,7 +20,8 @@ import net.neoforged.neoforge.client.event.RenderPlayerEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 
-@EventBusSubscriber(modid = AurenMinecraft.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = AurenMinecraft.MOD_ID, value = Dist.CLIENT,
+        bus = EventBusSubscriber.Bus.GAME)
 public final class ClientEvents {
     private ClientEvents() {}
 
@@ -39,7 +41,7 @@ public final class ClientEvents {
     private static int lastPilotId = -1;
     private static byte lastPilotControls = -1;
 
-    @SubscribeEvent
+    // Called from ClientModEvents on the MOD bus.
     public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(DRAGON_DOWN);
         event.register(DRAGON_BREATH);
@@ -61,7 +63,11 @@ public final class ClientEvents {
             while (MARK_TARGET.consumeClick()) {
                 AurenDragon owned = AurenAttackOverlay.nearbyOwnedDragon(mc);
                 if (owned == null) continue;
-                if (mc.options.keyShift.isDown()) {
+                // Physical Shift, independent of the player's remapped Sneak key.
+                long window = mc.getWindow().getWindow();
+                boolean shiftHeld = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_LEFT_SHIFT)
+                        || InputConstants.isKeyDown(window, GLFW.GLFW_KEY_RIGHT_SHIFT);
+                if (shiftHeld) {
                     if (owned.getSyncedMarkMode() != 0) {
                         PacketDistributor.sendToServer(new AurenMarkPayload(0, true));
                     } else {
@@ -113,7 +119,7 @@ public final class ClientEvents {
         }
     }
 
-    @SubscribeEvent
+    // Called from ClientModEvents on the MOD bus.
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(AurenMinecraft.AUREN.get(), AurenDragonRenderer::new);
     }
