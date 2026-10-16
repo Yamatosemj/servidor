@@ -18,8 +18,10 @@
   sem loot nem abas criativas. No mundo de teste, as marcas somem aos
   poucos por tick aleatório e os blocos naturais reaparecem.
 - Respeita `mobGriefing`: se falso, nenhum bloco do mundo é modificado.
-  Só transforma terreno natural permitido; não altera baús, plantações,
-  construções do jogador, blocos com inventário ou regiões descarregadas.
+  Só transforma tipos de blocos permitidos; não altera diretamente baús,
+  plantações, blocos com inventário ou regiões descarregadas. **Atenção:**
+  pedra, terra e pedregulho colocados pelo jogador também podem queimar:
+  o jogo não distingue esses blocos dos gerados naturalmente.
   O fogo azul pode existir sobre o terreno carbonizado por uma tag de
   suporte do soul fire.
 - **R** permanece sopro azul, **G** permanece raio; montaria, voo,
@@ -30,7 +32,8 @@
 **Faça backup:** esta versão introduz seis tipos de blocos novos no save.
 Evite abrir um mundo modificado pela 0.7.6 em versões anteriores do Auren
 sem um backup. O CE inteiro não está incluso. O relevo não é quebrado por
-explosões, mas o efeito queima natural permanece até reverter.
+explosões, mas blocos permitidos podem mudar temporariamente, inclusive
+em construções. Para não alterar blocos, use `/gamerule mobGriefing false`.
 
 ### O que testar
 
