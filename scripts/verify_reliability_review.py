@@ -55,7 +55,7 @@ assert "findEntrance" in cave and "findCaveLanding" in brain
 assert "level.explode(" not in fire
 assert "AurenScorchTerrain.scorch(" in fire
 assert "hunter.tick(level, owner, enemy, directSight)" in orders
-assert "mod_version=0.7.24-natural-companion-alpha" in (root/"gradle.properties").read_text()
+assert "mod_version=0.7.25-contextual-daily-routine-alpha" in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars
 with ZipFile(jars[0]) as jar:
