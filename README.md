@@ -1,3 +1,27 @@
+# Auren Minecraft 0.7.27 — Rotinas visíveis e verificáveis
+
+**Motivo da atualização:** o usuário não percebeu mudanças em gameplay após a 0.7.26. A política de utilidade mudou o ranking mas oferecia quase as mesmas atividades visuais; na prática `EXPLORE` podia falhar a escolha de altura/piso e cair para `OBSERVE`, que só mexia a cabeça. Isso não é teste satisfatório de autonomia.
+
+### Correções pontuais
+1. **Ação nova `APPROACH_OWNER`:** quando descansando perto do dono mas a mais de ~3,6 blocos na forma grande (2,5 na pequena), o Auren pode se aproximar voluntariamente por uma rota A* para um piso seguro **ao lado do dono**, sem entrar no hitbox dele, sem voar e sem atrapalhar combate/montaria.
+2. **Descanso diurno mais perceptível:** a pontuação do descanso foi recalibrada. Quando explorar não é possível, descansar/sentar passa a ser uma alternativa real, em vez de sempre cair para observar invisivelmente.
+3. **Caminho mais confiável:** tenta primeiro altura do dono, depois até ±2 blocos; verifica chão sólido, fluido, colisão, chunks e `Path.canReach()`. Limites: 12 amostras horizontais e **6 cálculos A*** por escolha. Se inviável, tenta próxima intenção segura; não força teleporte, destruição ou voo.
+4. **Diagnóstico de verdade:** `/auren mente` agora mostra **rotina executada**, total de rotinas iniciadas na sessão, tentativas de caminho inviáveis, motivo que impede rotina, e última interrupção, além das necessidades simuladas e da última intenção. Esses contadores de diagnóstico são transitórios; energia/curiosidade/alerta e última escolha continuam persistentes no NBT.
+5. **Sem IA externa** nem funções fora de rotina. O mod continua usando o controlador original CE para voo, ataque, formatação, e as defesas/ordens têm prioridade.
+
+### Como testar no jogo
+1. Instale **somente um arquivo Auren JAR**: substitua o anterior, não deixe 0.7.26 junto.
+2. Deixe o Auren adulto livre, no **chão**, com você a aproximadamente 5–8 blocos. Fique parado por 60–90 segundos e execute `/auren mente` algumas vezes. A saída deve mostrar rotina, iniciadas e se houve caminhos inviáveis.
+3. Observe aproximação, exploração e pose sentada diurna. Se não acontecer, o comando deve explicar por quê (**dono distante**, **sentado por ordem**, **voando**, **em combate**, **dono movendo**, **sem rota**, etc.).
+4. `/time set night`: o descanso noturno deve ser mais provável. Se o dono sair, atacar ou montar, a rotina interrompe.
+5. Repita o teste em uma construção e num campo plano: resultados diferentes permitem identificar falhas reais de navegação.
+6. Marque criaturas, ataque de fogo/raio, monte, abra a caverna: sistemas antigos preservados.
+
+### Estado
+**Não atestamos ainda mudança visual em gameplay**; os testes automatizados comprovam o algoritmo, os limites e a compilação. A PR é draft empilhada sobre a 0.7.26.
+
+---
+
 # Auren Minecraft 0.7.26 — Cérebro local offline-first
 
 > **Roadmap permanente:** [docs/ROADMAP_AUREN_AUTONOMO.md](docs/ROADMAP_AUREN_AUTONOMO.md). Esta é a **etapa 1**, não a conclusão de toda a autonomia.

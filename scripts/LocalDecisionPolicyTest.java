@@ -53,7 +53,14 @@ public final class LocalDecisionPolicyTest {
 
         List<AurenLocalDecisionPolicy.Rated> ranked =
                 AurenLocalDecisionPolicy.rank(different);
-        require(ranked.size() == 4, "only available options may be ranked");
+        require(ranked.size() == 5, "only available options may be ranked");
+        require(AurenLocalDecisionPolicy.score(Activity.APPROACH_OWNER, different)
+                        > AurenLocalDecisionPolicy.score(Activity.OBSERVE, different),
+                "energized daytime companion must consider actually approaching owner");
+        Context tiredDay = context(35, 35, 12, false, false, false, null);
+        require(AurenLocalDecisionPolicy.score(Activity.REST, tiredDay)
+                        > AurenLocalDecisionPolicy.score(Activity.OBSERVE, tiredDay),
+                "daytime rest must be a meaningful visible alternative");
         for (int i = 1; i < ranked.size(); i++)
             require(ranked.get(i-1).utility() >= ranked.get(i).utility(),
                     "descending ranking must be stable");

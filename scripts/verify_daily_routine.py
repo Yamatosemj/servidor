@@ -17,7 +17,7 @@ for expected in (
   "private enum Routine { OBSERVE, EXPLORE, INVESTIGATE, REST, SEEK_SHELTER }",
   "MIN_COOLDOWN_TICKS = 100",
   "MAX_COOLDOWN_TICKS = 230",
-  "MAX_SEARCH_ATTEMPTS = 9",
+  "MAX_SEARCH_ATTEMPTS = 12",
   "private boolean night()",
   "getDayTime() % 24000L",
   "private boolean exposedRain()",
@@ -77,7 +77,7 @@ assert "this.iafFlightManager" not in routine
 assert "getNavigation().createPath(this.owner, 0)" in follow
 assert "findDistributedAreaImpact(" in orders
 assert "AurenScorchTerrain.scorchFace(" in fire
-assert "mod_version=0.7.26-offline-mind-alpha" in (
+assert "mod_version=0.7.27-visible-offline-routine-alpha" in (
     root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars
