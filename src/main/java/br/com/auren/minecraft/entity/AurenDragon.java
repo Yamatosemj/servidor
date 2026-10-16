@@ -720,12 +720,18 @@ public final class AurenDragon extends TamableAnimal {
         this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.65D) {
             @Override
             public boolean canUse() {
-                return !AurenDragon.this.isVehicle() && super.canUse();
+                return !AurenDragon.this.isVehicle()
+                        && !AurenDragon.this.getAttackOrders().hasOrder()
+                        && AurenDragon.this.getFlightMode() == AurenFlightController.GROUNDED
+                        && super.canUse();
             }
 
             @Override
             public boolean canContinueToUse() {
-                return !AurenDragon.this.isVehicle() && super.canContinueToUse();
+                return !AurenDragon.this.isVehicle()
+                        && !AurenDragon.this.getAttackOrders().hasOrder()
+                        && AurenDragon.this.getFlightMode() == AurenFlightController.GROUNDED
+                        && super.canContinueToUse();
             }
         });
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));

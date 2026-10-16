@@ -61,7 +61,7 @@ assert "new AurenAttackOrders(this)" in dragon
 assert "this.attackOrders.tick();" in dragon
 assert "this.attackOrders.save(tag);" in dragon
 assert "this.attackOrders.load(tag);" in dragon
-assert dragon.count("!AurenDragon.this.getAttackOrders().hasOrder()") == 2
+assert dragon.count("!AurenDragon.this.getAttackOrders().hasOrder()") == 4
 assert "&& !this.dragon.getAttackOrders().hasOrder()" in follow
 assert "if (!this.dragon.getAttackOrders().hasOrder())" in follow
 
@@ -90,7 +90,7 @@ assert "withinArea(Vec3.atCenterOf(firePos))" in fire
 assert 4.5**2 <= 5**2 and not (5.5**2 <= 5**2)
 assert "BlockPos markedCenter, int radius" in terrain
 assert "dx * dx + dz * dz > radius * radius" in terrain
-assert "mod_version=0.7.13-smart-creature-combat-alpha" in version
+assert "mod_version=0.7.14-combat-safety-alpha" in version
 
 # Pure numerical radius and sweep sanity (no engine/AI claim).
 for r in range(5, 31, 5):

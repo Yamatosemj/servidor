@@ -121,7 +121,10 @@ public final class AurenAttackOrders {
     }
 
     public boolean markEnemy(LivingEntity enemy) {
-        if (!canMarkTarget(enemy)) return false;
+        if (!canMarkTarget(enemy)
+                || dragon.position().distanceToSqr(enemy.getBoundingBox().getCenter())
+                   > MAX_MARK_DISTANCE * MAX_MARK_DISTANCE
+                || !dragon.level().hasChunkAt(enemy.blockPosition())) return false;
         mode = ENEMY;
         markedEnemy = enemy.getUUID();
         recentlyResolvedEnemy = enemy;
@@ -133,7 +136,9 @@ public final class AurenAttackOrders {
 
     public boolean markArea(BlockPos center, int selectedRadius) {
         if (!areaEnabled || center == null || selectedRadius < 5 || selectedRadius > 30
-                || selectedRadius % 5 != 0 || !dragon.level().hasChunkAt(center)) return false;
+                || selectedRadius % 5 != 0 || !dragon.level().hasChunkAt(center)
+                || dragon.position().distanceToSqr(Vec3.atCenterOf(center))
+                   > MAX_MARK_DISTANCE * MAX_MARK_DISTANCE) return false;
         mode = AREA;
         areaCenter = center.immutable();
         markedEnemy = null;
@@ -213,6 +218,56 @@ public final class AurenAttackOrders {
     }
 
     /**
+     * Find a safe approach *near* a blocked target; never send the large
+     * collision box of Auren into the target's solid block or cave wall.
+     * Still lets the melee hit be triggered by actual box proximity later.
+     */
+    private Vec3 tackleApproachPoint(ServerLevel level, LivingEntity enemy) {
+        Vec3 away = dragon.position().subtract(enemy.position());
+        away = new Vec3(away.x, 0.0D, away.z);
+        if (away.lengthSqr() < 1.0E-4D) away = new Vec3(1.0D, 0.0D, 0.0D);
+        away = away.normalize();
+        for (int dist : new int[] {3, 5, 8}) {
+            for (int elevation : new int[] {2, 5, 9}) {
+                Vec3 candidate = enemy.position().add(away.scale(dist))
+                        .add(0.0D, elevation, 0.0D);
+                if (canFlyTo(level, candidate)
+                        && clearViewFrom(level, candidate, enemy))
+                    return candidate;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * When an enemy is hidden in a cave or room, a LOS-approved firing
+     * position may not exist. Recover to a COLLISION-FREE rally point and
+     * periodically try again; never deliberately dive through the wall.
+     */
+    private Vec3 recoveryPoint(ServerLevel level, LivingEntity enemy) {
+        Vec3 visible = hoverPoint(level, enemy);
+        if (visible != null) return visible;
+        for (int i = 0; i < 8; i++) {
+            double angle = i * Math.PI / 4.0D;
+            double distance = 9.0D + (i % 2) * 4.0D;
+            BlockPos horizontal = BlockPos.containing(
+                    enemy.getX() + Math.cos(angle) * distance,
+                    enemy.getY(), enemy.getZ() + Math.sin(angle) * distance);
+            if (!level.hasChunkAt(horizontal)) continue;
+            int surface = level.getHeightmapPos(
+                    Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, horizontal).getY();
+            Vec3 candidate = new Vec3(horizontal.getX() + 0.5D,
+                    Math.max(surface + 8.0D, enemy.getY() + 8.0D),
+                    horizontal.getZ() + 0.5D);
+            if (canFlyTo(level, candidate)) return candidate;
+        }
+        // Loaded and unobstructed: a steady local holding point is better
+        // than a repeated forced landing, especially in constrained spaces.
+        Vec3 holding = dragon.position().add(0.0D, 2.0D, 0.0D);
+        return canFlyTo(level, holding) ? holding : null;
+    }
+
+    /**
      * Preserve CE's three original tactics while adapting the decision
      * logic to a marked prey. Decisions are based on combat opportunity:
      * reacquire sight, close distance, dive, then sweep or hover to breathe.
@@ -266,11 +321,17 @@ public final class AurenAttackOrders {
                 if (meleeCooldown > 0) --meleeCooldown;
                 double reach = (dragon.getBbWidth() + enemy.getBbWidth() + 0.6D);
                 if (meleeCooldown == 0 && dragon.distanceToSqr(enemy) <= reach * reach
+                        && dragon.getBoundingBox().inflate(0.7D).intersects(enemy.getBoundingBox())
                         && dragon.hasLineOfSight(enemy) && canMarkTarget(enemy)) {
                     // CE TACKLE must complete a physical contact hit, then
                     // create space for another dive instead of circling in place.
                     boolean landedHit = dragon.doHurtTarget(enemy);
                     meleeCooldown = 20;
+                    if (landedHit) {
+                        // A successful dive is an actual combat event: let
+                        // the next tactical decision follow the breakaway.
+                        nextTacticTick = Math.min(nextTacticTick, combatTicks + 42);
+                    }
                     if (landedHit) {
                         Vec3 delta = dragon.position().subtract(enemy.position());
                         Vec3 retreat = new Vec3(delta.x, 0, delta.z);
@@ -293,12 +354,16 @@ public final class AurenAttackOrders {
                 // close/far; avoid rerolling directions every few seconds.
                 double horizontalSq = dragon.distanceToSqr(
                         enemy.getX(), dragon.getY(), enemy.getZ());
-                if (waypoint == null || combatTicks >= nextWaypointTick
-                        || horizontalSq < 16.0D || horizontalSq > 900.0D
-                        || !clearViewFrom(level, waypoint, enemy)) {
+                if (waypoint == null || !canFlyTo(level, waypoint)
+                        || combatTicks >= nextWaypointTick
+                        || (sightLostTicks == 20)) {
                     Vec3 chosen = hoverPoint(level, enemy);
+                    // If the target is fully enclosed, keep flying around
+                    // loaded, clear terrain rather than repeatedly landing.
+                    if (chosen == null) chosen = recoveryPoint(level, enemy);
                     if (chosen != null) waypoint = chosen;
-                    nextWaypointTick = combatTicks + 80;
+                    nextWaypointTick = combatTicks + ((horizontalSq < 16.0D
+                            || horizontalSq > 900.0D) ? 45 : 70);
                 }
                 next = waypoint;
                 fireAim = dragon.hasLineOfSight(enemy) ? center : null;
@@ -320,22 +385,24 @@ public final class AurenAttackOrders {
             default -> { return; }
         }
         if (next == null || !canFlyTo(level, next)) {
-            // If the target is standing inside terrain, CE can still aim
-            // towards it for tackle, but avoid pushing unloaded waypoints.
-            if (tactic == AirAttack.TACKLE && next != null
-                    && level.hasChunkAt(BlockPos.containing(next))) {
-                dragon.getFlightController().patrolAttack(owner, next, true);
-            } else {
-                // An obstructed prey position is not a reason to land every
-                // tick. Recover to a safe CE HOVER_BLAST vantage instead.
-                Vec3 recovery = hoverPoint(level, enemy);
-                if (recovery != null) {
+            // TACKLE must never bypass collision checks. Approach near the
+            // prey only through free space; otherwise seek a rally waypoint.
+            Vec3 recovery = tactic == AirAttack.TACKLE
+                    && waypoint != null && combatTicks < nextWaypointTick
+                    && canFlyTo(level, waypoint) ? waypoint : null;
+            if (recovery == null && tactic == AirAttack.TACKLE)
+                recovery = tackleApproachPoint(level, enemy);
+            if (recovery == null) recovery = recoveryPoint(level, enemy);
+            if (recovery != null) {
+                if (waypoint == null || !waypoint.equals(recovery)
+                        || combatTicks >= nextWaypointTick) {
                     waypoint = recovery;
                     nextWaypointTick = combatTicks + 45;
-                    dragon.getFlightController().patrolAttack(owner, recovery, false);
-                } else {
-                    dragon.getFlightController().land();
                 }
+                dragon.getFlightController().patrolAttack(owner, recovery, false);
+            } else {
+                // No verified free location: do not fly into solid blocks.
+                dragon.getFlightController().land();
             }
             fireAim = null;
             return;

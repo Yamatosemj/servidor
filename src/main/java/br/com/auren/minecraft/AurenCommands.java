@@ -67,10 +67,14 @@ public final class AurenCommands {
                 player.level(), player, eye, end, new AABB(eye, end).inflate(1.0D),
                 entity -> entity instanceof LivingEntity living
                         && dragon.getAttackOrders().canMarkTarget(living));
-        if (hit == null || !(hit.getEntity() instanceof LivingEntity target)
-                || !dragon.getAttackOrders().markEnemy(target)) {
+        if (hit == null || !(hit.getEntity() instanceof LivingEntity target)) {
             context.getSource().sendFailure(Component.literal(
                     "Mire em uma criatura válida a até 48 blocos."));
+            return 0;
+        }
+        if (!dragon.getAttackOrders().markEnemy(target)) {
+            context.getSource().sendFailure(Component.literal(
+                    "Alvo inválido ou além de 64 blocos de distância do Auren."));
             return 0;
         }
         context.getSource().sendSuccess(() ->
@@ -98,7 +102,8 @@ public final class AurenCommands {
         }
         BlockPos center = hit.getBlockPos();
         if (!dragon.getAttackOrders().markArea(center, radius)) {
-            context.getSource().sendFailure(Component.literal("Não foi possível marcar a área."));
+            context.getSource().sendFailure(Component.literal(
+                    "Área inválida, descarregada ou além de 64 blocos do Auren."));
             return 0;
         }
         context.getSource().sendSuccess(() -> Component.literal(
@@ -192,7 +197,8 @@ public final class AurenCommands {
                     && dragon.getAttackOrders().markEnemy(mob)) {
                 player.displayClientMessage(Component.literal("Auren: inimigo marcado!"), true);
             } else {
-                player.displayClientMessage(Component.literal("Este alvo não pode ser marcado (dono/aliado/invulnerável)."), true);
+                player.displayClientMessage(Component.literal(
+                        "Alvo inválido, protegido ou além de 64 blocos do Auren."), true);
             }
             return;
         }
@@ -207,7 +213,7 @@ public final class AurenCommands {
                     "Auren: bombardeio marcado, raio " + radius + " blocos."), true);
         } else {
             player.displayClientMessage(Component.literal(
-                    "Mire em uma criatura ou bloco a até 48 blocos."), true);
+                    "Mire em uma criatura/bloco a até 48 blocos, e no máximo 64 do Auren."), true);
         }
     }
 
