@@ -1,3 +1,18 @@
+# Auren Minecraft 0.7.20 — Revisão de confiabilidade
+
+Esta versão **não adiciona mais poderes**. Corrige falhas confirmadas na 0.7.19 e reforça o teste dos sistemas existentes.
+
+- **Percepção sem pontos cegos:** leitura completa, em disco de 5 blocos e 5 níveis de altura, incluindo o bloco onde o dono está; não deixa lava/fogo/sinos passarem despercebidos por posições pares.
+- **Distância verdadeira:** criaturas consideradas apenas até 24 blocos **reais** de distância do dono. A lista é organizada por distância antes de aplicar o limite de 96, priorizando ameaças e animais próximos.
+- **Memórias mais corretas:** distingue surgimento/desaparecimento de monstros e sino de vila de mudanças reais de perigo, sem spam por qualquer flutuação de contagem.
+- **Navegação em cavernas:** a busca de entrada não aceita mais qualquer bloco de ar como rota. Verifica um volume desocupado de 0,50×0,70 bloco (o tamanho da forma pequena); corredores com colisões de paredes/lajes não são classificados como livres.
+- **Preservação:** nenhuma alteração em fogo azul, carbonização/magma, ataques, montaria, voo original CE, explosões, atalhos existentes, ou modelos/animações.
+- **Teste:** novo verificador específico para cobertura de sensores e hitbox de caverna. O script estrutural sozinho não substitui testes de gameplay.
+
+Detalhes de criticidade e de outros riscos observados estão em `docs/AUDIT_0720.md`.
+
+---
+
 # Auren Minecraft 0.7.19 — Percepção do Mundo
 
 Primeira camada de percepção ambiental server-side do Auren, planejada para integrar futuramente com a IA Auren desktop. **Não existe ainda conexão com modelo de linguagem, voz ou memórias da IA do computador.**
