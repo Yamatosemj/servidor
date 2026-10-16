@@ -33,6 +33,7 @@ for string in ('RenderLevelStageEvent.Stage.AFTER_PARTICLES', 'RenderType.lines(
                'center.getY() + 9.5D', 'selectedRadius >= 30 ? 5 : selectedRadius + 5',
                'dragon.getSyncedMarkMode()', 'Preview aiming = preview(mc, dragon)'):
     assert string in overlay, string
+assert '.setNormal(nx, ny, nz)' in overlay  # True segment direction for line shader
 assert 'getMarkedEnemyEntityId()' in orders
 assert 'DRAGON_BREATH.isDown()' in client and 'DRAGON_LIGHTNING.isDown()' in client
 assert 'Commands.literal("atacar")' in server and 'Commands.literal("parar")' in server
