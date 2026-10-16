@@ -136,10 +136,23 @@ public final class AurenOriginalAnimations {
         } else {
             pose = this.streamCharge.get(2);
         }
-        // Original CE bone naming, and original poses: jaw opens + head
-        // rises as the attack charges. Never overwrite flapping wing bones.
+        // Original CE stream-charge and open-jaw poses. Overlay a gradual
+        // downward neck/head movement during the transition to actual fire.
+        // Wings and body flight keyframes remain untouched.
         AurenPoseTransition.applyBones(model, pose, blend,
                 "BodyUpper", "Neck1", "Neck2", "Neck3", "Head", "Jaw");
+        float lowering = Mth.clamp((ticks - 10.0F) / 18.0F, 0.0F, 1.0F) * blend;
+        lowerBreathBone(model, "Neck1", 0.06F, lowering);
+        lowerBreathBone(model, "Neck2", 0.10F, lowering);
+        lowerBreathBone(model, "Neck3", 0.12F, lowering);
+        lowerBreathBone(model, "Head", 0.17F, lowering);
+    }
+
+    /** Add a smooth head dip on top of CE's genuine Tabula breath keyframes. */
+    private static void lowerBreathBone(TabulaModel<AurenDragon> model,
+                                        String boneName, float radians, float blend) {
+        AdvancedModelBox bone = model.getCube(boneName);
+        if (bone != null) bone.rotateAngleX += radians * blend;
     }
 
     /** Original CE three-keyframe BITE attack for adult and baby defenders. */

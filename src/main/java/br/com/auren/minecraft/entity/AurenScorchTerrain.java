@@ -29,83 +29,51 @@ public final class AurenScorchTerrain {
     }
 
     /**
-     * Bounded stage-3 CE charge-style destruction for AREA orders only.
-     * No explosions, drops, block entities, unloaded chunks, or unbreakables.
-     * Unlike terrain scorching, village facades actually lose blocks.
-     */
-    public static void bombard(ServerLevel level, BlockPos impact, AurenDragon dragon,
-                               BlockPos markedCenter, int radius) {
-        if (markedCenter == null || radius < 5 || radius > 30
-                || !level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)
-                || !level.hasChunkAt(impact)) return;
-        int destroyed = 0;
-        // A sustained sweep damages both the ground and the buildings over it.
-        for (BlockPos pos : BlockPos.betweenClosed(
-                impact.offset(-3, -2, -3), impact.offset(3, 2, 3))) {
-            if (destroyed >= 20) break;
-            double dx = pos.getX() - markedCenter.getX();
-            double dz = pos.getZ() - markedCenter.getZ();
-            if (dx * dx + dz * dz > radius * radius
-                    || impact.distSqr(pos) > 12.0D
-                    || pos.getY() < level.getMinBuildHeight()
-                    || pos.getY() >= level.getMaxBuildHeight()
-                    || !level.hasChunkAt(pos)
-                    || level.getBlockEntity(pos) != null
-                    || dragon.getRandom().nextFloat() > 0.85F) continue;
-            BlockState state = level.getBlockState(pos);
-            float hardness = state.getDestroySpeed(level, pos);
-            if (state.isAir() || !state.getFluidState().isEmpty()
-                    || hardness < 0 || hardness > 8.0F) continue;
-            // The old whitelist omitted most village foundations/ground.
-            // Respect hardness and block entities, but allow both structural
-            // and diggable terrain blocks in the marked destructible circle.
-            boolean villageBlock = state.is(BlockTags.MINEABLE_WITH_AXE)
-                    || state.is(BlockTags.MINEABLE_WITH_PICKAXE)
-                    || state.is(BlockTags.MINEABLE_WITH_SHOVEL)
-                    || state.is(BlockTags.MINEABLE_WITH_HOE)
-                    || state.is(BlockTags.LOGS) || state.is(BlockTags.PLANKS)
-                    || state.is(BlockTags.LEAVES) || state.is(BlockTags.WOOL)
-                    || state.is(BlockTags.FLOWERS) || state.is(BlockTags.CROPS)
-                    || state.is(Blocks.GLASS) || state.is(Blocks.GLASS_PANE)
-                    || state.is(Blocks.HAY_BLOCK) || state.is(Blocks.DIRT)
-                    || state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.SAND)
-                    || state.is(Blocks.GRAVEL);
-
-            if (villageBlock && level.destroyBlock(pos, false)) ++destroyed;
-        }
-    }
-
-    /**
-     * Only area bombing ignites ordinary flammable building materials.
-     * Soul fire cannot survive beside normal wood; a real vanilla FIRE block
-     * is needed for wooden walls/roofs to catch and spread flames.
-     * The blue breath PARTICLES are unaffected.
+     * Ignite the flammable buildings caught in a dragonfire stream.
+     * We NEVER destroy blocks directly. Vanilla fire can naturally burn
+     * wooden roofs and walls later (subject to doFireTick), unlike soul fire.
+     * The projectile and mouth plume remain blue.
      */
     public static void igniteVillage(ServerLevel level, BlockPos impact, AurenDragon dragon,
                                      BlockPos markedCenter, int radius) {
-        if (markedCenter == null || radius < 5 || radius > 30
-                || !level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)
+        if (!level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)
+                || (markedCenter != null && (radius < 5 || radius > 30))
                 || !level.hasChunkAt(impact)) return;
+        // Multiple ignition sources across walls/roofs, rather than a single
+        // soul-fire patch on the ground. 16 ignitions per impact maximum.
         int lit = 0;
         for (BlockPos wood : BlockPos.betweenClosed(
-                impact.offset(-3, -2, -3), impact.offset(3, 2, 3))) {
-            if (lit >= 8) break;
-            double dx = wood.getX() - markedCenter.getX();
-            double dz = wood.getZ() - markedCenter.getZ();
-            if (dx * dx + dz * dz > radius * radius
-                    || !level.hasChunkAt(wood) || level.getBlockEntity(wood) != null)
+                impact.offset(-4, -3, -4), impact.offset(4, 3, 4))) {
+            if (lit >= 16) break;
+            if (!level.hasChunkAt(wood) || level.getBlockEntity(wood) != null)
                 continue;
+            if (markedCenter != null) {
+                double dx = (wood.getX() + 0.5D) - (markedCenter.getX() + 0.5D);
+                double dz = (wood.getZ() + 0.5D) - (markedCenter.getZ() + 0.5D);
+                if (dx * dx + dz * dz > radius * radius) continue;
+            }
             BlockState fuel = level.getBlockState(wood);
-            if (!(fuel.is(BlockTags.PLANKS) || fuel.is(BlockTags.LOGS)
-                    || fuel.is(BlockTags.WOOL) || fuel.is(BlockTags.LEAVES)
-                    || fuel.is(Blocks.HAY_BLOCK)) || dragon.getRandom().nextFloat() > 0.65F)
-                continue;
+            // Most village roofs use wooden STAIRS and SLABS, previously
+            // missing from the block ignition list.
+            boolean flammable = fuel.is(BlockTags.PLANKS)
+                    || fuel.is(BlockTags.LOGS)
+                    || fuel.is(BlockTags.WOODEN_STAIRS)
+                    || fuel.is(BlockTags.WOODEN_SLABS)
+                    || fuel.is(BlockTags.WOODEN_FENCES)
+                    || fuel.is(BlockTags.WOODEN_DOORS)
+                    || fuel.is(BlockTags.WOODEN_TRAPDOORS)
+                    || fuel.is(BlockTags.WOOL)
+                    || fuel.is(BlockTags.LEAVES)
+                    || fuel.is(Blocks.HAY_BLOCK);
+            if (!flammable || dragon.getRandom().nextFloat() > 0.80F) continue;
             for (Direction face : Direction.values()) {
                 BlockPos firePos = wood.relative(face);
-                double fx = firePos.getX() - markedCenter.getX();
-                double fz = firePos.getZ() - markedCenter.getZ();
-                if (fx * fx + fz * fz > radius * radius
-                        || !level.hasChunkAt(firePos)
+                if (markedCenter != null) {
+                    double fx = firePos.getX() - markedCenter.getX();
+                    double fz = firePos.getZ() - markedCenter.getZ();
+                    if (fx * fx + fz * fz > radius * radius) continue;
+                }
+                if (!level.hasChunkAt(firePos)
                         || !level.isEmptyBlock(firePos)
                         || !Blocks.FIRE.defaultBlockState().canSurvive(level, firePos))
                     continue;

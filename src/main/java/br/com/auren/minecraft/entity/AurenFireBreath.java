@@ -45,8 +45,6 @@ public final class AurenFireBreath {
     private static final float CE_FIRE_DAMAGE_SCALE = 2.0F;
     private static final int CE_IGNITE_SECONDS = 5 + CE_STAGE * 5;
     private static final float CE_RENDER_SIZE = 3.25F / 0.35F;
-    // Autonomous attacks must respect where the actual dragon muzzle faces.
-    private static final double MIN_FORWARD_DOT = Math.cos(Math.toRadians(55.0D));
 
     private final AurenDragon dragon;
     private int fireBreathTicks;
@@ -101,13 +99,8 @@ public final class AurenFireBreath {
             return;
         }
 
-        // Aiming and flight now share a forward strafing run. A temporary
-        // loss of alignment pauses fire without throwing away all warmup.
-        if (autonomousFire && !canAimForward(getHeadPosition(), autoAim)) {
-            this.fireBreathTicks = Math.max(CE_WARMUP_TICKS, this.fireBreathTicks);
-            this.burnProgress = Math.max(0, this.burnProgress - 1);
-            return;
-        }
+        // No angle restriction: the marked target dictates aim, while the
+        // original CE pose visibly lowers the head during breath.
         this.aimGraceTicks = 0;
 
         // CE DragonBaseEntity.isActuallyBreathingFire = fireBreathTicks > 20.
@@ -202,18 +195,6 @@ public final class AurenFireBreath {
         }
     }
 
-    /** Autonomous fire can never curve around the body or shoot backward. */
-    private boolean canAimForward(Vec3 muzzle, Vec3 aim) {
-        Vec3 delta = aim.subtract(muzzle);
-        double horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
-        if (horizontal < 1.0D || muzzle.distanceToSqr(aim) > CE_REACH * CE_REACH)
-            return false;
-        double yaw = Math.toRadians(dragon.getYRot());
-        double forwardX = -Math.sin(yaw);
-        double forwardZ = Math.cos(yaw);
-        return (delta.x * forwardX + delta.z * forwardZ) / horizontal >= MIN_FORWARD_DOT;
-    }
-
     /**
      * Adapted from CE DragonBaseEntity.getHeadPosition, using stage-3 size
      * and Auren's synced flight blend (no custom mouth-part entity exists).
@@ -239,6 +220,10 @@ public final class AurenFireBreath {
                 pitchMinus = 0.95F * Math.abs(dragonPitch / 90.0F);
             }
         }
+        // Follow the synced original breath pose with the muzzle: its neck
+        // and head lower while fire is emitted, not just the particles.
+        float neckLower = Mth.clamp((this.fireBreathTicks - 10.0F) / 18.0F,
+                0.0F, 1.0F);
         float flightXz = 1.0F + flyProg + hoverProg;
         float xzMod = (1.7F * CE_RENDER_SIZE * 0.3F * flightXz)
                 + CE_RENDER_SIZE * (0.3F * Mth.sin((float)
@@ -248,7 +233,7 @@ public final class AurenFireBreath {
         return new Vec3(
                 dragon.getX() + xzMod * Mth.cos(angle),
                 dragon.getY() + (0.7F + hoverProg + flyProg + pitchMulti)
-                        * CE_RENDER_SIZE * 0.3F,
+                        * CE_RENDER_SIZE * 0.3F - neckLower * 0.65D,
                 dragon.getZ() + xzMod * Mth.sin(angle));
     }
 
@@ -271,17 +256,12 @@ public final class AurenFireBreath {
             }
         }
 
-        // CE destruction manager transforms a 3x3x3 terrain area at the
-        // stage-3 impact. This is entirely distinct from damage to mobs
-        // and only runs if mobGriefing is enabled.
+        // Impact carbonizes some ordinary ground and ignites nearby
+        // flammable structure blocks. The dragon itself NEVER removes blocks;
+        // the natural vanilla fire tick may later consume wood.
         BlockPos scorchCenter = blockHit != null
                 ? blockHit.getBlockPos() : BlockPos.containing(center).below();
         if (areaOrder) {
-            // Stronger CE-inspired strike exists ONLY for explicitly marked
-            // aerial bombardment; riding and creature combat remain unchanged.
-            AurenScorchTerrain.bombard(level, scorchCenter, dragon,
-                    dragon.getAttackOrders().getAreaCenter(),
-                    dragon.getAttackOrders().getRadius());
             AurenScorchTerrain.scorch(level, scorchCenter, dragon,
                     dragon.getAttackOrders().getAreaCenter(),
                     dragon.getAttackOrders().getRadius());
@@ -290,6 +270,9 @@ public final class AurenFireBreath {
                     dragon.getAttackOrders().getRadius());
         } else {
             AurenScorchTerrain.scorch(level, scorchCenter, dragon);
+            // Riding and marked creature breath can also start a real fire
+            // when the ray strikes flammable material.
+            AurenScorchTerrain.igniteVillage(level, scorchCenter, dragon, null, 0);
         }
 
         // Blue SOUL_FIRE persists only where vanilla soul fire can survive.
