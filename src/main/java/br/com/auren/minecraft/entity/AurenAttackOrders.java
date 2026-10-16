@@ -189,7 +189,8 @@ public final class AurenAttackOrders {
                     enemy.getX() + Math.cos(angle) * range,
                     enemy.getY() + 10.0D + dragon.getRandom().nextDouble() * 6.0D,
                     enemy.getZ() + Math.sin(angle) * range);
-            if (canFlyTo(level, point) && clearViewFrom(level, point, enemy))
+            if (canFlyTo(level, point) && clearFlightCorridor(level, point)
+                    && clearViewFrom(level, point, enemy))
                 return point;
         }
         return null;
@@ -338,6 +339,8 @@ public final class AurenAttackOrders {
                 if (meleeCooldown > 0) --meleeCooldown;
                 double reach = (dragon.getBbWidth() + enemy.getBbWidth() + 0.6D);
                 if (meleeCooldown == 0 && dragon.distanceToSqr(enemy) <= reach * reach
+                        && dragon.getBoundingBox().inflate(0.65D)
+                                .intersects(enemy.getBoundingBox())
                         && dragon.hasLineOfSight(enemy) && canMarkTarget(enemy)) {
                     // CE TACKLE must complete a physical contact hit, then
                     // create space for another dive instead of circling in place.
@@ -397,16 +400,17 @@ public final class AurenAttackOrders {
             }
             default -> { return; }
         }
-        if (next == null || !canFlyTo(level, next)) {
+        if (next == null || !canFlyTo(level, next)
+                || !clearFlightCorridor(level, next)) {
             fireAim = null;
             // Never bypass canFlyTo for a diving target embedded in terrain.
             // Reuse the same recovery destination for a short interval.
-            if (combatTicks >= nextRecoveryTick
-                    || waypoint == null || !canFlyTo(level, waypoint)) {
+            if (combatTicks >= nextRecoveryTick) {
                 waypoint = recoveryPoint(level, enemy);
                 nextRecoveryTick = combatTicks + 25;
             }
             if (waypoint != null && canFlyTo(level, waypoint)
+                    && clearFlightCorridor(level, waypoint)
                     && dragon.getFlightController().patrolAttack(owner, waypoint, false)) {
                 recoveryFailureTicks = 0;
             } else if (++recoveryFailureTicks >= 80) {
