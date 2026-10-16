@@ -38,14 +38,23 @@ for string in ('MARK_MODE', 'MARK_X', 'MARK_Y', 'MARK_Z', 'MARK_RADIUS',
     assert string in dragon, string
 for string in ('RenderLevelStageEvent.Stage.AFTER_PARTICLES', 'RenderType.lines()',
                'LevelRenderer.renderLineBox(', 'private static void ring(',
-               'center.getY() + 9.5D', 'selectedRadius >= 30 ? 5 : selectedRadius + 5',
+               'if (!previewActive(mc)) return;', 'selectedRadius >= 30 ? 5 : selectedRadius + 5',
                'dragon.getSyncedMarkMode()', 'Preview aiming = preview(mc, dragon)'):
     assert string in overlay, string
 assert '.setNormal(nx, ny, nz)' in overlay  # True segment direction for line shader
+assert 'TOGGLE_BOMBARDMENT.consumeClick()' in client
+assert 'new AurenMarkPayload(0, false)' in client
+assert 'isSyncedAreaAttackEnabled()' in overlay
+assert 'graphics.fill(' not in overlay
+assert 'PREVIEW_TICKS = 80' in overlay
+assert 'mc.level == previewLevel' in overlay
+assert 'living instanceof TamableAnimal pet' in overlay
+assert 'dragon.getOwnerUUID().equals(pet.getOwnerUUID())' in overlay
+assert 'isAreaEnabled()' in orders
 assert 'getMarkedEnemyEntityId()' in orders
 assert 'DRAGON_BREATH.isDown()' in client and 'DRAGON_LIGHTNING.isDown()' in client
 assert 'Commands.literal("atacar")' in server and 'Commands.literal("parar")' in server
-assert 'mod_version=0.7.8-key-preview-alpha' in (root / 'gradle.properties').read_text()
+assert 'mod_version=0.7.9-natural-combat-alpha' in (root / 'gradle.properties').read_text()
 jars = list((root / 'build/libs').glob('aurenminecraft-*.jar'))
 assert len(jars) == 1, jars
 with ZipFile(jars[0]) as jar:

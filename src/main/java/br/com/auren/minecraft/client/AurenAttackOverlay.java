@@ -10,7 +10,8 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
@@ -32,6 +33,27 @@ public final class AurenAttackOverlay {
     private static final double DRAGON_RANGE = 64.0D;
     private static int selectedRadius = 5;
     private static final int SEGMENTS = 64;
+    private static final int PREVIEW_TICKS = 80;
+    private static long previewUntil = Long.MIN_VALUE;
+    private static net.minecraft.client.multiplayer.ClientLevel previewLevel;
+
+    /** Preview is temporary; gameplay never leaves permanent rings in the world. */
+    public static void revealForTicks(Minecraft mc) {
+        if (mc.level != null) {
+            previewLevel = mc.level;
+            previewUntil = mc.level.getGameTime() + PREVIEW_TICKS;
+        }
+    }
+
+    public static void resetTransient() {
+        previewUntil = Long.MIN_VALUE;
+        previewLevel = null;
+    }
+
+    private static boolean previewActive(Minecraft mc) {
+        return mc.level != null && mc.level == previewLevel
+                && mc.level.getGameTime() < previewUntil;
+    }
 
     private AurenAttackOverlay() {}
 
@@ -66,8 +88,13 @@ public final class AurenAttackOverlay {
                         && living.isAlive() && candidate != mc.player && candidate != dragon);
         if (entity != null) {
             Entity found = entity.getEntity();
-            if (found instanceof LivingEntity living && living instanceof Enemy
-                    && !dragon.isAlliedTo(living)) return new Preview(null, living, false);
+            if (found instanceof LivingEntity living && !dragon.isAlliedTo(living)
+                    && living != dragon.getOwner()
+                    && !(living instanceof Player p && (p.isCreative() || p.isSpectator()))
+                    && !(living instanceof TamableAnimal pet && pet.isTame()
+                        && dragon.getOwnerUUID() != null
+                        && dragon.getOwnerUUID().equals(pet.getOwnerUUID())))
+                return new Preview(null, living, false);
             return new Preview(null, null, true);
         }
         return new Preview(block.getType() == HitResult.Type.BLOCK
@@ -82,6 +109,8 @@ public final class AurenAttackOverlay {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null || mc.screen != null
                 || mc.options.hideGui || mc.player.isSpectator()) return;
+        // Only display 3D markers briefly after the user interacts with V/B.
+        if (!previewActive(mc)) return;
         AurenDragon dragon = nearbyOwnedDragon(mc);
         if (dragon == null) return;
 
@@ -108,7 +137,7 @@ public final class AurenAttackOverlay {
             Preview aiming = preview(mc, dragon);
             if (aiming.enemy() != null) {
                 drawEnemy(pose, lines, aiming.enemy(), 130, 205, 255, 180);
-            } else if (aiming.block() != null
+            } else if (dragon.isSyncedAreaAttackEnabled() && aiming.block() != null
                     && (dragon.getSyncedMarkMode() != 2
                     || !aiming.block().equals(dragon.getSyncedMarkCenter())
                     || selectedRadius != dragon.getSyncedMarkRadius())) {
@@ -140,9 +169,7 @@ public final class AurenAttackOverlay {
         double z = center.getZ() + 0.5D;
         double y = center.getY() + 1.03D;
         ring(pose, lines, x, y, z, radius, red, green, blue, alpha);
-        // Orbit is approx. nine blocks over the marked block center (v0.7.7).
-        ring(pose, lines, x, center.getY() + 9.5D, z,
-                radius, red, green, blue, Math.max(55, alpha / 3));
+        // The new natural patrol has no fixed aerial orbit to draw.
         line(pose, lines, x - 0.75, y, z, x + 0.75, y, z, red, green, blue, alpha);
         line(pose, lines, x, y, z - 0.75, x, y, z + 0.75, red, green, blue, alpha);
         line(pose, lines, x, y, z, x, y + 2.0D, z, red, green, blue, alpha);
@@ -186,28 +213,30 @@ public final class AurenAttackOverlay {
                 || mc.options.hideGui || mc.player.isSpectator()) return;
         AurenDragon dragon = nearbyOwnedDragon(mc);
         if (dragon == null) return;
+        int mode = dragon.getSyncedMarkMode();
+        boolean transientHint = previewActive(mc);
+        // Nothing on screen while idle. Only a small blue heading for a
+        // currently executing order or during the short keypress hint.
+        if (mode == 0 && !transientHint) return;
+
         GuiGraphics graphics = event.getGuiGraphics();
-        int y = graphics.guiHeight() - 70;
-        int width = 258;
-        graphics.fill(6, y - 5, width, y + 32, 0xA50C1724);
-        String mode = switch (dragon.getSyncedMarkMode()) {
-            case 1 -> "Auren | Inimigo marcado";
-            case 2 -> "Auren | Bombardeio ativo: raio " + dragon.getSyncedMarkRadius();
-            default -> "Auren | Raio de ataque: " + selectedRadius + " blocos";
+        String status = switch (mode) {
+            case 1 -> "AUREN  •  ALVO MARCADO";
+            case 2 -> "AUREN  •  BOMBARDEIO ATIVO  •  RAIO " + dragon.getSyncedMarkRadius();
+            default -> "AUREN  •  BOMBARDEIO "
+                    + (dragon.isSyncedAreaAttackEnabled() ? "LIGADO" : "DESLIGADO")
+                    + "  •  RAIO " + selectedRadius;
         };
-        graphics.drawString(mc.font, mode, 12, y, 0x77E9FF, true);
-        if (dragon.getSyncedMarkMode() != 0) {
-            graphics.drawString(mc.font, "V: novo alvo   Shift+V: cancelar",
-                    12, y + 13, 0xFFFFFF, true);
-        } else {
-            graphics.drawString(mc.font, "V: marcar   Shift+V: mudar raio",
-                    12, y + 13, 0xFFFFFF, true);
-        }
-        if (dragon.getSyncedMarkMode() == 0 && !dragon.isSmallForm()) {
-            Preview aim = preview(mc, dragon);
-            if (aim.invalidEntity()) {
-                graphics.drawString(mc.font, "Alvo não hostil", 12, y + 24, 0xFFA999, true);
-            }
+        int x = (graphics.guiWidth() - mc.font.width(status)) / 2;
+        graphics.drawString(mc.font, status, x, 8, 0x66DAFF, true);
+
+        if (transientHint) {
+            String hint = mode != 0
+                    ? "V: mudar alvo   Shift+V: cancelar   B: alternar bombardeio"
+                    : "V: marcar   Shift+V: raio   B: alternar bombardeio";
+            graphics.drawString(mc.font, hint,
+                    (graphics.guiWidth() - mc.font.width(hint)) / 2, 20,
+                    0x8CBCCD, true);
         }
     }
 }

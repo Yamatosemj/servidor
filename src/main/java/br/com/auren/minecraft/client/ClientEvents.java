@@ -38,6 +38,10 @@ public final class ClientEvents {
     // One remappable key: plain V marks, Shift+V cancels or cycles radius.
     private static final KeyMapping MARK_TARGET = new KeyMapping(
             "key.aurenminecraft.mark_target", GLFW.GLFW_KEY_V, "key.categories.gameplay");
+    // B toggles AREA bombing only; V still marks any permitted living target.
+    private static final KeyMapping TOGGLE_BOMBARDMENT = new KeyMapping(
+            "key.aurenminecraft.toggle_bombardment", GLFW.GLFW_KEY_B,
+            "key.categories.gameplay");
     private static int lastPilotId = -1;
     private static byte lastPilotControls = -1;
 
@@ -47,6 +51,7 @@ public final class ClientEvents {
         event.register(DRAGON_BREATH);
         event.register(DRAGON_LIGHTNING);
         event.register(MARK_TARGET);
+        event.register(TOGGLE_BOMBARDMENT);
     }
 
     /** Port of CE ClientEvents.onLivingUpdate rider input, once per client tick. */
@@ -54,6 +59,7 @@ public final class ClientEvents {
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) {
+            AurenAttackOverlay.resetTransient();
             lastPilotId = -1;
             lastPilotControls = -1;
             return;
@@ -63,6 +69,7 @@ public final class ClientEvents {
             while (MARK_TARGET.consumeClick()) {
                 AurenDragon owned = AurenAttackOverlay.nearbyOwnedDragon(mc);
                 if (owned == null) continue;
+                AurenAttackOverlay.revealForTicks(mc);
                 // Physical Shift, independent of the player's remapped Sneak key.
                 long window = mc.getWindow().getWindow();
                 boolean shiftHeld = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_LEFT_SHIFT)
@@ -77,6 +84,12 @@ public final class ClientEvents {
                     PacketDistributor.sendToServer(
                             new AurenMarkPayload(AurenAttackOverlay.selectedRadius(), false));
                 }
+            }
+            while (TOGGLE_BOMBARDMENT.consumeClick()) {
+                if (AurenAttackOverlay.nearbyOwnedDragon(mc) == null) continue;
+                AurenAttackOverlay.revealForTicks(mc);
+                // 0 is the server-owned mode toggle, not a targeting radius.
+                PacketDistributor.sendToServer(new AurenMarkPayload(0, false));
             }
         }
         Entity mount = mc.player.getVehicle();

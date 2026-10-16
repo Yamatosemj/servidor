@@ -43,6 +43,7 @@ public final class AurenIafDragonFlightManager {
     private Vec3 target;
     private Vec3 lastOwnerPos;
     private int targetTicks;
+    private boolean tacklePursuit;
 
     public AurenIafDragonFlightManager(AurenDragon dragon) {
         this.dragon = dragon;
@@ -72,10 +73,15 @@ public final class AurenIafDragonFlightManager {
         this.target = target;
     }
 
+    public void setTacklePursuit(boolean tackling) {
+        this.tacklePursuit = tackling;
+    }
+
     public void clear() {
         this.target = null;
         this.lastOwnerPos = null;
         this.targetTicks = 0;
+        this.tacklePursuit = false;
     }
 
     public void invalidateTarget() {
@@ -237,7 +243,7 @@ public final class AurenIafDragonFlightManager {
                 float yawTurnAtan = Mth.wrapDegrees(atan * 57.295776F);
                 // CE's natural 4-degree turn limiter, not arbitrary lerp.
                 this.dragon.setYRot(AurenIafDragonFlightManager.approachDegrees(
-                        yawTurn, yawTurnAtan, 4.0F) - 90.0F);
+                        yawTurn, yawTurnAtan, this.flightManager.tacklePursuit ? 10.0F : 4.0F) - 90.0F);
                 this.dragon.yBodyRot = this.dragon.getYRot();
 
                 if (AurenIafDragonFlightManager.degreesDifferenceAbs(
