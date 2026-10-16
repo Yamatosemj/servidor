@@ -31,6 +31,7 @@ public final class AurenAttackOrders {
     private final AurenDragon dragon;
     private int mode;
     private UUID markedEnemy;
+    private LivingEntity recentlyResolvedEnemy;
     private BlockPos areaCenter;
     private int radius;
     private double orbitAngle;
@@ -83,6 +84,7 @@ public final class AurenAttackOrders {
             return false;
         this.mode = ENEMY;
         this.markedEnemy = enemy.getUUID();
+        this.recentlyResolvedEnemy = enemy;
         this.areaCenter = null;
         this.radius = 0;
         begin();
@@ -96,6 +98,7 @@ public final class AurenAttackOrders {
         this.mode = AREA;
         this.areaCenter = center.immutable();
         this.markedEnemy = null;
+        this.recentlyResolvedEnemy = null;
         this.radius = selectedRadius;
         begin();
         return true;
@@ -104,6 +107,7 @@ public final class AurenAttackOrders {
     public void clear() {
         this.mode = NONE;
         this.markedEnemy = null;
+        this.recentlyResolvedEnemy = null;
         this.areaCenter = null;
         this.radius = 0;
         this.fireAim = null;
@@ -135,7 +139,13 @@ public final class AurenAttackOrders {
         if (mode == ENEMY) {
             Entity found = markedEnemy == null ? null : level.getEntity(markedEnemy);
             if (found == null) {
-                dragon.getFlightController().land(); // Target unloaded: keep order.
+                // Entity can disappear from ServerLevel after dying; do not
+                // mistake that for a temporarily unloaded living enemy.
+                if (recentlyResolvedEnemy != null && !recentlyResolvedEnemy.isAlive()) {
+                    clear();
+                } else {
+                    dragon.getFlightController().land(); // Unloaded: keep order.
+                }
                 return;
             }
             if (!(found instanceof LivingEntity living) || !living.isAlive()) {
@@ -147,6 +157,7 @@ public final class AurenAttackOrders {
                 return;
             }
             enemy = living;
+            this.recentlyResolvedEnemy = living;
             center = living.getBoundingBox().getCenter();
         } else {
             if (areaCenter == null || !level.hasChunkAt(areaCenter)) {
@@ -226,6 +237,7 @@ public final class AurenAttackOrders {
         // No active fire or stale navigation survives a world reload.
         this.mode = NONE;
         this.markedEnemy = null;
+        this.recentlyResolvedEnemy = null;
         this.areaCenter = null;
         this.fireAim = null;
         this.combatTicks = 0;
