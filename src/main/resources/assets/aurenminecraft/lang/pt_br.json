@@ -4,5 +4,6 @@
   "key.aurenminecraft.dragon_down": "Auren: descer",
   "key.aurenminecraft.dragon_lightning": "Auren: lançar raio (segure G)",
   "key.aurenminecraft.mark_target": "Auren: marcar alvo / Shift: cancelar ou mudar raio",
-  "key.aurenminecraft.toggle_bombardment": "Auren: ligar/desligar bombardeio aéreo"
+  "key.aurenminecraft.toggle_bombardment": "Auren: ligar/desligar bombardeio aéreo",
+  "key.aurenminecraft.perception": "Auren: perceber ambiente (H)"
 }

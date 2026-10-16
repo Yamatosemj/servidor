@@ -84,6 +84,13 @@ public final class AurenDragon extends TamableAnimal {
     private static final EntityDataAccessor<Integer> MARK_ENEMY_ID =
             SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT);
 
+    // Compact perception shared to the owner-facing discreet HUD. Sensors
+    // and the full observation history remain authoritative on the server.
+    private static final EntityDataAccessor<String> WORLD_PERCEPTION =
+            SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<Integer> WORLD_ALERT =
+            SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.INT);
+
     private static final EntityDataAccessor<Boolean> AREA_ATTACK_ENABLED =
             SynchedEntityData.defineId(AurenDragon.class, EntityDataSerializers.BOOLEAN);
 
@@ -105,6 +112,7 @@ public final class AurenDragon extends TamableAnimal {
     private final AurenFireBreath fireBreath = new AurenFireBreath(this);
     private final AurenLightningBreath lightningBreath = new AurenLightningBreath(this);
     private final AurenAttackOrders attackOrders = new AurenAttackOrders(this);
+    private final AurenWorldPerception awareness = new AurenWorldPerception(this);
 
     // IceAndFire CE's CONTROL_STATE bits: 0 = jump/climb, 1 = descend.
     // Client sets its local value and forwards it only to the owning server.
@@ -171,6 +179,8 @@ public final class AurenDragon extends TamableAnimal {
         builder.define(MARK_RADIUS, 0);
         builder.define(MARK_ENEMY_ID, -1);
         builder.define(AREA_ATTACK_ENABLED, true);
+        builder.define(WORLD_PERCEPTION, "AUREN • observando o ambiente");
+        builder.define(WORLD_ALERT, 0);
     }
 
     public boolean isSmallForm() {
@@ -196,6 +206,28 @@ public final class AurenDragon extends TamableAnimal {
 
     public AurenAttackOrders getAttackOrders() {
         return this.attackOrders;
+    }
+
+    public AurenWorldPerception getAwareness() {
+        return this.awareness;
+    }
+
+    public String getSyncedPerceptionBrief() {
+        return this.entityData.get(WORLD_PERCEPTION);
+    }
+
+    public int getSyncedPerceptionAlert() {
+        return this.entityData.get(WORLD_ALERT);
+    }
+
+    private void syncPerception() {
+        if (this.level().isClientSide()) return;
+        String text = awareness.brief();
+        if (!text.equals(this.entityData.get(WORLD_PERCEPTION)))
+            this.entityData.set(WORLD_PERCEPTION, text);
+        int alert = awareness.alertLevel();
+        if (alert != this.entityData.get(WORLD_ALERT))
+            this.entityData.set(WORLD_ALERT, alert);
     }
 
     public int getSyncedMarkMode() {
@@ -866,6 +898,9 @@ public final class AurenDragon extends TamableAnimal {
         }
         super.tick();
         if (!this.level().isClientSide()) {
+            if (this.level() instanceof ServerLevel perceptionLevel)
+                this.awareness.tick(perceptionLevel);
+            this.syncPerception();
             this.attackOrders.tick();
             this.syncAttackMark();
             this.flightController.tick();
