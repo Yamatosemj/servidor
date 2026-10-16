@@ -10,7 +10,7 @@ import java.util.List;
  * not claims of human-like consciousness or subjective needs.
  */
 public final class AurenLocalDecisionPolicy {
-    public enum Activity { OBSERVE, EXPLORE, INVESTIGATE, REST, SEEK_SHELTER }
+    public enum Activity { OBSERVE, EXPLORE, INVESTIGATE, REST, SEEK_SHELTER, APPROACH_OWNER }
 
     public record Context(double energy, double curiosity, double vigilance,
                           boolean night, boolean rainExposed,
@@ -47,9 +47,18 @@ public final class AurenLocalDecisionPolicy {
             case INVESTIGATE -> context.passiveAnimalNearby()
                     ? 14.0D + curiosity * 0.40D + energy * 0.08D
                     - vigilance * 0.18D : Double.NEGATIVE_INFINITY;
-            case REST -> 10.0D + (100.0D - energy) * 0.74D
-                    + (context.night() ? 25.0D : 0.0D)
-                    - vigilance * 0.15D;
+            // Rest is intentionally an ordinary DAYTIME option too. In the
+            // previous version its low ranking meant failed exploration
+            // almost always fell back to invisible LOOK animations.
+            case REST -> 25.0D + (100.0D - energy) * 0.35D
+                    + (context.night() ? 32.0D : 0.0D)
+                    - vigilance * 0.09D;
+            // Voluntary approach is physically visible, but does not force
+            // the adult into the owner's hitbox: ground path is validated
+            // by the goal and only if currently >3.6 blocks away.
+            case APPROACH_OWNER -> 27.0D + curiosity * 0.14D
+                    + energy * 0.10D - vigilance * 0.20D
+                    - (context.night() ? 12.0D : 0.0D);
             case SEEK_SHELTER -> context.rainExposed()
                     ? 72.0D + vigilance * 0.12D
                     : Double.NEGATIVE_INFINITY;

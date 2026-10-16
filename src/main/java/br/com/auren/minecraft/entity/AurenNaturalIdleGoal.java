@@ -26,16 +26,19 @@ public final class AurenNaturalIdleGoal extends Goal {
     private static final int MAX_REST_TICKS = 135;
     private static final int MIN_COOLDOWN_TICKS = 100;
     private static final int MAX_COOLDOWN_TICKS = 230;
-    private static final int MAX_SEARCH_ATTEMPTS = 9;
+    private static final int MAX_SEARCH_ATTEMPTS = 12;
 
-    private enum Routine { OBSERVE, EXPLORE, INVESTIGATE, REST, SEEK_SHELTER }
+    private enum Routine { OBSERVE, EXPLORE, INVESTIGATE, REST, SEEK_SHELTER, APPROACH_OWNER }
 
     private final AurenDragon dragon;
     private LivingEntity owner;
     private int remainingTicks;
-    private int cooldownTicks;
+    private long nextRoutineTick;
     private Routine routine = Routine.OBSERVE;
     private Vec3 interestPoint;
+    private Vec3 routeStart;
+    private double initialOwnerDistance;
+    private int remainingPathBudget;
     private Animal interestingAnimal;
 
     public AurenNaturalIdleGoal(AurenDragon dragon) {
@@ -65,12 +68,36 @@ public final class AurenNaturalIdleGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (cooldownTicks > 0) {
-            --cooldownTicks;
+        // GoalSelector does NOT invoke canUse every server tick. Count
+        // against game time rather than decrementing per canUse() call:
+        // otherwise a 100-230 tick break becomes 3x longer or more.
+        if (dragon.tickCount < nextRoutineTick) {
+            dragon.getMind().idleUnready("pausa entre rotinas ("
+                    + (nextRoutineTick - dragon.tickCount) + " ticks)");
             return false;
         }
         LivingEntity possible = dragon.getOwner();
-        if (!calm(possible)) return false;
+        if (!calm(possible)) {
+            String reason;
+            if (possible == null || !possible.isAlive()
+                    || possible.level() != dragon.level())
+                reason = "dono ausente";
+            else if (dragon.isOrderedToSit()) reason = "sentado por ordem";
+            else if (dragon.isOnShoulder()) reason = "no ombro";
+            else if (dragon.isVehicle()) reason = "montado";
+            else if (dragon.getAttackOrders().hasOrder() || dragon.getTarget() != null)
+                reason = "combate ou alvo ativo";
+            else if (dragon.getFlightMode() != AurenFlightController.GROUNDED
+                    || !dragon.onGround()) reason = "voando ou fora do chao";
+            else if (dragon.distanceToSqr(possible)
+                    >= (dragon.isSmallForm() ? 16.0D : 100.0D))
+                reason = "dono distante";
+            else if (possible.getDeltaMovement().horizontalDistanceSqr() >= 0.045D)
+                reason = "dono em movimento";
+            else reason = "ambiente inseguro ou sem condicoes de descanso";
+            dragon.getMind().idleUnready(reason);
+            return false;
+        }
         owner = possible;
         return true;
     }
@@ -95,6 +122,9 @@ public final class AurenNaturalIdleGoal extends Goal {
         interestingAnimal = null;
         interestPoint = null;
         dragon.getNavigation().stop();
+        routeStart = dragon.position();
+        initialOwnerDistance = dragon.distanceTo(owner);
+        remainingPathBudget = 6;
         remainingTicks = MIN_REST_TICKS + dragon.getRandom().nextInt(
                 MAX_REST_TICKS - MIN_REST_TICKS + 1);
 
@@ -115,6 +145,7 @@ public final class AurenNaturalIdleGoal extends Goal {
                         dragon.getMind().accepted(rated.activity());
                         return;
                     }
+                    dragon.getMind().idlePathFailed();
                 }
                 case REST -> {
                     if (exposedRain()) break; // resting in open rain looks wrong
@@ -128,6 +159,8 @@ public final class AurenNaturalIdleGoal extends Goal {
                 }
                 case INVESTIGATE -> {
                     if (nearby == null) break;
+                    if (remainingPathBudget <= 0) break;
+                    --remainingPathBudget;
                     Path route = dragon.getNavigation().createPath(
                             nearby.blockPosition(), 0);
                     if (route != null && route.canReach()
@@ -137,6 +170,7 @@ public final class AurenNaturalIdleGoal extends Goal {
                         dragon.getMind().accepted(rated.activity());
                         return;
                     }
+                    dragon.getMind().idlePathFailed();
                 }
                 case EXPLORE -> {
                     Path shortRoute = chooseInterestPath(false);
@@ -146,6 +180,25 @@ public final class AurenNaturalIdleGoal extends Goal {
                         dragon.getMind().accepted(rated.activity());
                         return;
                     }
+                    dragon.getMind().idlePathFailed();
+                }
+                case APPROACH_OWNER -> {
+                    double minimum = dragon.isSmallForm() ? 2.5D : 3.6D;
+                    if (dragon.distanceToSqr(owner) <= minimum * minimum)
+                        break;
+                    // Choose a safe spot alongside the player, never their
+                    // feet. The follow goal is not overridden at long range.
+                    Path approach = chooseInterestPath(false,
+                            dragon.isSmallForm() ? 1.8D : 3.0D,
+                            dragon.isSmallForm() ? 2.7D : 4.4D);
+                    if (approach != null && approach.canReach()
+                            && dragon.getNavigation().moveTo(approach, 0.82D)) {
+                        routine = Routine.APPROACH_OWNER;
+                        remainingTicks = 90 + dragon.getRandom().nextInt(95);
+                        dragon.getMind().accepted(rated.activity());
+                        return;
+                    }
+                    dragon.getMind().idlePathFailed();
                 }
                 case OBSERVE -> {
                     routine = Routine.OBSERVE;
@@ -171,36 +224,55 @@ public final class AurenNaturalIdleGoal extends Goal {
                 Comparator.comparingDouble(dragon::distanceToSqr)).orElse(null);
     }
 
-    /** A* only, close to the owner. Optional roof constraint for rainy days. */
+    /** A* only; local owner-centered waypoints, no teleport or flight. */
     private Path chooseInterestPath(boolean shelteredOnly) {
+        return chooseInterestPath(shelteredOnly, 2.2D,
+                dragon.isSmallForm() ? 3.8D : 6.8D);
+    }
+
+    /**
+     * Sample real ground at the owner's elevation first, then nearby
+     * offsets. The previous single random Y sample wasted most attempts,
+     * often falling through to OBSERVE without any visible activity.
+     */
+    private Path chooseInterestPath(boolean shelteredOnly, double minDist,
+                                    double maxDist) {
         if (owner == null) return null;
-        double radius = dragon.isSmallForm() ? 2.8D : 5.5D;
+        if (remainingPathBudget <= 0) return null;
         for (int attempt = 0; attempt < MAX_SEARCH_ATTEMPTS; ++attempt) {
             double angle = dragon.getRandom().nextDouble() * Math.PI * 2.0D;
-            double d = 1.7D + dragon.getRandom().nextDouble() * radius;
+            double d = minDist + dragon.getRandom().nextDouble()
+                    * (maxDist - minDist);
             double x = owner.getX() + Math.cos(angle) * d;
             double z = owner.getZ() + Math.sin(angle) * d;
-            int y = owner.getBlockY() + dragon.getRandom().nextInt(5) - 2;
-            BlockPos floor = BlockPos.containing(x, y, z);
-            BlockPos below = floor.below();
-            if (!dragon.level().hasChunkAt(floor)
-                    || !dragon.level().hasChunkAt(below)
-                    || !dragon.level().getBlockState(below).isFaceSturdy(
-                            dragon.level(), below, Direction.UP)
-                    || !dragon.level().getFluidState(floor).isEmpty()
-                    || (shelteredOnly
-                        && dragon.level().canSeeSky(floor.above()))) continue;
-            Vec3 destination = new Vec3(floor.getX() + 0.5D, floor.getY(),
-                    floor.getZ() + 0.5D);
-            AABB space = dragon.getBoundingBox().move(
-                    destination.x - dragon.getX(),
-                    destination.y - dragon.getY(),
-                    destination.z - dragon.getZ());
-            if (!dragon.level().noCollision(dragon, space)) continue;
-            Path path = dragon.getNavigation().createPath(floor, 0);
-            if (path != null && path.canReach()) {
-                interestPoint = destination;
-                return path;
+            for (int dy : new int[] {0, 1, -1, 2, -2}) {
+                BlockPos floor = BlockPos.containing(
+                        x, owner.getBlockY() + dy, z);
+                BlockPos below = floor.below();
+                if (!dragon.level().hasChunkAt(floor)
+                        || !dragon.level().hasChunkAt(below)
+                        || !dragon.level().getBlockState(below).isFaceSturdy(
+                                dragon.level(), below, Direction.UP)
+                        || !dragon.level().getFluidState(floor).isEmpty()
+                        || (shelteredOnly
+                            && dragon.level().canSeeSky(floor.above())))
+                    continue;
+
+                Vec3 destination = new Vec3(floor.getX() + 0.5D,
+                        floor.getY(), floor.getZ() + 0.5D);
+                AABB space = dragon.getBoundingBox().move(
+                        destination.x - dragon.getX(),
+                        destination.y - dragon.getY(),
+                        destination.z - dragon.getZ());
+                if (!dragon.level().noCollision(dragon, space)) continue;
+                // Do not run an unbounded number of A* searches in a tick.
+                if (remainingPathBudget <= 0) return null;
+                --remainingPathBudget;
+                Path path = dragon.getNavigation().createPath(floor, 0);
+                if (path != null && path.canReach()) {
+                    interestPoint = destination;
+                    return path;
+                }
             }
         }
         return null;
@@ -227,11 +299,15 @@ public final class AurenNaturalIdleGoal extends Goal {
                 if (dragon.distanceToSqr(interestingAnimal) < 3.8D * 3.8D
                         || dragon.getNavigation().isDone()) {
                     dragon.getNavigation().stop();
+                    reportRouteCompletion();
                     routine = Routine.OBSERVE;
                 }
             }
-        } else if (routine == Routine.EXPLORE || routine == Routine.SEEK_SHELTER) {
+        } else if (routine == Routine.EXPLORE
+                || routine == Routine.SEEK_SHELTER
+                || routine == Routine.APPROACH_OWNER) {
             if (dragon.getNavigation().isDone()) {
+                reportRouteCompletion();
                 routine = Routine.OBSERVE;
                 dragon.getNavigation().stop();
             } else if (dragon.tickCount % 40 < 8) {
@@ -257,16 +333,30 @@ public final class AurenNaturalIdleGoal extends Goal {
         }
     }
 
+    /** A path starting does not prove the dragon actually moved. */
+    private void reportRouteCompletion() {
+        if (routeStart == null || owner == null) return;
+        double progress = routine == Routine.APPROACH_OWNER
+                ? initialOwnerDistance - dragon.distanceTo(owner)
+                : dragon.position().distanceTo(routeStart);
+        dragon.getMind().idleRouteEnded(
+                routine.name().toLowerCase(java.util.Locale.ROOT), progress);
+    }
+
     @Override
     public void stop() {
         dragon.setNaturalRestPose(0);
         dragon.getNavigation().stop();
+        dragon.getMind().idleFinished(
+                "encerrou " + routine.name().toLowerCase(java.util.Locale.ROOT));
         owner = null;
         interestingAnimal = null;
         interestPoint = null;
+        routeStart = null;
         remainingTicks = 0;
         routine = Routine.OBSERVE;
-        cooldownTicks = MIN_COOLDOWN_TICKS + dragon.getRandom()
-                .nextInt(MAX_COOLDOWN_TICKS - MIN_COOLDOWN_TICKS + 1);
+        nextRoutineTick = dragon.tickCount + MIN_COOLDOWN_TICKS
+                + dragon.getRandom().nextInt(
+                    MAX_COOLDOWN_TICKS - MIN_COOLDOWN_TICKS + 1);
     }
 }

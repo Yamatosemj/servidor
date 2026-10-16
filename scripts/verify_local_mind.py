@@ -11,12 +11,14 @@ idle=(j/"entity/AurenNaturalIdleGoal.java").read_text()
 dragon=(j/"entity/AurenDragon.java").read_text()
 commands=(j/"AurenCommands.java").read_text()
 for token in (
-  "enum Activity { OBSERVE, EXPLORE, INVESTIGATE, REST, SEEK_SHELTER }",
+  "enum Activity { OBSERVE, EXPLORE, INVESTIGATE, REST, SEEK_SHELTER, APPROACH_OWNER }",
   "public static List<Rated> rank(Context context)",
   "public static double score(Activity activity, Context context)",
   "Double.NEGATIVE_INFINITY",
   "if (context.previous() == activity) base -= 19.0D;",
   "List.copyOf(options)",
+  "case APPROACH_OWNER ->",
+  "case REST -> 25.0D",
 ): assert token in policy, token
 for token in (
   "public void tickServer()",
@@ -60,7 +62,7 @@ for forbidden in ("java.net.", "HttpClient", "DeepSeek", "markEnemy(",
                   "setTarget(", "setBlock(", "getFlightController()."):
     assert forbidden not in mind,forbidden
 assert "markEnemy(" not in policy and "getFlightController()" not in policy
-assert "mod_version=0.7.26-offline-mind-alpha" in (
+assert "mod_version=0.7.27-visible-offline-routine-alpha" in (
     root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars

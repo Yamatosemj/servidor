@@ -68,3 +68,18 @@ Cada componente usa **um único Auren** e preserva controles CE existentes. As a
 - **0.7.26:** começar por mecanismo de ranking isolado, adaptar somente rotina ociosa; persistência dos valores; comando de observabilidade. Sem alterar controladores de voo/combate.
 
 - **0.7.26, validação técnica:** suíte GitHub Actions aprovada em 16/10/2026; o teste manual de gameplay e o merge continuam pendentes.
+
+## 0.7.27 — Correção baseada em teste (etapa 1 ainda em andamento)
+
+**Feedback real:** na 0.7.26 o usuário não viu mudança nenhuma. Esse relato tem prioridade sobre a aprovação de CI. Auditoria do código: o sistema só alterou ranking; uma escolha de caminho podia falhar por altura aleatória, fazendo a rotina retornar a observação quase invisível. Não alegar que isso foi testado visualmente.
+
+Solução proposta na branch `fix/auren-0727-visible-offline-routine`:
+- `APPROACH_OWNER` para interações visíveis sem sair do controle A*;
+- restauração de descanso diurno como opção útil;
+- amostras de piso com altura coerente e limite de seis cálculos A*;
+- diagnóstico `/auren mente` de **ação executada versus ação escolhida**, contadores e condições de bloqueio;
+- teste concreto de 60–90 segundos em campo aberto e ambiente construído.
+
+**Critério para fechar a etapa 1:** usuário observa ao menos um comportamento novo OU os diagnósticos mostram concretamente por que a rotina não inicia. Se ainda não houver diferença, investigar prioridades de GoalSelector e geometria no mundo, sem iniciar etapa 2 por impulso.
+
+- **0.7.27 — outra causa confirmada:** cooldown ocioso era decrementado por chamada de `Goal.canUse()`, não por tick; como o selector não consulta a cada tick, os intervalos reais podiam triplicar ou mais. Corrigido com `nextRoutineTick` em ticks absolutos. 
