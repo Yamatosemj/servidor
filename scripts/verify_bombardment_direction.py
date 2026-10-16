@@ -37,7 +37,7 @@ for token in ("public static void igniteVillage(", "GameRules.RULE_MOBGRIEFING",
 for token in ("findForwardAreaImpact(", "areaFiringPass = areaPhase == 2",
               "safeAreaWaypoint(", "nextSweepTick = combatTicks + 3"):
     assert token in orders, token
-assert "0.7.21-defense-flame-hunt-alpha" in (root/"gradle.properties").read_text()
+assert "0.7.22-organic-area-bombing-alpha" in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1, jars
 with ZipFile(jars[0]) as jar:
