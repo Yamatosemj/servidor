@@ -29,6 +29,7 @@ public final class AurenAttackOrders {
     private enum AirAttack { TACKLE, HOVER_BLAST, SCORCH_STREAM }
 
     private final AurenDragon dragon;
+    private final AurenRelentlessHunt hunter;
     private int mode;
     private boolean areaEnabled = true;
     private UUID markedEnemy;
@@ -55,9 +56,11 @@ public final class AurenAttackOrders {
 
     AurenAttackOrders(AurenDragon dragon) {
         this.dragon = dragon;
+        this.hunter = new AurenRelentlessHunt(dragon);
     }
 
     public boolean hasOrder() { return mode != NONE; }
+    public boolean isCompactHunting() { return hunter.isCompact(); }
     public int getMode() { return mode; }
     public boolean isAreaEnabled() { return areaEnabled; }
 
@@ -87,6 +90,7 @@ public final class AurenAttackOrders {
     }
 
     private void begin() {
+        hunter.reset();
         combatTicks = 0;
         nextTacticTick = 0;
         nextWaypointTick = 0;
@@ -300,7 +304,16 @@ public final class AurenAttackOrders {
     }
 
     private void tickEnemy(ServerLevel level, ServerPlayer owner, LivingEntity enemy) {
-        sightLostTicks = dragon.hasLineOfSight(enemy) ? 0 : sightLostTicks + 1;
+        boolean directSight = dragon.hasLineOfSight(enemy);
+        sightLostTicks = directSight ? 0 : Math.min(10000, sightLostTicks + 1);
+        // Only mark a prey genuinely inaccessible after searching actual
+        // collision-free CE air vantage positions, then escalate gradually.
+        if (sightLostTicks >= 100 && sightLostTicks % 40 == 0)
+            hunter.inspectAerialRoute(hoverPoint(level, enemy) != null);
+        if (hunter.tick(level, owner, enemy, directSight)) {
+            fireAim = hunter.getFireAim();
+            return;
+        }
         // If a wall hides the prey, stop a blind dive and search for a
         // clear aerial vantage instead of circling uselessly.
         if (tactic == null || combatTicks >= nextTacticTick
@@ -528,6 +541,7 @@ public final class AurenAttackOrders {
     }
 
     public void tick() {
+        hunter.tickPassive();
         if (mode == NONE || !(dragon.level() instanceof ServerLevel level)) {
             fireAim = null;
             return;
@@ -539,7 +553,8 @@ public final class AurenAttackOrders {
         }
         if (!(dragon.getOwner() instanceof ServerPlayer owner)
                 || !owner.isAlive() || owner.isSpectator() || owner.level() != level
-                || !dragon.isAlive() || dragon.isSmallForm()
+                || !dragon.isAlive()
+                || (dragon.isSmallForm() && !hunter.isCompact())
                 || dragon.isOnShoulder() || dragon.isOrderedToSit()) {
             fireAim = null;
             dragon.getFlightController().land();
@@ -587,6 +602,7 @@ public final class AurenAttackOrders {
     }
 
     public void save(CompoundTag tag) {
+        hunter.save(tag);
         tag.putBoolean("AurenAreaAttackEnabled", areaEnabled);
         tag.putInt("AurenAttackMode", mode);
         if (mode == ENEMY && markedEnemy != null)
@@ -609,6 +625,7 @@ public final class AurenAttackOrders {
         radius = 0;
         begin();
         int storedMode = tag.getInt("AurenAttackMode");
+        hunter.load(tag);
         if (storedMode == ENEMY && tag.hasUUID("AurenMarkedEnemy")) {
             mode = ENEMY;
             markedEnemy = tag.getUUID("AurenMarkedEnemy");
