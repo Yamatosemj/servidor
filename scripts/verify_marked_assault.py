@@ -28,7 +28,7 @@ assert "selectedRadius % 5 != 0" in orders
 assert "Commands.literal(Integer.toString(selected))" in commands
 assert "ClipContext.Block.COLLIDER" in commands
 assert "ProjectileUtil.getEntityHitResult(" in commands
-assert "entity instanceof Enemy" in commands
+assert "dragon.getAttackOrders().canMarkTarget(living)" in commands
 assert "dragon.isTame() && dragon.isOwnedBy(player)" in commands
 assert "player.getViewVector(1.0F)" in commands
 assert "MARK_DISTANCE" not in orders or "MAX_MARK_DISTANCE" in orders
@@ -41,10 +41,16 @@ for phrase in ["public boolean markArea(", "public boolean markEnemy(",
                'tag.getInt("AurenAttackRadius")', "this.fireAim = null;",
                "level.getEntity(markedEnemy)", "level.hasChunkAt(",
                "dragon.getFlightController().patrol(owner, waypoint)",
-               "combatTicks / 120", "combatTicks / 60",
-               "double altitude = mode == AREA ? 9.0D : 11.0D",
+               "AirAttack { TACKLE, HOVER_BLAST, SCORCH_STREAM }",
+               "chooseTactic(", "streamPoint(", "hoverPoint(",
+               "nextWaypointTick", "tickArea(",
                "MAX_MARK_DISTANCE * MAX_MARK_DISTANCE"]:
     assert phrase in orders, phrase
+assert "toggleAreaEnabled()" in orders
+assert "areaEnabled = !tag.contains" in orders
+assert "target == dragon.getOwner()" in orders
+assert "canFlyTo(ServerLevel level, Vec3 point)" in orders
+assert "dragon.getRandom().nextDouble()" in orders
 assert "new AurenAttackOrders(this)" in dragon
 assert "this.attackOrders.tick();" in dragon
 assert "this.attackOrders.save(tag);" in dragon
@@ -58,7 +64,8 @@ assert "new AurenIafDragonFlightManager.FlightMoveHelper(" in flight
 assert "public boolean patrol(LivingEntity targetOwner, Vec3 waypoint)" in flight
 assert "this.iafFlightManager.setFlightTarget(this.patrolPoint)" in flight
 assert "this.iafFlightManager.update(this.owner)" in flight
-assert "4.0F" in manager
+assert "4.0F" in manager and "10.0F" in manager
+assert "public boolean patrolAttack(" in flight
 assert "Mth.clamp(stabilizedY, -0.20D, 0.22D)" in flight
 
 # Fire stays in the original server-only CE attack pipeline.
@@ -77,7 +84,7 @@ assert "withinArea(Vec3.atCenterOf(firePos))" in fire
 assert 4.5**2 <= 5**2 and not (5.5**2 <= 5**2)
 assert "BlockPos markedCenter, int radius" in terrain
 assert "dx * dx + dz * dz > radius * radius" in terrain
-assert "mod_version=0.7.8-key-preview-alpha" in version
+assert "mod_version=0.7.9-natural-combat-alpha" in version
 
 # Pure numerical radius and sweep sanity (no engine/AI claim).
 for r in range(5, 31, 5):
