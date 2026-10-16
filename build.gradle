@@ -99,7 +99,7 @@ def assets = [
     'assets/aurenminecraft/textures/block/chared_stone.png':
         ['textures/block/chared_stone.png', '4d82aa613d494e20a3faba5420d8b775ea0e85a9'],
     'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_bite1.tbl':
-        ['models/tabula/lightningdragon/lightningdragon_bite1.tbl', '5527d37b3513afb00c0efea0c'],
+        ['models/tabula/lightningdragon/lightningdragon_bite1.tbl', '5527d37b3513afb00f4fd2a60ee6ab00c0efea0c'],
     'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_bite2.tbl':
         ['models/tabula/lightningdragon/lightningdragon_bite2.tbl', '854f8078d2f7cf3799e4b1d8e9e1bb1ee1206378'],
     'assets/aurenminecraft/models/tabula/lightningdragon/lightningdragon_bite3.tbl':
