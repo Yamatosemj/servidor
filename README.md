@@ -1,3 +1,26 @@
+# Auren 0.7.29 — Painel unificado no Minecraft
+
+**Status:** interface codificada, CI pendente, jogabilidade visual ainda não validada.
+
+Pressione **V** para abrir o painel personalizado escuro, escalável, com as abas **Principal, Combate e Autonomia**. Nenhum item novo nem bibliotecas gráficas externas.
+
+- **Principal:** Interagir (ombro), Descansar, Mudar forma (com verificação de colisão), Seguir/Ficar. O painel envia somente ações enumeradas. O servidor verifica dono vivo, alcance de 64 blocos, montaria e estado do Auren antes de executar.
+- **Combate:** marcar criatura, marcar área com raio 5/10/15/20/25/30, cancelar ordem persistente, ativar/desativar bombardeio. Seleção: escolher função no menu, mirar, clicar **botão direito** para confirmar, ou **V** para cancelar a prévia e retornar ao menu; nenhum item ou bloco é utilizado pelo clique de confirmação.
+- **Autonomia:** caça, voo espontâneo e exploração estão identificados como **em desenvolvimento** e não alteram a simulação; Ver ambiente revela temporariamente a percepção sincronizada existente.
+- **Teclas conservadas:** X para descida, R para fogo, G para raio, enquanto montado. As ações anteriormente em B/H/Shift+V passam ao menu; não afetar o controle aéreo.
+- O mundo fica visível ao fundo e a tela usa dimensões lógicas 418x290 com redução proporcional para telas menores.
+- Não muda nada na IA autônoma, motor CE, fogo, raio, caça marcada, NBT do dragão ou estados do mundo fora das ações solicitadas.
+
+### QA manual obrigatória
+1. V abre menu e V/ESC fecha, com mod rodando em singleplayer e servidor dedicado.
+2. Abas/click/raios com GUI Scale alterada, resolução baixa e tela cheia.
+3. Marcar criatura e área via UI; botão direito confirma sem colocar bloco/comer/montar. V durante seleção volta ao menu, mas não apaga ordem antiga.
+4. Descansar/ficar/seguir e transformar no mundo, inclusive forma adulta sob teto: negar com mensagem. Interagir com o ombro.
+5. Bombardeio ligar/desligar, cancelar ordem, render de círculos só durante mira; percepção de sete segundos.
+6. Confirme que montar normalmente com botão direito e X/R/G montado continuam funcionando.
+
+---
+
 # Auren Minecraft 0.7.28 — comportamento natural coordenado
 
 Branch separada sobre 0.7.27 (PR #52); sem alterações de voo, fogo, raio, montaria, marcações V/B ou física.

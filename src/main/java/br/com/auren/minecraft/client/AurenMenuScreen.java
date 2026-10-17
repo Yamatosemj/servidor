@@ -180,8 +180,7 @@ public final class AurenMenuScreen extends Screen {
             actionRow(g, 0, "Cacar animais", "Em desenvolvimento - opcao indisponivel", mx, my, false);
             actionRow(g, 1, "Voar espontaneamente", "Em desenvolvimento - opcao indisponivel", mx, my, false);
             actionRow(g, 2, "Explorar por vontade propria", "Em desenvolvimento - opcao indisponivel", mx, my, false);
-            label(g, "Rotinas locais ja funcionam sem IA externa.", left + 19, top + 237, CYAN);
-            label(g, "Os controles surgirao quando as acoes existirem.", left + 19, top + 251, MUTED);
+            actionRow(g, 3, "Ver ambiente", "Mostrar observacoes atuais no jogo", mx, my, d != null);
         }
         String footer = notice.isEmpty() ? "V: fechar   |   ESC: voltar ao jogo" : notice;
         label(g, footer, left + 18, top + panelHeight - 15, notice.isEmpty() ? MUTED : GOLD);
@@ -249,6 +248,14 @@ public final class AurenMenuScreen extends Screen {
                 send(AurenMenuActionPayload.TOGGLE_AREA);
                 return true;
             }
+        } else if (tab == 2 && inside(mx, my, left + 18, top + 228, panelWidth - 36, 32)) {
+            if (dragon() != null) {
+                AurenAttackOverlay.revealPerceptionForTicks(Minecraft.getInstance());
+                Minecraft.getInstance().setScreen(null);
+            } else {
+                notice = "Auren precisa estar perto de voce.";
+            }
+            return true;
         }
         return super.mouseClicked(mx, my, button);
     }

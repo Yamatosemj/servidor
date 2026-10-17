@@ -7,6 +7,7 @@ sensor=(src/"entity/AurenWorldPerception.java").read_text()
 dragon=(src/"entity/AurenDragon.java").read_text()
 commands=(src/"AurenCommands.java").read_text()
 client=(src/"client/ClientEvents.java").read_text()
+menu=(src/"client/AurenMenuScreen.java").read_text()
 hud=(src/"client/AurenAttackOverlay.java").read_text()
 for token in (
  "record Snapshot(long tick, String biome, String environment,",
@@ -38,9 +39,11 @@ for token in (
  "dragon.getAwareness().describe()", "dragon.getAwareness().recentEvents()",
  "AurenDragon dragon = getDragon(context)",
 ): assert token in commands,token
-for token in ("GLFW.GLFW_KEY_H","event.register(PERCEPTION)",
- "while (PERCEPTION.consumeClick())","revealPerceptionForTicks(mc)"):
+for token in ("GLFW.GLFW_KEY_V","event.register(MARK_TARGET)",
+ "mc.setScreen(new AurenMenuScreen())"):
     assert token in client,token
+for token in ("Ver ambiente","revealPerceptionForTicks(Minecraft.getInstance())"):
+    assert token in menu,token
 for token in ("PERCEPTION_TICKS = 140", "perceptionActive(Minecraft mc)",
  "perceptionUntil = Long.MIN_VALUE", "dragon.getSyncedPerceptionBrief()",
  "dragon.getSyncedPerceptionAlert()",

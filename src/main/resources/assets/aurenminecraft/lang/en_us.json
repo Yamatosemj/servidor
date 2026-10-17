@@ -1,9 +1,7 @@
 {
   "entity.aurenminecraft.auren": "Auren",
-  "key.aurenminecraft.dragon_breath": "Auren Fire Breath",
-  "key.aurenminecraft.dragon_down": "Descend on Auren",
-  "key.aurenminecraft.dragon_lightning": "Auren Lightning Breath (hold G)",
-  "key.aurenminecraft.mark_target": "Auren: Mark Target / Shift: Cancel or Change Radius",
-  "key.aurenminecraft.toggle_bombardment": "Auren: Toggle Aerial Bombardment",
-  "key.aurenminecraft.perception": "Auren: Perceive Surroundings (H)"
+  "key.aurenminecraft.dragon_breath": "Auren: fire breath while mounted",
+  "key.aurenminecraft.dragon_down": "Auren: descend while mounted",
+  "key.aurenminecraft.dragon_lightning": "Auren: lightning while mounted",
+  "key.aurenminecraft.mark_target": "Auren: open control panel (V)"
 }

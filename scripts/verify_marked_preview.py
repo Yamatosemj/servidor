@@ -38,7 +38,7 @@ for token in (
     "g.pose().scale(scale, scale, 1.0F)",
     "Principal", "Combate", "Autonomia", "Mudar forma", "Descansar",
     "Seguir / Ficar", "Marcar criatura", "Marcar area", "Cancelar ataque",
-    "Cacar animais", "Em desenvolvimento", "isPauseScreen()",
+    "Cacar animais", "Em desenvolvimento", "Ver ambiente", "isPauseScreen()",
     "ClientEvents.matchesMenuKey(key, scan)", "AurenAttackOverlay.setSelectedRadius",
     "ClientEvents.beginSelection(area)", "Minecraft.getInstance().setScreen(null)"
 ): assert token in menu, token
