@@ -1,6 +1,7 @@
 package br.com.auren.minecraft.entity;
 
 import net.minecraft.nbt.CompoundTag;
+import br.com.auren.minecraft.bond.AurenBondService;
 import net.minecraft.util.Mth;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -915,10 +916,10 @@ public final class AurenDragon extends TamableAnimal {
                                     ? "Auren: forma filhote." : "Auren: forma adulta."), true);
                         }
                     } else if (this.isSmallForm()) {
-                        boolean next = !this.isOnShoulder();
-                        this.setOnShoulder(next);
-                        player.displayClientMessage(Component.literal(next
-                                ? "Auren subiu no ombro!" : "Auren saiu do ombro."), true);
+                        // Turn the SAME entity into one server-owned bond record.
+                        // There is no separate entity orbiting the player's head.
+                        if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer)
+                            AurenBondService.capture(serverPlayer, this);
                     } else {
                         player.displayClientMessage(Component.literal(
                                 "Agache e interaja para transformar o Auren em filhote."), true);

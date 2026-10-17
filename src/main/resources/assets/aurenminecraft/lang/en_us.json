@@ -3,5 +3,6 @@
   "key.aurenminecraft.dragon_breath": "Auren: fire breath while mounted",
   "key.aurenminecraft.dragon_down": "Auren: descend while mounted",
   "key.aurenminecraft.dragon_lightning": "Auren: lightning while mounted",
-  "key.aurenminecraft.mark_target": "Auren: open control panel (V)"
+  "key.aurenminecraft.mark_target": "Auren: open control panel (V)",
+  "item.aurenminecraft.auren_bond": "Auren - Bound Form"
 }
