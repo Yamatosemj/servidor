@@ -53,7 +53,7 @@ jobs:
         run: python3 scripts/verify_reliability_review.py
       - name: Verify server-only environment perception and temporary HUD
         run: python3 scripts/verify_world_perception.py
-      - name: Verify discreet key target preview and aerial mode
+      - name: Verify unified V menu, secure targeting and owner actions
         run: python3 scripts/verify_marked_preview.py
       - name: Verify connected cave corridors and stable native A* route
         run: python3 scripts/verify_cave_pathfinding.py
@@ -88,6 +88,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: auren-0728-NATURAL-PRIORITIES
+          name: auren-0729-UNIFIED-MENU
           path: build/libs/*.jar
           if-no-files-found: error

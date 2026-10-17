@@ -1,6 +1,7 @@
 package br.com.auren.minecraft;
 
 import br.com.auren.minecraft.entity.AurenDragon;
+import br.com.auren.minecraft.network.AurenMenuActionPayload;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
@@ -189,6 +190,142 @@ public final class AurenCommands {
      * Keybind entry point. Target selection is repeated on the SERVER from the
      * player's actual gaze. Never trust client-provided coordinates or entity IDs.
      */
+    /**
+     * The client sends only a finite action and an optional bounded radius.
+     * No entity ID, coordinates or arbitrary text from the UI is trusted.
+     */
+    public static void handleMenuAction(ServerPlayer player, int action, int radius) {
+        if (player.isSpectator() || !player.isAlive() || player.level().isClientSide()) return;
+        AurenDragon dragon = ownedDragon(player);
+        if (dragon == null) {
+            player.displayClientMessage(Component.literal(
+                    "Auren nao encontrado em ate 64 blocos."), true);
+            return;
+        }
+
+        if (action == AurenMenuActionPayload.STOP_ATTACK) {
+            dragon.getAttackOrders().clear();
+            player.displayClientMessage(Component.literal("Auren: ataque cancelado."), true);
+            return;
+        }
+        if (action == AurenMenuActionPayload.TOGGLE_AREA) {
+            boolean enabled = dragon.getAttackOrders().toggleAreaEnabled();
+            player.displayClientMessage(Component.literal("Auren: bombardeio "
+                    + (enabled ? "ativado." : "desativado.")), true);
+            return;
+        }
+        if (dragon.isVehicle() || dragon.isPassenger()) {
+            player.displayClientMessage(Component.literal(
+                    "Desmonte antes de comandar o Auren pelo painel."), true);
+            return;
+        }
+
+        switch (action) {
+            case AurenMenuActionPayload.SHOULDER -> {
+                if (dragon.isOnShoulder()) {
+                    dragon.setOnShoulder(false);
+                    player.displayClientMessage(Component.literal("Auren desceu do ombro."), true);
+                } else {
+                    dragon.setSmallForm(true);
+                    dragon.setOnShoulder(true);
+                    player.displayClientMessage(Component.literal("Auren subiu no ombro."), true);
+                }
+            }
+            case AurenMenuActionPayload.REST -> {
+                if (dragon.getAttackOrders().hasOrder()) {
+                    player.displayClientMessage(Component.literal(
+                            "Cancele a ordem de ataque antes de descansar."), true);
+                    return;
+                }
+                if (dragon.isOnShoulder()) {
+                    player.displayClientMessage(Component.literal(
+                            "Retire o Auren do ombro para descansar."), true);
+                    return;
+                }
+                dragon.requestOwnerRest(true);
+                player.displayClientMessage(Component.literal("Auren: descansando."), true);
+            }
+            case AurenMenuActionPayload.FORM -> {
+                if (dragon.isOnShoulder()) {
+                    player.displayClientMessage(Component.literal(
+                            "Retire o Auren do ombro antes de mudar de forma."), true);
+                    return;
+                }
+                if (dragon.isSmallForm() && !dragon.canExpandToAdultHere()) {
+                    player.displayClientMessage(Component.literal(
+                            "Espaco insuficiente para a forma adulta."), true);
+                    return;
+                }
+                dragon.setSmallForm(!dragon.isSmallForm());
+                player.displayClientMessage(Component.literal(dragon.isSmallForm()
+                        ? "Auren: forma pequena." : "Auren: forma adulta."), true);
+            }
+            case AurenMenuActionPayload.FOLLOW_OR_STAY -> {
+                if (dragon.isOnShoulder()) {
+                    player.displayClientMessage(Component.literal(
+                            "Retire o Auren do ombro primeiro."), true);
+                    return;
+                }
+                boolean stay = !dragon.isOrderedToSit();
+                if (stay && dragon.getAttackOrders().hasOrder()) {
+                    player.displayClientMessage(Component.literal(
+                            "Cancele a ordem de ataque antes de ficar."), true);
+                    return;
+                }
+                dragon.requestOwnerRest(stay);
+                player.displayClientMessage(Component.literal(stay
+                        ? "Auren: fique e descanse." : "Auren: pode me seguir."), true);
+            }
+            case AurenMenuActionPayload.TARGET_CREATURE, AurenMenuActionPayload.TARGET_AREA -> {
+                if (dragon.isSmallForm() || dragon.isOnShoulder()) {
+                    player.displayClientMessage(Component.literal(
+                            "Use a forma adulta para marcar ataques."), true);
+                    return;
+                }
+                if (action == AurenMenuActionPayload.TARGET_CREATURE) {
+                    Vec3 eye = player.getEyePosition(1.0F);
+                    Vec3 end = eye.add(player.getViewVector(1.0F).scale(AIM_REACH));
+                    BlockHitResult block = player.level().clip(new ClipContext(
+                            eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+                    if (block.getType() == HitResult.Type.BLOCK) end = block.getLocation();
+                    EntityHitResult hit = ProjectileUtil.getEntityHitResult(
+                            player.level(), player, eye, end, new AABB(eye, end).inflate(1.0D),
+                            entity -> entity instanceof LivingEntity living
+                                    && living.isAlive() && entity != player && entity != dragon
+                                    && dragon.getAttackOrders().canMarkTarget(living));
+                    if (hit != null && hit.getEntity() instanceof LivingEntity enemy
+                            && dragon.getAttackOrders().markEnemy(enemy)) {
+                        player.displayClientMessage(Component.literal(
+                                "Auren: criatura marcada."), true);
+                    } else {
+                        player.displayClientMessage(Component.literal(
+                                "Mire em uma criatura valida a ate 48 blocos."), true);
+                    }
+                } else {
+                    if (radius < 5 || radius > 30 || radius % 5 != 0) return;
+                    if (!dragon.getAttackOrders().isAreaEnabled()) {
+                        player.displayClientMessage(Component.literal(
+                                "Ative o bombardeio no menu primeiro."), true);
+                        return;
+                    }
+                    Vec3 eye = player.getEyePosition(1.0F);
+                    Vec3 end = eye.add(player.getViewVector(1.0F).scale(AIM_REACH));
+                    BlockHitResult block = player.level().clip(new ClipContext(
+                            eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+                    if (block.getType() == HitResult.Type.BLOCK
+                            && dragon.getAttackOrders().markArea(block.getBlockPos(), radius)) {
+                        player.displayClientMessage(Component.literal(
+                                "Auren: area marcada, raio " + radius + "."), true);
+                    } else {
+                        player.displayClientMessage(Component.literal(
+                                "Mire em um bloco valido a ate 48 blocos."), true);
+                    }
+                }
+            }
+            default -> { /* unknown action: do nothing */ }
+        }
+    }
+
     public static void handleMarkKey(ServerPlayer player, int radius, boolean clear) {
         AurenDragon dragon = ownedDragon(player);
         if (dragon == null) {

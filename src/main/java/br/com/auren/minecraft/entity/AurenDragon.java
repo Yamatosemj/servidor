@@ -24,6 +24,7 @@ import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.SitWhenOrderedToGoal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.target.OwnerHurtTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.OwnerHurtByTargetGoal;
@@ -231,6 +232,17 @@ public final class AurenDragon extends TamableAnimal {
 
     public int getNaturalRestPose() {
         return this.entityData.get(NATURAL_REST_POSE);
+    }
+
+    /** Only server-side owner-validated handlers may request a passive rest. */
+    public void requestOwnerRest(boolean rest) {
+        if (this.level().isClientSide() || this.isVehicle() || this.isOnShoulder()) return;
+        this.setOrderedToSit(rest);
+        this.setNaturalRestPose(rest ? 1 : 0);
+        if (rest) {
+            this.flightController.land();
+            this.getNavigation().stop();
+        }
     }
 
     /** Routine is server-authoritative; no client can command rest. */
@@ -717,7 +729,7 @@ public final class AurenDragon extends TamableAnimal {
     }
 
     /** Reject manual growth into walls or unloaded chunks. */
-    private boolean canExpandToAdultHere() {
+    public boolean canExpandToAdultHere() {
         if (!this.isSmallForm()) return true;
         if (this.isInWater() || this.isInLava()) return false;
         double half = 0.78D * 3.25D * 0.5D;
@@ -781,6 +793,8 @@ public final class AurenDragon extends TamableAnimal {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(1, new FloatGoal(this));
+        // The owner's explicit rest/stay order must override autonomous stroll.
+        this.goalSelector.addGoal(1, new SitWhenOrderedToGoal(this));
         // Vanilla tameable companion owner-protection targets, with the
         // Auren-specific on-shoulder / mounted suppression below.
         // Self-defence is NOT proactive aggression. If a mob hits Auren
@@ -991,6 +1005,11 @@ public final class AurenDragon extends TamableAnimal {
                 this.awareness.tick(perceptionLevel);
             this.syncPerception();
             this.mind.tickServer();
+            // A manual rest stays visible after the higher-priority sit Goal
+            // interrupts an autonomous idle and resets its former rest pose.
+            if (this.isOrderedToSit() && !this.isVehicle()
+                    && this.getFlightMode() == AurenFlightController.GROUNDED)
+                this.setNaturalRestPose(1);
             this.attackOrders.tick();
             this.syncAttackMark();
             this.flightController.tick();

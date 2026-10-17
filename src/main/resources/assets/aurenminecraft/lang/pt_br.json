@@ -1,9 +1,7 @@
 {
   "entity.aurenminecraft.auren": "Auren",
-  "key.aurenminecraft.dragon_breath": "Auren: soprar fogo",
-  "key.aurenminecraft.dragon_down": "Auren: descer",
-  "key.aurenminecraft.dragon_lightning": "Auren: lançar raio (segure G)",
-  "key.aurenminecraft.mark_target": "Auren: marcar alvo / Shift: cancelar ou mudar raio",
-  "key.aurenminecraft.toggle_bombardment": "Auren: ligar/desligar bombardeio aéreo",
-  "key.aurenminecraft.perception": "Auren: perceber ambiente (H)"
+  "key.aurenminecraft.dragon_breath": "Auren: soprar fogo montado",
+  "key.aurenminecraft.dragon_down": "Auren: descer montado",
+  "key.aurenminecraft.dragon_lightning": "Auren: lançar raio montado",
+  "key.aurenminecraft.mark_target": "Auren: abrir painel (V)"
 }

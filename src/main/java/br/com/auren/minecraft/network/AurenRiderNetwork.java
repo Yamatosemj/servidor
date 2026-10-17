@@ -23,6 +23,8 @@ public final class AurenRiderNetwork {
                 AurenDragonControlPayload.CODEC, AurenRiderNetwork::handleControl);
         registrar.playToServer(AurenMarkPayload.ID,
                 AurenMarkPayload.CODEC, AurenRiderNetwork::handleMark);
+        registrar.playToServer(AurenMenuActionPayload.ID,
+                AurenMenuActionPayload.CODEC, AurenRiderNetwork::handleMenu);
     }
 
     private static void handleMark(AurenMarkPayload payload, IPayloadContext context) {
@@ -30,6 +32,13 @@ public final class AurenRiderNetwork {
             if (context.player() instanceof ServerPlayer player) {
                 AurenCommands.handleMarkKey(player, payload.radius(), payload.clear());
             }
+        });
+    }
+
+    private static void handleMenu(AurenMenuActionPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (context.player() instanceof ServerPlayer player)
+                AurenCommands.handleMenuAction(player, payload.action(), payload.radius());
         });
     }
 
