@@ -34,7 +34,7 @@ for x in (
     "dragon.getMind().idleUnready(",
     "dragon.getMind().idlePathFailed()",
     "dragon.getMind().idleFinished(",
-    "reportRouteCompletion();",
+    "reportRouteCompletion(false);",
     "dragon.getMind().idleRouteEnded(",
     "initialOwnerDistance - dragon.distanceTo(owner)",
     "traveledDuringRoute, interrupted",
