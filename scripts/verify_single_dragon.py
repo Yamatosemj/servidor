@@ -15,7 +15,10 @@ build = (root / "build.gradle").read_text()
 metadata_template = (root / "src/main/templates/META-INF/neoforge.mods.toml").read_text()
 assert registration.count('ENTITIES.register("auren"') == 1
 assert registration.count('ENTITIES.register("') == 1, "Only one named entity registration permitted"
-assert "DeferredRegister.Items" not in registration, "IceAndFire item registry forbidden"
+assert registration.count('ITEMS.register("auren_bond"') == 1
+assert registration.count('ITEMS.register("') == 1, "Only the dedicated bound Auren item is permitted"
+assert "DeferredRegister.createItems(MOD_ID)" in registration
+assert "IafItems" not in registration
 assert "IafEntities" not in commands and "spawnOriginal" not in commands
 assert 'Commands.literal("original")' not in commands
 assert 'Commands.literal("original_fogo")' not in commands
