@@ -93,7 +93,7 @@ def check():
     assert "if (entity.isVehicle())" in renderer
     assert "pose.mulPose(Axis.XP.rotationDegrees(entity.getRiderVisualPitch(partialTick)))" in renderer
     assert "Axis.YP.rotationDegrees(90" not in renderer
-    assert "mod_version=0.7.27-visible-offline-routine-alpha" in version
+    assert "mod_version=0.7.28-natural-priorities-alpha" in version
     print(f"PASS: {len(NAMES)} compatible original Lightning Dragon "
           f"Tabula models are bundled and referenced; original CE folded wings and illustrated awake neck wrap integrated")
 
