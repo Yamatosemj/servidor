@@ -32,7 +32,7 @@ for expected in (
   "dragon.getNavigation().moveTo(shortRoute, 0.68D)",
   "dragon.getNavigation().moveTo(route, 0.63D)",
   "animal.distanceToSqr(dragon) > 2.0D * 2.0D",
-  "routine = Routine.REST",
+  "routine = startedRoutine = Routine.REST",
   "dragon.setNaturalRestPose(night() ? 2 : 1)",
   "dragon.setNaturalRestPose(0)",
   "dragon.getAttackOrders().hasOrder()",
@@ -42,7 +42,7 @@ for expected in (
   "dragon.isVehicle()",
   "dragon.isOnShoulder()",
   "dragon.isOrderedToSit()",
-  "candidate.getDeltaMovement().horizontalDistanceSqr() < 0.045D",
+  "ownerStationary(candidate)",
   "public void stop()",
 ):
     assert expected in routine, expected
@@ -77,7 +77,7 @@ assert "this.iafFlightManager" not in routine
 assert "getNavigation().createPath(this.owner, 0)" in follow
 assert "findDistributedAreaImpact(" in orders
 assert "AurenScorchTerrain.scorchFace(" in fire
-assert "mod_version=0.7.27-visible-offline-routine-alpha" in (
+assert "mod_version=0.7.28-natural-priorities-alpha" in (
     root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars

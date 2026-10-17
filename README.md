@@ -1,3 +1,20 @@
+# Auren Minecraft 0.7.28 — comportamento natural coordenado
+
+Branch separada sobre 0.7.27 (PR #52); sem alterações de voo, fogo, raio, montaria, marcações V/B ou física.
+
+- Faixa ociosa adulta ampliada até 15 blocos, filhote até 4,5, complementando o acompanhamento.
+- Dono parado por 12 ticks de verdade (velocidade e deslocamento em janela de 8 ticks), evitando rotinas durante caminhadas lentas.
+- Aproximação usa pontos alcançáveis e mais perto do dono.
+- Restauração temporária da forma adulta após caçada tem exclusividade sobre acompanhar/idle.
+- Ordens de ataque pendentes continuam intactas e informam o motivo do bloqueio da rotina.
+- Diagnóstico distingue sessões, ações visíveis tentadas, movimento real >=0,75 bloco, rotas interrompidas e caminhos sem avanço.
+- Transformação manual só aumenta o dragão onde o corpo adulto cabe, com chunks disponíveis.
+- Limite de 6 buscas A* por seleção preservado; nenhum chunk carregado para rotinas.
+
+**QA manual ainda necessário.** Testar 10–15 blocos, dono andando devagar, caverna após caça, alvo marcado ausente, transformação sob teto e combate interrompendo idle.
+
+---
+
 # Auren Minecraft 0.7.27 — Rotinas visíveis e verificáveis
 
 **Motivo da atualização:** o usuário não percebeu mudanças em gameplay após a 0.7.26. A política de utilidade mudou o ranking mas oferecia quase as mesmas atividades visuais; na prática `EXPLORE` podia falhar a escolha de altura/piso e cair para `OBSERVE`, que só mexia a cabeça. Isso não é teste satisfatório de autonomia.

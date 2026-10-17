@@ -27,6 +27,9 @@ public final class AurenLocalMind {
     private int idleStarts;
     private int failedIdlePaths;
     private int stalledIdleRoutes;
+    private int visibleIdleAttempts;
+    private int routesWithMovement;
+    private int interruptedRoutes;
     private String lastRouteResult = "nenhum";
     private String idleStatus = "aguardando oportunidade";
     private String lastBlocked = "nenhum";
@@ -84,10 +87,16 @@ public final class AurenLocalMind {
     }
 
     /** Distinguish A* accepted from actual ground movement. */
-    public void idleRouteEnded(String route, double progressBlocks) {
-        boolean advanced = Double.isFinite(progressBlocks) && progressBlocks >= 0.75D;
+    public void idleRouteEnded(String route, double progressBlocks,
+                               double distanceTraveled, boolean interrupted) {
+        boolean advanced = Double.isFinite(distanceTraveled) && distanceTraveled >= 0.75D;
         if (!advanced) stalledIdleRoutes = Math.min(99999, stalledIdleRoutes + 1);
-        lastRouteResult = route + (advanced ? " avancou " : " sem avancar ") 
+        else routesWithMovement = Math.min(99999, routesWithMovement + 1);
+        if (interrupted) interruptedRoutes = Math.min(99999, interruptedRoutes + 1);
+        lastRouteResult = route + (interrupted ? " interrompida" : " navegacao encerrada")
+                + " | andou " + (Double.isFinite(distanceTraveled)
+                    ? Math.round(distanceTraveled * 10.0D) / 10.0D : 0.0D)
+                + " blocos | deslocamento/avanco "
                 + (Double.isFinite(progressBlocks)
                     ? Math.round(progressBlocks * 10.0D) / 10.0D : 0.0D)
                 + " blocos";
@@ -106,6 +115,8 @@ public final class AurenLocalMind {
         previous = activity;
         ++localDecisions;
         ++idleStarts;
+        if (activity != AurenLocalDecisionPolicy.Activity.OBSERVE)
+            visibleIdleAttempts = Math.min(99999, visibleIdleAttempts + 1);
         lastBlocked = "nenhum"; // Do not show a stale cooldown while a routine is active.
         idleStatus = "executando: " + switch (activity) {
             case OBSERVE -> "observando";
@@ -130,6 +141,9 @@ public final class AurenLocalMind {
                     : previous.name().toLowerCase(java.util.Locale.ROOT))
                 + " | rotina: " + idleStatus
                 + " | iniciadas: " + idleStarts
+                + ", acoes visiveis tentadas: " + visibleIdleAttempts
+                + ", rotas que andaram: " + routesWithMovement
+                + ", rotas interrompidas: " + interruptedRoutes
                 + ", caminhos inviaveis: " + failedIdlePaths
                 + ", rotas sem avanco: " + stalledIdleRoutes
                 + " | ultimo trajeto: " + lastRouteResult
