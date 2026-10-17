@@ -729,7 +729,7 @@ public final class AurenDragon extends TamableAnimal {
     }
 
     /** Reject manual growth into walls or unloaded chunks. */
-    private boolean canExpandToAdultHere() {
+    public boolean canExpandToAdultHere() {
         if (!this.isSmallForm()) return true;
         if (this.isInWater() || this.isInLava()) return false;
         double half = 0.78D * 3.25D * 0.5D;

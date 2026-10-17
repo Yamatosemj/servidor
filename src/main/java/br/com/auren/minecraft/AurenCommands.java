@@ -232,6 +232,11 @@ public final class AurenCommands {
                 }
             }
             case AurenMenuActionPayload.REST -> {
+                if (dragon.getAttackOrders().hasOrder()) {
+                    player.displayClientMessage(Component.literal(
+                            "Cancele a ordem de ataque antes de descansar."), true);
+                    return;
+                }
                 if (dragon.isOnShoulder()) {
                     player.displayClientMessage(Component.literal(
                             "Retire o Auren do ombro para descansar."), true);
@@ -262,6 +267,11 @@ public final class AurenCommands {
                     return;
                 }
                 boolean stay = !dragon.isOrderedToSit();
+                if (stay && dragon.getAttackOrders().hasOrder()) {
+                    player.displayClientMessage(Component.literal(
+                            "Cancele a ordem de ataque antes de ficar."), true);
+                    return;
+                }
                 dragon.requestOwnerRest(stay);
                 player.displayClientMessage(Component.literal(stay
                         ? "Auren: fique e descanse." : "Auren: pode me seguir."), true);

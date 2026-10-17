@@ -23,6 +23,7 @@ public final class AurenMenuScreen extends Screen {
     private static final int GREEN = 0xFF8FE3B3;
     private int tab; // 0 Principal, 1 Combate, 2 Autonomia
     private int left, top, panelWidth, panelHeight;
+    private float scale = 1.0F;
     private String notice = "";
 
     public AurenMenuScreen() {
@@ -31,10 +32,14 @@ public final class AurenMenuScreen extends Screen {
 
     @Override
     protected void init() {
-        panelWidth = Math.min(418, width - 18);
-        panelHeight = Math.min(290, height - 16);
-        left = (width - panelWidth) / 2;
-        top = (height - panelHeight) / 2;
+        // Keep the approved proportions on narrow windows and high GUI scale.
+        panelWidth = 418;
+        panelHeight = 290;
+        scale = Math.min(1.0F, Math.min((width - 18) / 418.0F,
+                (height - 16) / 290.0F));
+        scale = Math.max(0.20F, scale);
+        left = Math.round((width / scale - panelWidth) / 2.0F);
+        top = Math.round((height / scale - panelHeight) / 2.0F);
     }
 
     private AurenDragon dragon() {
@@ -115,6 +120,10 @@ public final class AurenMenuScreen extends Screen {
     public void render(GuiGraphics g, int mx, int my, float partialTick) {
         // Real Minecraft world remains visible beneath a dark, translucent HUD.
         g.fill(0, 0, width, height, 0x9C07101C);
+        g.pose().pushPose();
+        g.pose().scale(scale, scale, 1.0F);
+        mx = Math.round(mx / scale);
+        my = Math.round(my / scale);
         frame(g, left, top, panelWidth, panelHeight, 0xFF3B6075, PANEL);
         g.fill(left + 3, top + 3, left + panelWidth - 3, top + 6, 0xFF3C9BBD);
         label(g, "AUREN", left + 18, top + 15, CYAN);
@@ -176,6 +185,7 @@ public final class AurenMenuScreen extends Screen {
         }
         String footer = notice.isEmpty() ? "V: fechar   |   ESC: voltar ao jogo" : notice;
         label(g, footer, left + 18, top + panelHeight - 15, notice.isEmpty() ? MUTED : GOLD);
+        g.pose().popPose();
         super.render(g, mx, my, partialTick);
     }
 
@@ -191,6 +201,8 @@ public final class AurenMenuScreen extends Screen {
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (button != 0) return super.mouseClicked(mx, my, button);
+        mx /= scale;
+        my /= scale;
         int gap = 7;
         int tw = (panelWidth - 36 - gap * 2) / 3;
         for (int i = 0; i < 3; ++i) {
