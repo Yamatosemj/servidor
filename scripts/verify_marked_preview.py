@@ -20,7 +20,7 @@ modbus = read("client/ClientModEvents.java")
 for token in (
     "GLFW.GLFW_KEY_V", "event.register(MARK_TARGET)",
     "while (MARK_TARGET.consumeClick())", "mc.setScreen(new AurenMenuScreen())",
-    "ClientEvents.isTargeting()", "InputEvent.InteractionKeyMappingTriggered",
+    "isTargeting()", "InputEvent.InteractionKeyMappingTriggered",
     "event.isUseItem()", "event.setCanceled(true)",
     "event.getHand() == InteractionHand.OFF_HAND && suppressOffhand",
     "new AurenMenuActionPayload(", "endSelection();",
