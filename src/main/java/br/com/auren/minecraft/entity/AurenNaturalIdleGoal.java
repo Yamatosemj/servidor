@@ -39,6 +39,14 @@ public final class AurenNaturalIdleGoal extends Goal {
     private Vec3 routeStart;
     private double initialOwnerDistance;
     private int remainingPathBudget;
+    private LivingEntity sampledOwner;
+    private Vec3 lastOwnerSample;
+    private int lastOwnerSampleTick = Integer.MIN_VALUE;
+    private int ownerLastMovedTick = Integer.MIN_VALUE;
+    private Vec3 lastRouteSample;
+    private double traveledDuringRoute;
+    private boolean routeReported;
+    private Routine startedRoutine = Routine.OBSERVE;
     private Animal interestingAnimal;
 
     public AurenNaturalIdleGoal(AurenDragon dragon) {
@@ -46,11 +54,34 @@ public final class AurenNaturalIdleGoal extends Goal {
         this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
 
+    /**
+     * Require real owner stillness, including slow movement the velocity
+     * snapshot can miss. Avoid an instant idle right after the owner stops.
+     */
+    private boolean ownerStationary(LivingEntity candidate) {
+        if (sampledOwner != candidate || lastOwnerSample == null) {
+            sampledOwner = candidate;
+            lastOwnerSample = candidate.position();
+            lastOwnerSampleTick = dragon.tickCount;
+            ownerLastMovedTick = dragon.tickCount;
+        } else if (dragon.tickCount - lastOwnerSampleTick >= 8) {
+            double dx = candidate.getX() - lastOwnerSample.x;
+            double dz = candidate.getZ() - lastOwnerSample.z;
+            if (dx * dx + dz * dz > 0.16D)
+                ownerLastMovedTick = dragon.tickCount;
+            lastOwnerSample = candidate.position();
+            lastOwnerSampleTick = dragon.tickCount;
+        }
+        if (candidate.getDeltaMovement().horizontalDistanceSqr() >= 0.012D)
+            ownerLastMovedTick = dragon.tickCount;
+        return dragon.tickCount - ownerLastMovedTick >= 12;
+    }
+
     private boolean calm(LivingEntity candidate) {
         if (candidate == null || !candidate.isAlive()
                 || candidate.level() != dragon.level() || candidate.isSpectator())
             return false;
-        double maxDistance = dragon.isSmallForm() ? 4.0D : 10.0D;
+        double maxDistance = dragon.isSmallForm() ? 4.5D : 15.0D;
         AurenWorldPerception.Snapshot observed = dragon.getAwareness().latest();
         boolean danger = observed != null
                 && (observed.dangerNearOwner() || observed.ownerBurning()
@@ -59,11 +90,12 @@ public final class AurenNaturalIdleGoal extends Goal {
                 && !dragon.isOrderedToSit() && !dragon.isOnShoulder()
                 && !dragon.isVehicle() && !dragon.isPassenger()
                 && !dragon.getAttackOrders().hasOrder()
+                && !dragon.getAttackOrders().isRestoringForm()
                 && dragon.getTarget() == null && !danger
                 && dragon.getFlightMode() == AurenFlightController.GROUNDED
                 && dragon.onGround() && !dragon.isInWater()
                 && dragon.distanceToSqr(candidate) < maxDistance * maxDistance
-                && candidate.getDeltaMovement().horizontalDistanceSqr() < 0.045D;
+                && ownerStationary(candidate);
     }
 
     @Override
@@ -85,15 +117,19 @@ public final class AurenNaturalIdleGoal extends Goal {
             else if (dragon.isOrderedToSit()) reason = "sentado por ordem";
             else if (dragon.isOnShoulder()) reason = "no ombro";
             else if (dragon.isVehicle()) reason = "montado";
-            else if (dragon.getAttackOrders().hasOrder() || dragon.getTarget() != null)
+            else if (dragon.getAttackOrders().isRestoringForm())
+                reason = "recuperando forma adulta apos caverna";
+            else if (dragon.getAttackOrders().hasOrder())
+                reason = dragon.getAttackOrders().routineBlockReason();
+            else if (dragon.getTarget() != null)
                 reason = "combate ou alvo ativo";
             else if (dragon.getFlightMode() != AurenFlightController.GROUNDED
                     || !dragon.onGround()) reason = "voando ou fora do chao";
             else if (dragon.distanceToSqr(possible)
-                    >= (dragon.isSmallForm() ? 16.0D : 100.0D))
+                    >= (dragon.isSmallForm() ? 20.25D : 225.0D))
                 reason = "dono distante";
-            else if (possible.getDeltaMovement().horizontalDistanceSqr() >= 0.045D)
-                reason = "dono em movimento";
+            else if (!ownerStationary(possible))
+                reason = "dono em movimento ou ainda parando";
             else reason = "ambiente inseguro ou sem condicoes de descanso";
             dragon.getMind().idleUnready(reason);
             return false;
@@ -123,6 +159,10 @@ public final class AurenNaturalIdleGoal extends Goal {
         interestPoint = null;
         dragon.getNavigation().stop();
         routeStart = dragon.position();
+        lastRouteSample = routeStart;
+        traveledDuringRoute = 0.0D;
+        routeReported = false;
+        startedRoutine = Routine.OBSERVE;
         initialOwnerDistance = dragon.distanceTo(owner);
         remainingPathBudget = 6;
         remainingTicks = MIN_REST_TICKS + dragon.getRandom().nextInt(
@@ -140,7 +180,7 @@ public final class AurenNaturalIdleGoal extends Goal {
                     Path cover = chooseInterestPath(true);
                     if (cover != null && cover.canReach()
                             && dragon.getNavigation().moveTo(cover, 0.72D)) {
-                        routine = Routine.SEEK_SHELTER;
+                        routine = startedRoutine = Routine.SEEK_SHELTER;
                         remainingTicks = 110 + dragon.getRandom().nextInt(100);
                         dragon.getMind().accepted(rated.activity());
                         return;
@@ -149,7 +189,7 @@ public final class AurenNaturalIdleGoal extends Goal {
                 }
                 case REST -> {
                     if (exposedRain()) break; // resting in open rain looks wrong
-                    routine = Routine.REST;
+                    routine = startedRoutine = Routine.REST;
                     remainingTicks = night()
                             ? 200 + dragon.getRandom().nextInt(280)
                             : 95 + dragon.getRandom().nextInt(120);
@@ -166,7 +206,7 @@ public final class AurenNaturalIdleGoal extends Goal {
                     if (route != null && route.canReach()
                             && dragon.getNavigation().moveTo(route, 0.63D)) {
                         interestingAnimal = nearby;
-                        routine = Routine.INVESTIGATE;
+                        routine = startedRoutine = Routine.INVESTIGATE;
                         dragon.getMind().accepted(rated.activity());
                         return;
                     }
@@ -176,24 +216,24 @@ public final class AurenNaturalIdleGoal extends Goal {
                     Path shortRoute = chooseInterestPath(false);
                     if (shortRoute != null && shortRoute.canReach()
                             && dragon.getNavigation().moveTo(shortRoute, 0.68D)) {
-                        routine = Routine.EXPLORE;
+                        routine = startedRoutine = Routine.EXPLORE;
                         dragon.getMind().accepted(rated.activity());
                         return;
                     }
                     dragon.getMind().idlePathFailed();
                 }
                 case APPROACH_OWNER -> {
-                    double minimum = dragon.isSmallForm() ? 2.5D : 3.6D;
+                    double minimum = dragon.isSmallForm() ? 2.6D : 4.6D;
                     if (dragon.distanceToSqr(owner) <= minimum * minimum)
                         break;
                     // Choose a safe spot alongside the player, never their
                     // feet. The follow goal is not overridden at long range.
                     Path approach = chooseInterestPath(false,
                             dragon.isSmallForm() ? 1.8D : 3.0D,
-                            dragon.isSmallForm() ? 2.7D : 4.4D);
+                            dragon.isSmallForm() ? 2.3D : 3.6D, true);
                     if (approach != null && approach.canReach()
                             && dragon.getNavigation().moveTo(approach, 0.82D)) {
-                        routine = Routine.APPROACH_OWNER;
+                        routine = startedRoutine = Routine.APPROACH_OWNER;
                         remainingTicks = 90 + dragon.getRandom().nextInt(95);
                         dragon.getMind().accepted(rated.activity());
                         return;
@@ -201,14 +241,14 @@ public final class AurenNaturalIdleGoal extends Goal {
                     dragon.getMind().idlePathFailed();
                 }
                 case OBSERVE -> {
-                    routine = Routine.OBSERVE;
+                    routine = startedRoutine = Routine.OBSERVE;
                     dragon.getMind().accepted(rated.activity());
                     return;
                 }
             }
         }
         // No unsafe or impossible action is ever forced.
-        routine = Routine.OBSERVE;
+        routine = startedRoutine = Routine.OBSERVE;
         dragon.getMind().accepted(AurenLocalDecisionPolicy.Activity.OBSERVE);
     }
 
@@ -227,7 +267,7 @@ public final class AurenNaturalIdleGoal extends Goal {
     /** A* only; local owner-centered waypoints, no teleport or flight. */
     private Path chooseInterestPath(boolean shelteredOnly) {
         return chooseInterestPath(shelteredOnly, 2.2D,
-                dragon.isSmallForm() ? 3.8D : 6.8D);
+                dragon.isSmallForm() ? 3.8D : 6.8D, false);
     }
 
     /**
@@ -236,7 +276,7 @@ public final class AurenNaturalIdleGoal extends Goal {
      * often falling through to OBSERVE without any visible activity.
      */
     private Path chooseInterestPath(boolean shelteredOnly, double minDist,
-                                    double maxDist) {
+                                    double maxDist, boolean approaching) {
         if (owner == null) return null;
         if (remainingPathBudget <= 0) return null;
         for (int attempt = 0; attempt < MAX_SEARCH_ATTEMPTS; ++attempt) {
@@ -265,6 +305,10 @@ public final class AurenNaturalIdleGoal extends Goal {
                         destination.y - dragon.getY(),
                         destination.z - dragon.getZ());
                 if (!dragon.level().noCollision(dragon, space)) continue;
+                // Voluntary approach must make progress, not wander away.
+                if (approaching && (dragon.position().distanceToSqr(destination) < 1.0D
+                        || destination.distanceToSqr(owner.position())
+                            >= dragon.distanceToSqr(owner) - 2.0D)) continue;
                 // Do not run an unbounded number of A* searches in a tick.
                 if (remainingPathBudget <= 0) return null;
                 --remainingPathBudget;
@@ -282,6 +326,11 @@ public final class AurenNaturalIdleGoal extends Goal {
     public void tick() {
         --remainingTicks;
         if (owner == null) return;
+        if (!routeReported && movingRoutine(routine) && lastRouteSample != null) {
+            double step = dragon.position().distanceTo(lastRouteSample);
+            if (step >= 0.01D && step < 3.0D) traveledDuringRoute += step;
+            lastRouteSample = dragon.position();
+        }
         if (routine == Routine.REST) {
             // Quiet CE sitting/sleeping pose; interruptible every tick.
             // Sleeping eyes do not constantly track the owner.
@@ -293,13 +342,14 @@ public final class AurenNaturalIdleGoal extends Goal {
             if (interestingAnimal == null || !interestingAnimal.isAlive()
                     || interestingAnimal.distanceToSqr(owner) > 100.0D) {
                 dragon.getNavigation().stop();
+                reportRouteCompletion(true);
                 routine = Routine.OBSERVE;
             } else {
                 dragon.getLookControl().setLookAt(interestingAnimal, 7.0F, 7.0F);
                 if (dragon.distanceToSqr(interestingAnimal) < 3.8D * 3.8D
                         || dragon.getNavigation().isDone()) {
                     dragon.getNavigation().stop();
-                    reportRouteCompletion();
+                    reportRouteCompletion(false);
                     routine = Routine.OBSERVE;
                 }
             }
@@ -307,7 +357,7 @@ public final class AurenNaturalIdleGoal extends Goal {
                 || routine == Routine.SEEK_SHELTER
                 || routine == Routine.APPROACH_OWNER) {
             if (dragon.getNavigation().isDone()) {
-                reportRouteCompletion();
+                reportRouteCompletion(false);
                 routine = Routine.OBSERVE;
                 dragon.getNavigation().stop();
             } else if (dragon.tickCount % 40 < 8) {
@@ -333,26 +383,38 @@ public final class AurenNaturalIdleGoal extends Goal {
         }
     }
 
-    /** A path starting does not prove the dragon actually moved. */
-    private void reportRouteCompletion() {
-        if (routeStart == null || owner == null) return;
+    private static boolean movingRoutine(Routine routine) {
+        return routine == Routine.EXPLORE || routine == Routine.APPROACH_OWNER
+                || routine == Routine.INVESTIGATE || routine == Routine.SEEK_SHELTER;
+    }
+
+    /** A* acceptance is not movement. Track actual travel and interruption. */
+    private void reportRouteCompletion(boolean interrupted) {
+        if (routeReported || routeStart == null || owner == null
+                || !movingRoutine(routine)) return;
         double progress = routine == Routine.APPROACH_OWNER
                 ? initialOwnerDistance - dragon.distanceTo(owner)
                 : dragon.position().distanceTo(routeStart);
         dragon.getMind().idleRouteEnded(
-                routine.name().toLowerCase(java.util.Locale.ROOT), progress);
+                routine.name().toLowerCase(java.util.Locale.ROOT),
+                progress, traveledDuringRoute, interrupted);
+        routeReported = true;
     }
 
     @Override
     public void stop() {
+        reportRouteCompletion(true);
         dragon.setNaturalRestPose(0);
         dragon.getNavigation().stop();
         dragon.getMind().idleFinished(
-                "encerrou " + routine.name().toLowerCase(java.util.Locale.ROOT));
+                (remainingTicks <= 0 ? "tempo encerrado: " : "interrompida: ")
+                + startedRoutine.name().toLowerCase(java.util.Locale.ROOT));
         owner = null;
         interestingAnimal = null;
         interestPoint = null;
         routeStart = null;
+        lastRouteSample = null;
+        routeReported = false;
         remainingTicks = 0;
         routine = Routine.OBSERVE;
         nextRoutineTick = dragon.tickCount + MIN_COOLDOWN_TICKS

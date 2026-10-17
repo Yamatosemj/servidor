@@ -37,6 +37,9 @@ for x in (
     "reportRouteCompletion();",
     "dragon.getMind().idleRouteEnded(",
     "initialOwnerDistance - dragon.distanceTo(owner)",
+    "traveledDuringRoute, interrupted",
+    "reportRouteCompletion(true);",
+    "ownerStationary(candidate)",
     "dragon.getAttackOrders().hasOrder()",
 ):
     assert x in idle,x
@@ -45,7 +48,8 @@ for x in (
     "private int idleStarts",
     "private int failedIdlePaths",
     "private int stalledIdleRoutes",
-    "public void idleRouteEnded(String route, double progressBlocks)",
+    "public void idleRouteEnded(String route, double progressBlocks,",
+    "private int routesWithMovement",
     '" | ultimo trajeto: " + lastRouteResult',
     "idleStatus = \"executando: \" + switch (activity)",
     "case APPROACH_OWNER -> \"aproximando do dono\"",
@@ -58,7 +62,7 @@ for x in (
     '" | limite: " + lastBlocked',
 ):
     assert x in mind,x
-assert "mod_version=0.7.27-visible-offline-routine-alpha" in (
+assert "mod_version=0.7.28-natural-priorities-alpha" in (
     root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars

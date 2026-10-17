@@ -88,6 +88,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: auren-0727-VISIBLE-ROUTINE
+          name: auren-0728-NATURAL-PRIORITIES
           path: build/libs/*.jar
           if-no-files-found: error

@@ -77,6 +77,7 @@ final class AurenRelentlessHunt {
     }
 
     boolean isCompact() { return compact; }
+    boolean isRestoringForm() { return pendingRestore; }
     Vec3 getFireAim() { return fireAim; }
 
     void inspectAerialRoute(boolean canSeeFromSomewhere) {

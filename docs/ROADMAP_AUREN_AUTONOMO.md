@@ -83,3 +83,20 @@ Solução proposta na branch `fix/auren-0727-visible-offline-routine`:
 **Critério para fechar a etapa 1:** usuário observa ao menos um comportamento novo OU os diagnósticos mostram concretamente por que a rotina não inicia. Se ainda não houver diferença, investigar prioridades de GoalSelector e geometria no mundo, sem iniciar etapa 2 por impulso.
 
 - **0.7.27 — outra causa confirmada:** cooldown ocioso era decrementado por chamada de `Goal.canUse()`, não por tick; como o selector não consulta a cada tick, os intervalos reais podiam triplicar ou mais. Corrigido com `nextRoutineTick` em ticks absolutos. 
+
+## 0.7.28 — Coordenação da rotina
+
+# Auren Minecraft 0.7.28 — comportamento natural coordenado
+
+Branch separada sobre 0.7.27 (PR #52); sem alterações de voo, fogo, raio, montaria, marcações V/B ou física.
+
+- Faixa ociosa adulta ampliada até 15 blocos, filhote até 4,5, complementando o acompanhamento.
+- Dono parado por 12 ticks de verdade (velocidade e deslocamento em janela de 8 ticks), evitando rotinas durante caminhadas lentas.
+- Aproximação usa pontos alcançáveis e mais perto do dono.
+- Restauração temporária da forma adulta após caçada tem exclusividade sobre acompanhar/idle.
+- Ordens de ataque pendentes continuam intactas e informam o motivo do bloqueio da rotina.
+- Diagnóstico distingue sessões, ações visíveis tentadas, movimento real >=0,75 bloco, rotas interrompidas e caminhos sem avanço.
+- Transformação manual só aumenta o dragão onde o corpo adulto cabe, com chunks disponíveis.
+- Limite de 6 buscas A* por seleção preservado; nenhum chunk carregado para rotinas.
+
+**QA manual ainda necessário.** Testar 10–15 blocos, dono andando devagar, caverna após caça, alvo marcado ausente, transformação sob teto e combate interrompendo idle.

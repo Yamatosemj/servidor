@@ -70,6 +70,19 @@ public final class AurenAttackOrders {
     }
 
     public boolean hasOrder() { return mode != NONE; }
+    /** Cave restoration retains movement ownership even if an order ends. */
+    public boolean isRestoringForm() { return hunter.isRestoringForm(); }
+
+    /** Read-only diagnostic; never discard the owner's persistent order. */
+    public String routineBlockReason() {
+        if (isRestoringForm()) return "recuperando forma adulta apos caverna";
+        if (mode == ENEMY && (recentlyResolvedEnemy == null
+                || !recentlyResolvedEnemy.isAlive() || recentlyResolvedEnemy.isRemoved()))
+            return "alvo marcado pendente ou fora dos chunks carregados";
+        if (mode == AREA && (areaCenter == null || !dragon.level().hasChunkAt(areaCenter)))
+            return "area marcada fora dos chunks carregados";
+        return "ordem de ataque ativa";
+    }
     public boolean isCompactHunting() { return hunter.isCompact(); }
     public int getMode() { return mode; }
     public boolean isAreaEnabled() { return areaEnabled; }

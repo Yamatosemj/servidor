@@ -39,6 +39,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -715,6 +716,25 @@ public final class AurenDragon extends TamableAnimal {
         this.refreshDimensions();
     }
 
+    /** Reject manual growth into walls or unloaded chunks. */
+    private boolean canExpandToAdultHere() {
+        if (!this.isSmallForm()) return true;
+        if (this.isInWater() || this.isInLava()) return false;
+        double half = 0.78D * 3.25D * 0.5D;
+        double height = 1.20D * 3.25D;
+        AABB adult = new AABB(this.getX() - half, this.getY(), this.getZ() - half,
+                this.getX() + half, this.getY() + height, this.getZ() + half);
+        // A collision query alone is not enough at unloaded chunk boundaries.
+        for (double x : new double[] {adult.minX, adult.maxX}) {
+            for (double z : new double[] {adult.minZ, adult.maxZ}) {
+                if (!this.level().hasChunkAt(BlockPos.containing(x, adult.minY, z))
+                        || !this.level().hasChunkAt(BlockPos.containing(x, adult.maxY, z)))
+                    return false;
+            }
+        }
+        return this.level().noCollision(this, adult);
+    }
+
     /** Updates state once; the normal tick keeps its position synchronized. */
     public void setOnShoulder(boolean enabled) {
         if (this.isVehicle()) return;
@@ -872,6 +892,9 @@ public final class AurenDragon extends TamableAnimal {
                         if (this.isOnShoulder()) {
                             this.setOnShoulder(false);
                             player.displayClientMessage(Component.literal("Auren saiu do ombro."), true);
+                        } else if (this.isSmallForm() && !this.canExpandToAdultHere()) {
+                            player.displayClientMessage(Component.literal(
+                                    "Auren precisa de espaco livre para assumir a forma adulta."), true);
                         } else {
                             this.setSmallForm(!this.isSmallForm());
                             player.displayClientMessage(Component.literal(this.isSmallForm()
