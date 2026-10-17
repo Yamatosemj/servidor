@@ -886,6 +886,17 @@ public final class AurenDragon extends TamableAnimal {
         if (player.getItemInHand(hand).isEmpty()) {
             if (!this.level().isClientSide()) {
                 if (!this.isTame()) {
+                    // A bonded original cannot coexist with another tamed Auren
+                    // for the same owner, even if a command created extra entities.
+                    if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                        var existing = br.com.auren.minecraft.bond.AurenBondSavedData
+                                .get(sp.server).forOwner(sp.getUUID());
+                        if (existing != null && existing.bound()) {
+                            sp.displayClientMessage(Component.literal(
+                                    "Seu Auren ja esta guardado na sua cabeca."), true);
+                            return InteractionResult.CONSUME;
+                        }
+                    }
                     this.tame(player);
                     player.displayClientMessage(Component.literal("Auren: agora sou seu companheiro."), true);
                 } else if (this.isOwnedBy(player)) {

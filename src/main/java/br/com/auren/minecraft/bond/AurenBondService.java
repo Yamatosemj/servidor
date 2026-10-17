@@ -20,6 +20,7 @@ import net.neoforged.neoforge.event.entity.item.ItemTossEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerContainerEvent;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -219,11 +220,25 @@ public final class AurenBondService {
     }
 
     @SubscribeEvent
+    public static void onContainerClose(PlayerContainerEvent.Close event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        // Catch even a one-tick transfer to chest before the periodic scan.
+        for (net.minecraft.world.inventory.Slot slot : event.getContainer().slots) {
+            if (slot.container != player.getInventory() && token(slot.getItem()))
+                slot.set(ItemStack.EMPTY);
+        }
+        reconcile(player);
+    }
+
+    @SubscribeEvent
     public static void onDragonJoin(EntityJoinLevelEvent event) {
         if (!(event.getEntity() instanceof AurenDragon dragon)
                 || !(event.getLevel() instanceof ServerLevel level)) return;
         AurenBondSavedData state = AurenBondSavedData.get(level.getServer());
-        if (state.isBoundDragon(dragon.getUUID())
+        AurenBondSavedData.Entry ownerEntry = dragon.getOwnerUUID() == null
+                ? null : state.forOwner(dragon.getOwnerUUID());
+        if ((state.isBoundDragon(dragon.getUUID())
+                || (ownerEntry != null && ownerEntry.bound()))
                 && !AUTHORIZED_SPAWNS.contains(dragon.getUUID())) {
             // Crash rollback / old chunk loading while the world record is BOUND.
             event.setCanceled(true);
