@@ -1,6 +1,7 @@
 package br.com.auren.minecraft;
 
 import br.com.auren.minecraft.entity.AurenDragon;
+import br.com.auren.minecraft.bond.AurenBondService;
 import br.com.auren.minecraft.network.AurenMenuActionPayload;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.context.CommandContext;
@@ -167,22 +168,7 @@ public final class AurenCommands {
         ServerPlayer player = context.getSource().getPlayerOrException();
         AurenDragon dragon = getDragon(context);
         if (dragon == null) return 0;
-        if (dragon.isVehicle()) {
-            context.getSource().sendFailure(Component.literal(
-                    "Desmonte do Auren antes de usar o ombro."));
-            return 0;
-        }
-        if (dragon.isOnShoulder()) {
-            dragon.setOnShoulder(false);
-            context.getSource().sendSuccess(() ->
-                    Component.literal("Auren saiu do seu ombro."), false);
-        } else {
-            dragon.setSmallForm(true);
-            dragon.setOnShoulder(true);
-            context.getSource().sendSuccess(() ->
-                    Component.literal("Auren subiu no seu ombro."), false);
-        }
-        return Command.SINGLE_SUCCESS;
+        return AurenBondService.capture(player, dragon) ? Command.SINGLE_SUCCESS : 0;
     }
 
 
@@ -196,6 +182,13 @@ public final class AurenCommands {
      */
     public static void handleMenuAction(ServerPlayer player, int action, int radius) {
         if (player.isSpectator() || !player.isAlive() || player.level().isClientSide()) return;
+        // When stored, Auren has no live entity. The menu may still
+        // request its return, but the actual bound item remains the normal use.
+        if (action == AurenMenuActionPayload.SHOULDER
+                && AurenBondService.isBound(player)) {
+            AurenBondService.deploy(player);
+            return;
+        }
         AurenDragon dragon = ownedDragon(player);
         if (dragon == null) {
             player.displayClientMessage(Component.literal(
@@ -221,16 +214,7 @@ public final class AurenCommands {
         }
 
         switch (action) {
-            case AurenMenuActionPayload.SHOULDER -> {
-                if (dragon.isOnShoulder()) {
-                    dragon.setOnShoulder(false);
-                    player.displayClientMessage(Component.literal("Auren desceu do ombro."), true);
-                } else {
-                    dragon.setSmallForm(true);
-                    dragon.setOnShoulder(true);
-                    player.displayClientMessage(Component.literal("Auren subiu no ombro."), true);
-                }
-            }
+            case AurenMenuActionPayload.SHOULDER -> AurenBondService.capture(player, dragon);
             case AurenMenuActionPayload.REST -> {
                 if (dragon.getAttackOrders().hasOrder()) {
                     player.displayClientMessage(Component.literal(

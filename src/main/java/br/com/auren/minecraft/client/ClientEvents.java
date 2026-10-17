@@ -159,6 +159,11 @@ public final class ClientEvents {
     }
 
     @SubscribeEvent
+    public static void renderBoundHead(RenderPlayerEvent.Post event) {
+        AurenHeadCompanionRenderer.render(event);
+    }
+
+    @SubscribeEvent
     public static void cancelUnattachedMountedPlayer(RenderPlayerEvent.Pre event) {
         if (event.getEntity().getVehicle() instanceof AurenDragon
                 && !AurenRiderFeatureRenderer.RENDERING_RIDERS.contains(event.getEntity())) {

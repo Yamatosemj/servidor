@@ -1,6 +1,7 @@
 package br.com.auren.minecraft.client;
 
 import br.com.auren.minecraft.entity.AurenDragon;
+import br.com.auren.minecraft.AurenMinecraft;
 import br.com.auren.minecraft.network.AurenMenuActionPayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -44,6 +45,16 @@ public final class AurenMenuScreen extends Screen {
 
     private AurenDragon dragon() {
         return AurenAttackOverlay.nearbyOwnedDragon(Minecraft.getInstance());
+    }
+
+    private boolean hasBond() {
+        if (Minecraft.getInstance().player == null) return false;
+        var inv = Minecraft.getInstance().player.getInventory();
+        for (var stack : inv.items)
+            if (stack.is(AurenMinecraft.BOND_ITEM.get())) return true;
+        for (var stack : inv.offhand)
+            if (stack.is(AurenMinecraft.BOND_ITEM.get())) return true;
+        return false;
     }
 
     private static void box(GuiGraphics g, int x, int y, int w, int h, int color) {
@@ -153,9 +164,11 @@ public final class AurenMenuScreen extends Screen {
             box(g, hx, top + 32, Math.max(0, Math.min(116, (int) (116.0F * hp / max))),
                     6, 0xFFE77F91);
         } else {
-            label(g, "Auren distante", hx, top + 19, GOLD);
+            label(g, hasBond() ? "Na sua cabeca" : "Auren distante", hx, top + 19, GOLD);
         }
-        String status = d == null ? "Aproxime-se do seu Auren (ate 64 blocos)"
+        String status = d == null ? (hasBond()
+                ? "Auren acoplado - invulneravel, pronto para descer"
+                : "Aproxime-se do seu Auren (ate 64 blocos)")
                 : "Forma: " + (d.isSmallForm() ? "pequena" : "adulta")
                     + "   |   " + (d.getSyncedMarkMode() == 0 ? "Sem alvo"
                     : d.getSyncedMarkMode() == 1 ? "Criatura marcada" : "Area marcada");
@@ -165,7 +178,9 @@ public final class AurenMenuScreen extends Screen {
         tab(g, 1, "Combate", mx, my);
         tab(g, 2, "Autonomia", mx, my);
         if (tab == 0) {
-            tile(g, 0, 0, "Interagir", "Ombro / descer", "*", mx, my, d != null);
+            tile(g, 0, 0, hasBond() ? "Soltar Auren" : "Interagir",
+                    hasBond() ? "Sair da sua cabeca" : "Subir na cabeca",
+                    "*", mx, my, d != null || hasBond());
             tile(g, 1, 0, "Descansar", "Deitar e repousar", "Z", mx, my, d != null);
             tile(g, 0, 1, "Mudar forma", "Pequeno / adulto", "~", mx, my, d != null);
             tile(g, 1, 1, d != null && d.isOrderedToSit() ? "Seguir" : "Seguir / Ficar",
@@ -202,7 +217,8 @@ public final class AurenMenuScreen extends Screen {
     }
 
     private void send(int action) {
-        if (dragon() == null) {
+        if (dragon() == null
+                && !(action == AurenMenuActionPayload.SHOULDER && hasBond())) {
             notice = "Auren precisa estar perto de voce.";
             return;
         }

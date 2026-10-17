@@ -38,7 +38,7 @@ for token in ("findDistributedAreaImpact(",
               "areaFiringPass = areaPhase == 2 || areaPhase == 3",
               "safeAreaWaypoint(", "nextSweepTick = combatTicks + 6"):
     assert token in orders, token
-assert "0.7.29-unified-ui-alpha" in (root/"gradle.properties").read_text()
+assert "0.7.30-bonded-head-alpha" in (root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1, jars
 with ZipFile(jars[0]) as jar:

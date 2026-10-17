@@ -51,6 +51,8 @@ jobs:
         run: python3 scripts/verify_fire_defense_hunt.py
       - name: Audit perception geometry and cave-size clearance regressions
         run: python3 scripts/verify_reliability_review.py
+      - name: Verify persistent owner-only dragon item, sprite and head anchor
+        run: python3 scripts/verify_head_bond.py
       - name: Verify server-only environment perception and temporary HUD
         run: python3 scripts/verify_world_perception.py
       - name: Verify unified V menu, secure targeting and owner actions
@@ -88,6 +90,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: auren-0729-UNIFIED-MENU
+          name: auren-0730-HEAD-BOND-ALPHA
           path: build/libs/*.jar
           if-no-files-found: error

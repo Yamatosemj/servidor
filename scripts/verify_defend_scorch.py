@@ -72,9 +72,11 @@ assert "random.nextInt(8) == 0" in scorched
 assert "level.setBlockAndUpdate(pos, restored)" in scorched
 assert "AurenScorchedBlocks.register(modBus)" in main
 assert "ENTITIES.register(\"auren\"" in main
-assert "DeferredRegister.Items" not in main and "DeferredRegister.Items" not in registry
+assert main.count('ITEMS.register("auren_bond"') == 1
+assert "DeferredRegister.Items" not in registry
+assert main.count('ITEMS.register("') == 1
 assert "BlockItem(" not in registry and "BlockItem(" not in main
-assert "0.7.29-unified-ui-alpha" in version
+assert "0.7.30-bonded-head-alpha" in version
 
 names=["chared_grass","chared_dirt","chared_gravel",
        "chared_cobblestone","chared_stone","chared_dirt_path"]

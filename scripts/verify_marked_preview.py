@@ -39,6 +39,7 @@ for token in (
     "Principal", "Combate", "Autonomia", "Mudar forma", "Descansar",
     "Seguir / Ficar", "Marcar criatura", "Marcar area", "Cancelar ataque",
     "Cacar animais", "Em desenvolvimento", "Ver ambiente", "isPauseScreen()",
+    "hasBond()", "Soltar Auren",
     "ClientEvents.matchesMenuKey(key, scan)", "AurenAttackOverlay.setSelectedRadius",
     "ClientEvents.beginSelection(area)", "Minecraft.getInstance().setScreen(null)"
 ): assert token in menu, token
@@ -96,7 +97,7 @@ for token in (
     "getSyncedMarkRadius()", "this.syncAttackMark()"
 ): assert token in dragon, token
 
-assert "mod_version=0.7.29-unified-ui-alpha" in (root / "gradle.properties").read_text()
+assert "mod_version=0.7.30-bonded-head-alpha" in (root / "gradle.properties").read_text()
 jars = list((root / "build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars) == 1, jars
 with ZipFile(jars[0]) as jar:

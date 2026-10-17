@@ -62,7 +62,7 @@ for forbidden in ("java.net.", "HttpClient", "DeepSeek", "markEnemy(",
                   "setTarget(", "setBlock(", "getFlightController()."):
     assert forbidden not in mind,forbidden
 assert "markEnemy(" not in policy and "getFlightController()" not in policy
-assert "mod_version=0.7.29-unified-ui-alpha" in (
+assert "mod_version=0.7.30-bonded-head-alpha" in (
     root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars
