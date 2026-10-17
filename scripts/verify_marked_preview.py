@@ -43,6 +43,15 @@ for token in (
     "ClientEvents.beginSelection(area)", "Minecraft.getInstance().setScreen(null)"
 ): assert token in menu, token
 assert "setBlock(" not in menu and "markEnemy(" not in menu
+# NeoForge 1.21.1 fullscreen blur applied after UI drawing makes every glyph
+# illegible. Draw only the custom dim layer, keep vanilla blur disabled for
+# this Screen, and draw parent widgets ahead of our foreground.
+assert "public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY," in menu
+assert "Intentionally empty; the translucent backdrop is drawn in render()" in menu
+start = menu.split("public void render(GuiGraphics g, int mx, int my, float partialTick) {", 1)[1]
+assert start.index("super.render(g, mx, my, partialTick);") < start.index("g.fill(0, 0, width, height")
+assert start.count("super.render(g, mx, my, partialTick);") == 1
+assert "renderBlurredBackground(" not in menu
 
 for token in (
     "RenderLevelStageEvent.Stage.AFTER_PARTICLES", "RenderType.lines()",
