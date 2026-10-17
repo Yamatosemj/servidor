@@ -32,7 +32,7 @@ for expected in (
   "dragon.getNavigation().moveTo(shortRoute, 0.68D)",
   "dragon.getNavigation().moveTo(route, 0.63D)",
   "animal.distanceToSqr(dragon) > 2.0D * 2.0D",
-  "routine = Routine.REST",
+  "routine = startedRoutine = Routine.REST",
   "dragon.setNaturalRestPose(night() ? 2 : 1)",
   "dragon.setNaturalRestPose(0)",
   "dragon.getAttackOrders().hasOrder()",

@@ -99,7 +99,7 @@ for _ in range(90):
     footprints.append(frozenset(cells))
 assert len(set(footprints))>=85
 assert max(len(t) for t in footprints)>=45
-assert "mod_version=0.7.27-visible-offline-routine-alpha" in (
+assert "mod_version=0.7.28-natural-priorities-alpha" in (
     ROOT/"gradle.properties").read_text()
 jars=list((ROOT/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars

@@ -16,7 +16,7 @@ for x in (
 ): assert x in policy,x
 for x in (
     "case APPROACH_OWNER ->",
-    "routine = Routine.APPROACH_OWNER",
+    "routine = startedRoutine = Routine.APPROACH_OWNER",
     "chooseInterestPath(false,",
     "dragon.getNavigation().moveTo(approach, 0.82D)",
     "dragon.getNavigation().moveTo(shortRoute, 0.68D)",
