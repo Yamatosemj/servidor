@@ -116,8 +116,22 @@ public final class AurenMenuScreen extends Screen {
         label(g, enabled ? ">" : "-", x + w - 17, y + 11, enabled ? CYAN : MUTED);
     }
 
+    /**
+     * This overlay paints its own dim backdrop. Vanilla's full-screen blur is
+     * unnecessary and can blur the already drawn menu on some 1.21.1 render
+     * paths / shader combinations. Never issue a post-process blur here.
+     */
+    @Override
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY,
+                                 float partialTick) {
+        // Intentionally empty; the translucent backdrop is drawn in render().
+    }
+
     @Override
     public void render(GuiGraphics g, int mx, int my, float partialTick) {
+        // Render any parent widgets BEFORE our foreground; never blur or
+        // redraw a background after the menu text was drawn.
+        super.render(g, mx, my, partialTick);
         // Real Minecraft world remains visible beneath a dark, translucent HUD.
         g.fill(0, 0, width, height, 0x9C07101C);
         g.pose().pushPose();
@@ -185,7 +199,6 @@ public final class AurenMenuScreen extends Screen {
         String footer = notice.isEmpty() ? "V: fechar   |   ESC: voltar ao jogo" : notice;
         label(g, footer, left + 18, top + panelHeight - 15, notice.isEmpty() ? MUTED : GOLD);
         g.pose().popPose();
-        super.render(g, mx, my, partialTick);
     }
 
     private void send(int action) {
