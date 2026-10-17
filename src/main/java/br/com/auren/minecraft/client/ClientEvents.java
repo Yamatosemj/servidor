@@ -1,15 +1,16 @@
 package br.com.auren.minecraft.client;
 
 import br.com.auren.minecraft.AurenMinecraft;
-import com.mojang.blaze3d.platform.InputConstants;
 import br.com.auren.minecraft.entity.AurenDragon;
 import br.com.auren.minecraft.network.AurenDragonControlPayload;
-import br.com.auren.minecraft.network.AurenMarkPayload;
+import br.com.auren.minecraft.network.AurenMenuActionPayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 import net.neoforged.api.distmarker.Dist;
@@ -20,86 +21,79 @@ import net.neoforged.neoforge.client.event.RenderPlayerEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 
+/**
+ * One V menu for ground commands. Mounted CE controls remain available:
+ * X descend, R fire and G lightning.
+ */
 @EventBusSubscriber(modid = AurenMinecraft.MOD_ID, value = Dist.CLIENT,
         bus = EventBusSubscriber.Bus.GAME)
 public final class ClientEvents {
     private ClientEvents() {}
 
-    // Same descent key as the original IceAndFire Community Edition.
     private static final KeyMapping DRAGON_DOWN = new KeyMapping(
             "key.aurenminecraft.dragon_down", GLFW.GLFW_KEY_X, "key.categories.gameplay");
-    // CE IafKeyMappings.DRAGON_BREATH default is R.
     private static final KeyMapping DRAGON_BREATH = new KeyMapping(
             "key.aurenminecraft.dragon_breath", GLFW.GLFW_KEY_R, "key.categories.gameplay");
-    // Additional mounted action. R remains fire; G launches CE lightning.
     private static final KeyMapping DRAGON_LIGHTNING = new KeyMapping(
             "key.aurenminecraft.dragon_lightning", GLFW.GLFW_KEY_G,
             "key.categories.gameplay");
-    // One remappable key: plain V marks, Shift+V cancels or cycles radius.
     private static final KeyMapping MARK_TARGET = new KeyMapping(
             "key.aurenminecraft.mark_target", GLFW.GLFW_KEY_V, "key.categories.gameplay");
-    // B toggles AREA bombing only; V still marks any permitted living target.
-    private static final KeyMapping TOGGLE_BOMBARDMENT = new KeyMapping(
-            "key.aurenminecraft.toggle_bombardment", GLFW.GLFW_KEY_B,
-            "key.categories.gameplay");
-    // H temporarily reveals the Auren's latest SERVER-verified perception.
-    // No extra packets, background overlay or action is sent by this key.
-    private static final KeyMapping PERCEPTION = new KeyMapping(
-            "key.aurenminecraft.perception", GLFW.GLFW_KEY_H,
-            "key.categories.gameplay");
+
     private static int lastPilotId = -1;
     private static byte lastPilotControls = -1;
+    private static boolean selectingCreature;
+    private static boolean selectingArea;
+    // Use-item event may be raised once per hand, even after main-hand cancel.
+    private static boolean suppressOffhand;
 
-    // Called from ClientModEvents on the MOD bus.
     public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(DRAGON_DOWN);
         event.register(DRAGON_BREATH);
         event.register(DRAGON_LIGHTNING);
         event.register(MARK_TARGET);
-        event.register(TOGGLE_BOMBARDMENT);
-        event.register(PERCEPTION);
     }
 
-    /** Port of CE ClientEvents.onLivingUpdate rider input, once per client tick. */
+    public static boolean matchesMenuKey(int key, int scancode) {
+        return MARK_TARGET.matches(key, scancode);
+    }
+
+    public static boolean isTargeting() { return selectingCreature || selectingArea; }
+    public static boolean isCreatureTargeting() { return selectingCreature; }
+    public static boolean isAreaTargeting() { return selectingArea; }
+
+    public static void beginSelection(boolean area) {
+        selectingArea = area;
+        selectingCreature = !area;
+        AurenAttackOverlay.revealForTicks(Minecraft.getInstance());
+    }
+
+    private static void endSelection() {
+        selectingCreature = false;
+        selectingArea = false;
+    }
+
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) {
+        suppressOffhand = false; // Never suppress interactions in a later tick.
+        if (mc.player == null || mc.level == null) {
             AurenAttackOverlay.resetTransient();
+            endSelection();
             lastPilotId = -1;
             lastPilotControls = -1;
             return;
         }
-        // Input is edge-triggered and ignored while typing in menus/chat.
+        if (mc.screen != null && isTargeting()) endSelection();
+
         if (mc.screen == null && mc.player.isAlive()) {
-            while (PERCEPTION.consumeClick()) {
-                if (AurenAttackOverlay.nearbyOwnedDragon(mc) != null)
-                    AurenAttackOverlay.revealPerceptionForTicks(mc);
-            }
             while (MARK_TARGET.consumeClick()) {
-                AurenDragon owned = AurenAttackOverlay.nearbyOwnedDragon(mc);
-                if (owned == null) continue;
-                AurenAttackOverlay.revealForTicks(mc);
-                // Physical Shift, independent of the player's remapped Sneak key.
-                long window = mc.getWindow().getWindow();
-                boolean shiftHeld = InputConstants.isKeyDown(window, GLFW.GLFW_KEY_LEFT_SHIFT)
-                        || InputConstants.isKeyDown(window, GLFW.GLFW_KEY_RIGHT_SHIFT);
-                if (shiftHeld) {
-                    if (owned.getSyncedMarkMode() != 0) {
-                        PacketDistributor.sendToServer(new AurenMarkPayload(0, true));
-                    } else {
-                        AurenAttackOverlay.nextRadius();
-                    }
+                if (isTargeting()) {
+                    endSelection(); // Cancel ONLY preview, never clear an active server order.
+                    mc.setScreen(new AurenMenuScreen());
                 } else {
-                    PacketDistributor.sendToServer(
-                            new AurenMarkPayload(AurenAttackOverlay.selectedRadius(), false));
+                    mc.setScreen(new AurenMenuScreen());
                 }
-            }
-            while (TOGGLE_BOMBARDMENT.consumeClick()) {
-                if (AurenAttackOverlay.nearbyOwnedDragon(mc) == null) continue;
-                AurenAttackOverlay.revealForTicks(mc);
-                // 0 is the server-owned mode toggle, not a targeting radius.
-                PacketDistributor.sendToServer(new AurenMarkPayload(0, false));
             }
         }
         Entity mount = mc.player.getVehicle();
@@ -109,11 +103,12 @@ public final class ClientEvents {
             lastPilotControls = -1;
             return;
         }
-
-        byte controls = (byte) ((mc.options.keyJump.isDown() ? 1 : 0)
-                | (DRAGON_DOWN.isDown() ? 2 : 0)
-                | (DRAGON_BREATH.isDown() ? 8 : 0)
-                | (DRAGON_LIGHTNING.isDown() ? 4 : 0));
+        byte controls = mc.screen == null
+                ? (byte) ((mc.options.keyJump.isDown() ? 1 : 0)
+                    | (DRAGON_DOWN.isDown() ? 2 : 0)
+                    | (DRAGON_BREATH.isDown() ? 8 : 0)
+                    | (DRAGON_LIGHTNING.isDown() ? 4 : 0))
+                : 0;
         dragon.setRiderControlState(controls);
         if (dragon.getId() != lastPilotId || controls != lastPilotControls) {
             PacketDistributor.sendToServer(new AurenDragonControlPayload(
@@ -121,6 +116,36 @@ public final class ClientEvents {
             lastPilotId = dragon.getId();
             lastPilotControls = controls;
         }
+    }
+
+    /**
+     * The confirmation click is reserved for targeting: never mount Auren,
+     * place a block, consume a held item or trigger an offhand action.
+     */
+    @SubscribeEvent
+    public static void onUse(InputEvent.InteractionKeyMappingTriggered event) {
+        if (!event.isUseItem()) return;
+        if (event.getHand() == InteractionHand.OFF_HAND && suppressOffhand) {
+            event.setCanceled(true);
+            event.setSwingHand(false);
+            suppressOffhand = false;
+            return;
+        }
+        if (!isTargeting() || event.getHand() != InteractionHand.MAIN_HAND) return;
+        event.setCanceled(true);
+        event.setSwingHand(false);
+        suppressOffhand = true;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.screen != null || !mc.player.isAlive()
+                || AurenAttackOverlay.nearbyOwnedDragon(mc) == null) {
+            endSelection();
+            return;
+        }
+        int action = selectingArea ? AurenMenuActionPayload.TARGET_AREA
+                : AurenMenuActionPayload.TARGET_CREATURE;
+        PacketDistributor.sendToServer(new AurenMenuActionPayload(
+                action, AurenAttackOverlay.selectedRadius()));
+        endSelection();
     }
 
     @SubscribeEvent
@@ -133,7 +158,6 @@ public final class ClientEvents {
         AurenAttackOverlay.renderHud(event);
     }
 
-    /** Suppress only the duplicate default player renderer while riding Auren. */
     @SubscribeEvent
     public static void cancelUnattachedMountedPlayer(RenderPlayerEvent.Pre event) {
         if (event.getEntity().getVehicle() instanceof AurenDragon
@@ -142,7 +166,6 @@ public final class ClientEvents {
         }
     }
 
-    // Called from ClientModEvents on the MOD bus.
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(AurenMinecraft.AUREN.get(), AurenDragonRenderer::new);
     }

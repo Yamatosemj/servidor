@@ -69,14 +69,19 @@ public final class AurenAttackOverlay {
     }
 
     private static boolean previewActive(Minecraft mc) {
-        return mc.level != null && mc.level == previewLevel
-                && mc.level.getGameTime() < previewUntil;
+        return ClientEvents.isTargeting() || (mc.level != null && mc.level == previewLevel
+                && mc.level.getGameTime() < previewUntil);
     }
 
     private AurenAttackOverlay() {}
 
     public static int selectedRadius() {
         return selectedRadius;
+    }
+
+    public static void setSelectedRadius(int radius) {
+        if (radius >= 5 && radius <= 30 && radius % 5 == 0)
+            selectedRadius = radius;
     }
 
     public static void nextRadius() {
@@ -112,7 +117,8 @@ public final class AurenAttackOverlay {
                     && !(living instanceof TamableAnimal pet && pet.isTame()
                         && dragon.getOwnerUUID() != null
                         && dragon.getOwnerUUID().equals(pet.getOwnerUUID())))
-                return new Preview(null, living, false);
+                return new Preview(block.getType() == HitResult.Type.BLOCK
+                        ? block.getBlockPos() : null, living, false);
             return new Preview(null, null, true);
         }
         return new Preview(block.getType() == HitResult.Type.BLOCK
@@ -153,9 +159,9 @@ public final class AurenAttackOverlay {
         // Dimmer local preview; target decision is repeated on server on V.
         if (!dragon.isVehicle() && !dragon.isSmallForm() && !dragon.isOnShoulder()) {
             Preview aiming = preview(mc, dragon);
-            if (aiming.enemy() != null) {
+            if (aiming.enemy() != null && !ClientEvents.isAreaTargeting()) {
                 drawEnemy(pose, lines, aiming.enemy(), 130, 205, 255, 180);
-            } else if (dragon.isSyncedAreaAttackEnabled() && aiming.block() != null
+            } else if (!ClientEvents.isCreatureTargeting() && aiming.block() != null
                     && (dragon.getSyncedMarkMode() != 2
                     || !aiming.block().equals(dragon.getSyncedMarkCenter())
                     || selectedRadius != dragon.getSyncedMarkRadius())) {
@@ -238,14 +244,18 @@ public final class AurenAttackOverlay {
         if (mode == 0 && !transientHint && !perceptionHint) return;
 
         GuiGraphics graphics = event.getGuiGraphics();
-        String status = switch (mode) {
+        String status = ClientEvents.isTargeting()
+                ? (ClientEvents.isAreaTargeting()
+                    ? "AUREN  •  SELECIONE A AREA  •  RAIO " + selectedRadius
+                    : "AUREN  •  SELECIONE A CRIATURA")
+                : switch (mode) {
             case 1 -> "AUREN  •  ALVO MARCADO";
             case 2 -> "AUREN  •  BOMBARDEIO ATIVO  •  RAIO " + dragon.getSyncedMarkRadius();
             default -> "AUREN  •  BOMBARDEIO "
                     + (dragon.isSyncedAreaAttackEnabled() ? "LIGADO" : "DESLIGADO")
                     + "  •  RAIO " + selectedRadius;
         };
-        if (mode != 0 || transientHint) {
+        if (mode != 0 || transientHint || ClientEvents.isTargeting()) {
             int x = (graphics.guiWidth() - mc.font.width(status)) / 2;
             graphics.drawString(mc.font, status, x, 8, 0x66DAFF, true);
         }
@@ -265,9 +275,9 @@ public final class AurenAttackOverlay {
         }
 
         if (transientHint) {
-            String hint = mode != 0
-                    ? "V: mudar alvo   Shift+V: cancelar   B: alternar bombardeio"
-                    : "V: marcar   Shift+V: raio   B: alternar bombardeio";
+            String hint = ClientEvents.isTargeting()
+                    ? "Botao direito: confirmar   V: voltar ao menu   ESC: sair"
+                    : "V: abrir o painel do Auren";
             graphics.drawString(mc.font, hint,
                     (graphics.guiWidth() - mc.font.width(hint)) / 2, 20,
                     0x8CBCCD, true);
