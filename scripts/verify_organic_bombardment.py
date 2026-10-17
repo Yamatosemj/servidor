@@ -96,7 +96,7 @@ for radius in (5,10,15,20,25,30):
     assert any(x>0 for x,z in samples) and any(x<0 for x,z in samples)
     assert any(z>0 for x,z in samples) and any(z<0 for x,z in samples)
 
-assert "mod_version=0.7.29-unified-ui-alpha" in (
+assert "mod_version=0.7.30-bonded-head-alpha" in (
     root/"gradle.properties").read_text()
 jars=list((root/"build/libs").glob("aurenminecraft-*.jar"))
 assert len(jars)==1,jars
